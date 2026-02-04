@@ -1,0 +1,33 @@
+{
+  "name": "@fws/cli",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Main entry point, menus, simulation controls",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "aeternum": "./dist/index.js"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "dev": "tsc --watch",
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "start": "node ./dist/index.js"
+  },
+  "dependencies": {
+    "@fws/core": "workspace:*",
+    "@fws/generator": "workspace:*",
+    "@fws/renderer": "workspace:*",
+    "@fws/narrative": "workspace:*"
+  },
+  "files": [
+    "dist"
+  ]
+}

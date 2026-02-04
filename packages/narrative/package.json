@@ -1,0 +1,26 @@
+{
+  "name": "@fws/narrative",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Event-to-prose transformation, template engine, chronicler system, vignettes",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "dev": "tsc --watch",
+    "build": "tsc",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@fws/core": "workspace:*"
+  },
+  "files": [
+    "dist"
+  ]
+}

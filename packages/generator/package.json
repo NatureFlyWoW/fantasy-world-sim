@@ -1,0 +1,26 @@
+{
+  "name": "@fws/generator",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Procedural world generation - terrain, ecology, cosmology, races, pre-history",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "dev": "tsc --watch",
+    "build": "tsc",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@fws/core": "workspace:*"
+  },
+  "files": [
+    "dist"
+  ]
+}

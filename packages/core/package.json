@@ -1,0 +1,23 @@
+{
+  "name": "@fws/core",
+  "version": "0.0.1",
+  "private": true,
+  "description": "ECS engine, simulation loop, event system, time management, level-of-detail manager",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "dev": "tsc --watch",
+    "build": "tsc",
+    "typecheck": "tsc --noEmit"
+  },
+  "files": [
+    "dist"
+  ]
+}
