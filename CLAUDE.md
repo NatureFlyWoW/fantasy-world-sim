@@ -127,12 +127,19 @@ Deterministic from seed. 9 configurable parameters with named presets.
   Military (battles, sieges, campaigns), Magic (research, artifacts, catastrophes),
   Religion (divine power, interventions), Cultural (tech, art, philosophy, language),
   Ecology (depletion, degradation, territories), Secrets (asymmetry, revelation, discovery).
-  1384 tests total. Systems communicate via EventBus and shared component state.
+  1392 tests total. Systems communicate via EventBus and shared component state.
 - Pre-Phase 4: Added smoke test integration test (365-tick Small world validation)
   and pnpm run start entry point. Smoke test validates all 10 systems produce
   well-formed events, cascade chains respect depth limits, entity references are
   valid, and state is consistent. Start script generates world, runs 10-tick
   verification, and prints placeholder banner. Both use standard_fantasy preset.
+- 2025: Generator-to-Simulation Bridge: Phase 3 systems use internal Maps (not ECS
+  queries) for state. Added initializeSystemsFromGenerated() in populate-world.ts
+  to bridge generator data to system internal state. MagicSystem needs registerInstitution()
+  + startResearch(); CulturalEvolutionSystem needs startResearch() with high progress;
+  EcologySystem needs registerRegion(); WarfareSystem needs declareWar() + createArmy().
+  9/10 event categories now produce events in 365-tick smoke test (1392 tests passing).
 
 ## Known Issues
-(none currently)
+- EventCategory.Exploratory has no system producing events (by design — no exploration
+  system implemented yet). All other 9 categories produce events after bridge initialization.

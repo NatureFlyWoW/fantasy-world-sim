@@ -61,7 +61,8 @@ import { TensionSeeder } from '../civilization/tension-seeder.js';
 import { NameGenerator } from '../character/name-generator.js';
 import { getAllCultures } from '../character/name-culture.js';
 import { PreHistorySimulator } from '../history/pre-history.js';
-import { populateWorldFromGenerated } from './populate-world.js';
+import { populateWorldFromGenerated, initializeSystemsFromGenerated } from './populate-world.js';
+import type { ExtendedGeneratedWorldData, InitializableSystems } from './populate-world.js';
 
 // Test configuration
 const TEST_SEED = 42;
@@ -199,6 +200,14 @@ function generateWorldData(seed: number): GeneratedWorldData {
 }
 
 /**
+ * Result of creating the simulation engine.
+ */
+interface SimulationEngineResult {
+  engine: SimulationEngine;
+  systems: InitializableSystems;
+}
+
+/**
  * Create simulation engine with all systems registered.
  *
  * Note: ReputationSystem and GrudgeSystem are support classes (not simulation systems),
@@ -209,7 +218,7 @@ function createSimulationEngine(
   clock: WorldClock,
   eventBus: EventBus,
   eventLog: EventLog
-): SimulationEngine {
+): SimulationEngineResult {
   const cascadeEngine = new CascadeEngine(eventBus, eventLog, {
     maxCascadeDepth: 10,
   });
@@ -218,6 +227,12 @@ function createSimulationEngine(
   // Support classes (not simulation systems, but used by other systems)
   const reputationSystem = new ReputationSystem();
   const grudgeSystem = new GrudgeSystem();
+
+  // Create systems - these will be registered AND passed to initialization
+  const magicSystem = new MagicSystem();
+  const warfareSystem = new WarfareSystem();
+  const culturalSystem = new CulturalEvolutionSystem();
+  const ecologySystem = new EcologySystem();
 
   // Register the 9 main simulation systems that extend BaseSystem:
   // 1. CharacterAISystem - Character decision-making (6-phase pipeline)
@@ -232,14 +247,14 @@ function createSimulationEngine(
   systemRegistry.register(new CharacterAISystem());
   systemRegistry.register(new FactionPoliticalSystem(reputationSystem, grudgeSystem));
   systemRegistry.register(new EconomicSystem());
-  systemRegistry.register(new WarfareSystem());
-  systemRegistry.register(new MagicSystem());
+  systemRegistry.register(warfareSystem);
+  systemRegistry.register(magicSystem);
   systemRegistry.register(new ReligionSystem());
-  systemRegistry.register(new CulturalEvolutionSystem());
-  systemRegistry.register(new EcologySystem());
+  systemRegistry.register(culturalSystem);
+  systemRegistry.register(ecologySystem);
   systemRegistry.register(new OralTraditionSystem());
 
-  return new SimulationEngine(
+  const engine = new SimulationEngine(
     world,
     clock,
     eventBus,
@@ -247,6 +262,16 @@ function createSimulationEngine(
     systemRegistry,
     cascadeEngine
   );
+
+  return {
+    engine,
+    systems: {
+      magicSystem,
+      warfareSystem,
+      culturalSystem,
+      ecologySystem,
+    },
+  };
 }
 
 // Shared state across tests
@@ -256,6 +281,7 @@ let clock: WorldClock;
 let eventBus: EventBus;
 let eventLog: EventLog;
 let engine: SimulationEngine;
+let initializableSystems: InitializableSystems;
 let allEvents: WorldEvent[] = [];
 
 describe('Smoke Test: 365-tick Small World Integration', { timeout: 60000 }, () => {
@@ -269,7 +295,7 @@ describe('Smoke Test: 365-tick Small World Integration', { timeout: 60000 }, () 
     // Create ECS world
     ecsWorld = new World();
 
-    // BRIDGE: Populate ECS world from generated data
+    // BRIDGE STEP 1: Populate ECS world from generated data
     // This converts plain JS objects into ECS entities with proper components
     const populationResult = populateWorldFromGenerated(ecsWorld, {
       worldMap: generatedData.worldMap,
@@ -290,7 +316,38 @@ describe('Smoke Test: 365-tick Small World Integration', { timeout: 60000 }, () 
     clock = new WorldClock();
     eventBus = new EventBus();
     eventLog = new EventLog();
-    engine = createSimulationEngine(ecsWorld, clock, eventBus, eventLog);
+    const engineResult = createSimulationEngine(ecsWorld, clock, eventBus, eventLog);
+    engine = engineResult.engine;
+    initializableSystems = engineResult.systems;
+
+    // BRIDGE STEP 2: Initialize simulation systems with generator data
+    // This populates internal system Maps (artifacts, languages, regions, etc.)
+    // that systems use instead of ECS queries
+    const extendedData: ExtendedGeneratedWorldData = {
+      worldMap: generatedData.worldMap,
+      settlements: generatedData.settlements,
+      factions: generatedData.factions,
+      rulers: generatedData.rulers,
+      notables: generatedData.notables,
+      preHistory: generatedData.preHistory,
+      tensions: generatedData.tensions,
+    };
+
+    const initResult = initializeSystemsFromGenerated(
+      initializableSystems,
+      extendedData,
+      populationResult,
+      eventBus,
+      clock,
+    );
+
+    console.log('\n=== SYSTEM INITIALIZATION ===');
+    console.log(`Artifacts registered: ${initResult.artifactsRegistered}`);
+    console.log(`Regions registered: ${initResult.regionsRegistered}`);
+    console.log(`Languages created: ${initResult.languagesCreated}`);
+    console.log(`Trade connections: ${initResult.tradeConnectionsCreated}`);
+    console.log(`Wars started: ${initResult.warsStarted}`);
+    console.log('==============================\n');
   });
 
   it('generates a Small world without errors', () => {
