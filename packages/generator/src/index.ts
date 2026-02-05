@@ -20,3 +20,6 @@ export * from './character/index.js';
 
 // History module
 export * from './history/index.js';
+
+// Integration module (ECS bridge)
+export { populateWorldFromGenerated, type GeneratedWorldData, type PopulationResult } from './integration/populate-world.js';

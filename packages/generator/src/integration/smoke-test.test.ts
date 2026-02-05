@@ -4,7 +4,7 @@
 // The test runs correctly through vitest which has its own module resolution.
 
 /**
- * Smoke Test: 50-tick Small World Integration
+ * Smoke Test: 365-tick Small World Integration
  *
  * This is the primary integration test validating all 10 simulation systems
  * work together without errors. It serves as the foundation for Phase 4
@@ -14,7 +14,7 @@
  * - World size: 'small' (200×200 grid)
  * - Preset: 'standard_fantasy'
  * - Seed: 42 (deterministic)
- * - Ticks: 50
+ * - Ticks: 365 (one full simulated year — exercises all frequency tiers)
  */
 
 import { describe, it, expect, beforeAll } from 'vitest';
@@ -65,7 +65,7 @@ import { populateWorldFromGenerated } from './populate-world.js';
 
 // Test configuration
 const TEST_SEED = 42;
-const TEST_TICKS = 50;
+const TEST_TICKS = 365;
 
 /**
  * Create a minimal world config for testing.
@@ -258,7 +258,7 @@ let eventLog: EventLog;
 let engine: SimulationEngine;
 let allEvents: WorldEvent[] = [];
 
-describe('Smoke Test: 50-tick Small World Integration', { timeout: 60000 }, () => {
+describe('Smoke Test: 365-tick Small World Integration', { timeout: 60000 }, () => {
   beforeAll(() => {
     // Reset ID counters for deterministic behavior
     resetEntityIdCounter();
@@ -325,7 +325,7 @@ describe('Smoke Test: 50-tick Small World Integration', { timeout: 60000 }, () =
     console.log('================================\n');
   });
 
-  it('runs 50 ticks without errors', () => {
+  it('runs 365 ticks without errors', () => {
     // Run the simulation
     engine.run(TEST_TICKS);
 
@@ -366,8 +366,9 @@ describe('Smoke Test: 50-tick Small World Integration', { timeout: 60000 }, () =
     console.log('==========================\n');
 
     // CRITICAL: Multiple systems must produce events (proves cross-system interaction)
-    // Require at least 2 categories to prove different systems are active
-    expect(categoryCount.size).toBeGreaterThanOrEqual(2);
+    // With a full year of simulation, seasonal and annual systems should contribute
+    // Require at least 5 categories to prove all frequency tiers are active
+    expect(categoryCount.size).toBeGreaterThanOrEqual(5);
   });
 
   it('validates all events have valid structure', () => {
@@ -481,17 +482,17 @@ describe('Smoke Test: 50-tick Small World Integration', { timeout: 60000 }, () =
     expect(totalReferences).toBeGreaterThan(0);
   });
 
-  it('maintains stable clock state after 50 ticks', () => {
+  it('maintains stable clock state after 365 ticks', () => {
     // Verify clock advanced correctly
     expect(clock.currentTick).toBe(TEST_TICKS);
 
     // Verify time conversion works
+    // Calendar: 12 months × 30 days = 360 days/year
+    // After 365 ticks: year 2, month 1, day 6 (365 = 360 + 5 days into year 2)
     const worldTime = clock.currentTime;
-    expect(worldTime.year).toBeGreaterThanOrEqual(1);
-    expect(worldTime.month).toBeGreaterThanOrEqual(1);
-    expect(worldTime.month).toBeLessThanOrEqual(12);
-    expect(worldTime.day).toBeGreaterThanOrEqual(1);
-    expect(worldTime.day).toBeLessThanOrEqual(30);
+    expect(worldTime.year).toBe(2);
+    expect(worldTime.month).toBe(1);
+    expect(worldTime.day).toBe(6);
 
     console.log(`\n=== WORLD TIME ===`);
     console.log(`Tick: ${clock.currentTick}`);
@@ -507,7 +508,7 @@ describe('Smoke Test: 50-tick Small World Integration', { timeout: 60000 }, () =
     }
 
     // Export all events to JSON
-    const outputPath = path.join(outputDir, 'smoke-test-events.json');
+    const outputPath = path.join(outputDir, 'smoke-test-events-365.json');
     const eventData = allEvents.map((event) => ({
       id: event.id,
       category: event.category,
