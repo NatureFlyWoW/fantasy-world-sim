@@ -60,7 +60,10 @@ pnpm run start -- --seed 42  # Deterministic generation with fixed seed
 ```
 
 ## Current Phase
-Phase 4: Narrative & Rendering (pending)
+Phase 4: Narrative & Rendering (in progress)
+
+### Phase 4 Tasks
+- [x] 4.1 — Terminal UI Framework (types, BasePanel, theme, layout manager, Application class)
 
 ### Phase 3 Tasks — COMPLETE
 Simulation systems: Character AI, Memory/Reputation, Faction/Political (with Treaties),
@@ -139,6 +142,11 @@ Deterministic from seed. 9 configurable parameters with named presets.
   + startResearch(); CulturalEvolutionSystem needs startResearch() with high progress;
   EcologySystem needs registerRegion(); WarfareSystem needs declareWar() + createArmy().
   9/10 event categories now produce events in 365-tick smoke test (1392 tests passing).
+- 2025: Renderer uses blessed for terminal UI. BasePanel abstraction allows
+  panel-agnostic layout management. Render loop throttled to 30fps max.
+  Status bar shows world date, speed, selected entity, and focus location.
+  7 panel types: Map, EventLog, Inspector, Relationships, Timeline, Statistics, Fingerprint.
+  MockScreen/MockBox classes enable headless testing. 1461 tests passing.
 
 ## Known Issues
 - EventCategory.Exploratory has no system producing events (by design — no exploration
