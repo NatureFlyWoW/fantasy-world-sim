@@ -13,3 +13,6 @@ export * from './time/index.js';
 
 // Engine module
 export * from './engine/index.js';
+
+// Spatial module
+export * from './spatial/index.js';

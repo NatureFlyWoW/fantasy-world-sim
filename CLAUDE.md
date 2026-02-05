@@ -66,7 +66,7 @@ Phase 2: World Generation (pending)
 - [x] 1.3 — Time system (WorldClock, TimeController, TickScheduler)
 - [x] 1.4 — Simulation loop orchestrator + LoD manager
 - [x] 1.5 — Event cascade engine (cross-domain transitions, dampening, narrative arcs)
-- [ ] 1.6 — Spatial indexing (Quadtree) — deferred to Phase 2
+- [x] 1.6 — Spatial indexing (Quadtree, SpatialIndex facade, distance helpers)
 
 ## Decisions Log
 - 2024: ECS uses Map-backed component stores, monotonic entity IDs (no recycling),
@@ -87,6 +87,8 @@ Phase 2: World Generation (pending)
 - 2024: Cascade engine built in Phase 1 to support all later systems. Cross-domain
   transitions map defined. Dampening formula: baseProbability × (1-dampening)^depth.
   Max cascade depth: 10. Narrative arc detection identifies rising-action patterns.
+- 2024: Quadtree spatial index built. All core infrastructure ready for Phase 2.
+  Phase 1 deliverables: ECS, Events, Time, SimLoop, Cascade Engine, Spatial Index.
 
 ## Known Issues
 (none currently)
