@@ -4,7 +4,7 @@
  */
 
 import type { EntityId, EventId, SiteId } from '../ecs/types.js';
-import type { EventCategory, WorldEvent, WorldTime, ConsequenceRule } from './types.js';
+import type { EventCategory, WorldEvent, TickNumber, ConsequenceRule } from './types.js';
 
 let nextEventId = 0;
 
@@ -31,7 +31,7 @@ export interface CreateEventOptions {
   /** Specific event type (e.g., "character.death") */
   subtype: string;
   /** When the event occurred */
-  timestamp: WorldTime;
+  timestamp: TickNumber;
   /** All entities involved */
   participants: EntityId[];
   /** Importance rating 0-100 */

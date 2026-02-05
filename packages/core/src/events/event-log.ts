@@ -4,7 +4,7 @@
  */
 
 import type { EntityId, EventId } from '../ecs/types.js';
-import type { EventCategory, WorldEvent, WorldTime } from './types.js';
+import type { EventCategory, WorldEvent, TickNumber } from './types.js';
 
 export class EventLog {
   /** Primary storage: id → event */
@@ -59,7 +59,7 @@ export class EventLog {
   /**
    * Get all events within a time range (inclusive).
    */
-  getByTimeRange(start: WorldTime, end: WorldTime): WorldEvent[] {
+  getByTimeRange(start: TickNumber, end: TickNumber): WorldEvent[] {
     // Binary search for start index
     const startIndex = this.findFirstIndexAtOrAfter(start);
     if (startIndex === -1) {
@@ -256,7 +256,7 @@ export class EventLog {
    * Binary search to find the first event at or after a given time.
    * Returns -1 if no such event exists.
    */
-  private findFirstIndexAtOrAfter(time: WorldTime): number {
+  private findFirstIndexAtOrAfter(time: TickNumber): number {
     let left = 0;
     let right = this.byTime.length;
 

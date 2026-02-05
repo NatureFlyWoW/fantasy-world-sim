@@ -7,3 +7,6 @@ export * from './ecs/index.js';
 
 // Events module
 export * from './events/index.js';
+
+// Time module
+export * from './time/index.js';

@@ -23,10 +23,10 @@ export enum EventCategory {
 }
 
 /**
- * WorldTime type - will be replaced with proper time module type later.
- * For now, represents the tick number.
+ * Tick number representing when events occur.
+ * Uses raw number for simplicity - WorldTime interface is for display/UI.
  */
-export type WorldTime = number;
+export type TickNumber = number;
 
 /**
  * Consequence rule defines a possible follow-on event.
@@ -59,7 +59,7 @@ export interface WorldEvent {
   /** Specific event type (e.g., "character.death", "battle.resolved") */
   readonly subtype: string;
   /** When this event occurred (tick number) */
-  readonly timestamp: WorldTime;
+  readonly timestamp: TickNumber;
   /** All entities involved in this event */
   readonly participants: readonly EntityId[];
   /** Where the event happened (optional for abstract events) */

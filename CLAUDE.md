@@ -63,7 +63,7 @@ Phase 1: Core Foundation
 ### Phase 1 Tasks
 - [x] 1.1 — ECS Foundation (branded IDs, components, entity manager, world)
 - [x] 1.2 — Event system (EventQueue, Event types, dispatch)
-- [ ] 1.3 — Time system (TickClock, frequencies)
+- [x] 1.3 — Time system (WorldClock, TimeController, TickScheduler)
 - [ ] 1.4 — Simulation loop orchestrator
 - [ ] 1.5 — Spatial indexing (Quadtree)
 - [ ] 1.6 — Level-of-Detail manager
@@ -77,6 +77,10 @@ Phase 1: Core Foundation
 - 2024: Event queue is a significance-priority binary heap. Event log indexes by id,
   entity, and time for efficient queries. ConsequenceRule on each event defines
   cascade potential with dampening.
+- 2024: Time module: 6 frequency tiers implemented. 1 tick = 1 day. Calendar: 12
+  months × 30 days = 360 days/year. WorldTime interface for structured dates,
+  TickNumber (raw number) for event timestamps. TickScheduler pre-registers 27
+  default systems. TimeController supports Paused/Normal/Fast7/30/365/UltraFast3650/SlowMotion.
 
 ## Known Issues
 (none currently)

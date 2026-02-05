@@ -5,7 +5,7 @@
 // Types
 export {
   EventCategory,
-  type WorldTime,
+  type TickNumber,
   type ConsequenceRule,
   type WorldEvent,
   type EventHandler,
