@@ -1,0 +1,50 @@
+{
+  "male": [
+    "Akiro", "Baiyen", "Chikao", "Daiken", "Eizan", "Fujin", "Genryu", "Haruto",
+    "Isamu", "Junrei", "Kaito", "Liwei", "Minato", "Noburu", "Ozuru", "Raiden",
+    "Shoren", "Takumi", "Udon", "Wulong", "Xianyu", "Yashiro", "Zenkai",
+    "Akihiro", "Byakuren", "Chonen", "Daishin", "Enzai", "Fushin", "Gozen",
+    "Hikaru", "Ichiro", "Jinhai", "Kenshin", "Lianyu", "Masaru", "Naoki",
+    "Orochi", "Ryuken", "Satoru", "Tenshi", "Ukiyo", "Wanren", "Xiaodan",
+    "Yuzan", "Zenshin", "Arashi", "Bokuden", "Chaoren", "Dozan", "Enshi",
+    "Fenren", "Genshu", "Hideaki", "Itsuki", "Jinshu"
+  ],
+  "female": [
+    "Akemi", "Baihua", "Chiyo", "Daiyu", "Emiko", "Fumiko", "Guanyin", "Hanami",
+    "Izumi", "Junko", "Kasumi", "Lianhua", "Midori", "Noriko", "Otsuki", "Reiha",
+    "Sakura", "Tamiko", "Umeko", "Wakana", "Xiulan", "Yuriko", "Zhenyi",
+    "Ayame", "Botan", "Chiharu", "Daiki", "Etsuko", "Fumiyo", "Ginrei",
+    "Hikari", "Inari", "Jinhua", "Kohaku", "Lanfen", "Mayumi", "Nanami",
+    "Okami", "Ranmei", "Setsuna", "Tsukiyo", "Uzume", "Wuying", "Xiaoli",
+    "Yukina", "Zhoulan", "Aiko", "Bingwen", "Chuhua", "Daiha", "Eshima",
+    "Fuyumi", "Guren", "Hoshiko", "Isuzu", "Jingyi"
+  ],
+  "family": [
+    "Ashikaga", "Baifeng", "Changli", "Daisho", "Enshiro", "Fujiwara", "Gongsun",
+    "Hayashi", "Ishikawa", "Jianghu", "Kurosawa", "Liangshan", "Matsumoto",
+    "Nakamura", "Oshiro", "Ryuzaki", "Shimizu", "Takahashi", "Uehara", "Wushan",
+    "Xiongdi", "Yamamoto", "Zhaoming", "Arakawa", "Baishou", "Chenglong",
+    "Dongfeng", "Endo", "Fenghuang", "Guangming", "Hasegawa", "Inoue",
+    "Jingwei", "Kobayashi", "Longshan", "Murasaki", "Nishikawa", "Ogawa",
+    "Rongguang", "Suzuki", "Taniguchi", "Uchida", "Wangchun", "Xueshan",
+    "Yoshida", "Zhangwei", "Akiyama", "Baishan", "Chenwu", "Daimon",
+    "Eboshi", "Feilong", "Guanshan"
+  ],
+  "place_prefixes": [
+    "Shi", "Ryu", "Kin", "Tai", "Hei", "Fen", "Long", "Bai", "Mei", "Kaze",
+    "Tsuki", "Hana", "Yama", "Kawa", "Kumo", "Taka", "Umi", "Mori", "Sora",
+    "Rai", "Yuki", "Hoshi", "Nami", "Tora", "Fuji", "Saku", "Kiri", "Asa",
+    "Hiru", "Yoru", "Aka", "Ao", "Kuro", "Shiro", "Mugi", "Ine", "Sugi",
+    "Matsu", "Take", "Sasa", "Ishi", "Tetsu", "Gin", "Dou", "Haku",
+    "Jade", "Shan", "Hai", "Tian", "Lian"
+  ],
+  "place_suffixes": [
+    "gawa", "yama", "shima", "mura", "dera", "jima", "zaki", "hara",
+    "oka", "machi", "kyo", "saki", "tani", "ike", "numa", "sawa",
+    "dake", "mine", "mori", "hashi", "mon", "kawa", "ura", "nami",
+    "matsu", "sugi", "take", "iwa", "ishi", "suna", "kumo", "kaze",
+    "tsuki", "hoshi", "sora", "umi", "ling", "shan", "hai", "feng",
+    "cheng", "yuan", "gong", "dian", "tang", "lou", "ge", "tai",
+    "qiao", "hu", "chi", "quan", "pu", "wan", "kou"
+  ]
+}

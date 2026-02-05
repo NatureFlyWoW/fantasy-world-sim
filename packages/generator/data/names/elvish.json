@@ -1,0 +1,55 @@
+{
+  "male": [
+    "Aelindor", "Calathorn", "Elorian", "Faenarel", "Galadrim", "Ithrandir", "Luthien",
+    "Naeloran", "Thalion", "Vaelorn", "Aerandir", "Celeborn", "Elrohir", "Finarion",
+    "Gildanor", "Haldarion", "Inariel", "Laerothon", "Maelithor", "Nolondil",
+    "Orophin", "Pelendur", "Quennar", "Rilanthir", "Silvarion", "Thandril",
+    "Ulanthir", "Vandirel", "Yavannor", "Aranion", "Belenor", "Calarion",
+    "Daenarion", "Elendir", "Falathren", "Glorenthil", "Helethir", "Ilmarion",
+    "Kelenthor", "Liranthel", "Melendil", "Nelarion", "Olothir", "Pharandir",
+    "Raenarion", "Selendir", "Taurion", "Uthrandir", "Vanyarel", "Aerenthil",
+    "Celindor", "Duilion", "Elathrin", "Farandir", "Galadhon", "Lindoriel"
+  ],
+  "female": [
+    "Aeloria", "Calenthia", "Elariel", "Faelwen", "Galadria", "Ithilwen", "Laeriel",
+    "Naelorien", "Thalindra", "Vaelaria", "Aeriel", "Celebrian", "Elanora",
+    "Finarel", "Gildwen", "Halindra", "Inarwen", "Laelithra", "Maeliwen",
+    "Nolorien", "Orowen", "Pelindra", "Quenwen", "Rilindra", "Silvarwen",
+    "Thandriel", "Ulindra", "Vandwen", "Yavaniel", "Aranwen", "Belindra",
+    "Calindra", "Daenwen", "Eleniel", "Falathwen", "Gloriel", "Helindra",
+    "Ilmaren", "Kelindra", "Liranwen", "Melindra", "Nelarwen", "Olothwen",
+    "Pharindra", "Raenwen", "Seleniel", "Tauriel", "Uthindra", "Vanyawen",
+    "Aerindel", "Celinwen", "Duilindra", "Elathriel", "Farindra", "Galawen",
+    "Lindorwen"
+  ],
+  "family": [
+    "Silvanthar", "Moonshadow", "Starweaver", "Dawnwhisper", "Leafsinger", "Lightbringer",
+    "Windwalker", "Dewdancer", "Sunfire", "Nightbloom", "Thornriel", "Crystalbrook",
+    "Amberleaf", "Goldenbow", "Ivoryspire", "Jadeblossom", "Pearlmist", "Sapphirewing",
+    "Emeraldthorn", "Duskwarden", "Evenstar", "Featherlight", "Glimmershade",
+    "Honeydew", "Iristhorn", "Lunariel", "Meadowlark", "Nightingale", "Oakenheart",
+    "Petalwind", "Quillrose", "Raindancer", "Silentwater", "Thistledown",
+    "Twilightvale", "Verdantshore", "Willowmere", "Zephyrveil", "Ashenbloom",
+    "Birchwood", "Cedarshade", "Dawnpetal", "Eldergrove", "Fernhollow",
+    "Gildenleaf", "Hazelwind", "Ivythorn", "Junipersong", "Kethrendil",
+    "Loreweaver", "Mistwalker", "Nethrandil", "Opalfrost", "Rivendell"
+  ],
+  "place_prefixes": [
+    "Aelin", "Calen", "Elar", "Fael", "Galad", "Ithil", "Laer", "Nael",
+    "Thal", "Vael", "Aer", "Celeb", "Elan", "Fin", "Gild", "Hal",
+    "Inar", "Lael", "Mael", "Nol", "Oro", "Pel", "Quen", "Ril",
+    "Silv", "Thand", "Ulan", "Vand", "Yavan", "Aran", "Bel", "Cal",
+    "Daen", "Elen", "Falath", "Glor", "Hel", "Ilm", "Kel", "Lir",
+    "Mel", "Nel", "Oloth", "Phar", "Raen", "Selen", "Taur", "Uthr",
+    "Vanya", "Loth", "Mith", "Nim", "Ost", "Thel", "Elen"
+  ],
+  "place_suffixes": [
+    "ador", "erin", "ilien", "ondor", "ariel", "ethil", "andir", "indel",
+    "orial", "enthir", "alion", "orien", "ithel", "anor", "endil", "athren",
+    "ondil", "arien", "ethren", "indor", "alor", "orin", "ithir", "aniel",
+    "enthil", "avel", "dell", "glade", "haven", "mere", "vale", "wood",
+    "brook", "glen", "holme", "bower", "weald", "shire", "thorne", "grove",
+    "ford", "moor", "fell", "dale", "holt", "lune", "rune", "spire",
+    "wind", "veil", "mist", "song", "light", "shade", "bloom"
+  ]
+}

@@ -1,0 +1,56 @@
+{
+  "male": [
+    "Azrathis", "Brixthane", "Czernoth", "Draxxus", "Exarion", "Fezrukh", "Ghorzath",
+    "Hexavius", "Ixtharon", "Jazreth", "Krixtan", "Lazroth", "Moxithel", "Naxriel",
+    "Ozrathon", "Phaxxus", "Qizreth", "Raxthion", "Szethrak", "Thazriel",
+    "Uxorith", "Vexarion", "Wyzroth", "Xathrius", "Yzzaroth", "Zexathon",
+    "Ashmedai", "Baalzeth", "Carixhon", "Drazxiel", "Eshkaroth", "Forzathul",
+    "Grixhaal", "Hazrathon", "Izxariel", "Jathzriel", "Korzathis", "Lazxrion",
+    "Mazrathul", "Nazxriel", "Orzathon", "Pazrothul", "Razxariel", "Shazrothis",
+    "Tazxriel", "Uzrathon", "Vazxrothul", "Wazrathiel", "Xazrothis", "Yazxarion",
+    "Zazrethul", "Arxathis", "Bazrothel", "Cazxrion", "Dazrathul", "Ezxarothis"
+  ],
+  "female": [
+    "Azshara", "Brixhael", "Czarissa", "Draxhiel", "Exhariel", "Fezrasha",
+    "Ghorziel", "Hexariel", "Ixtharel", "Jazriel", "Krixhara", "Lazriel",
+    "Moxithael", "Naxhariel", "Ozrashiel", "Phaxhara", "Qizrashiel", "Raxhiel",
+    "Szethiel", "Thazrasha", "Uxhariel", "Vexhara", "Wyzriel", "Xathriela",
+    "Yzzariel", "Zexhara", "Ashmedael", "Baalziel", "Carixhiel", "Drazxhara",
+    "Eshkariel", "Forzathiel", "Grixhiel", "Hazrashiel", "Izxhara", "Jathzrasha",
+    "Korzathiel", "Lazxhara", "Mazrashiel", "Nazxhara", "Orzathiel", "Pazrashiel",
+    "Razxhara", "Shazriel", "Tazxhiel", "Uzrathiel", "Vazxhara", "Wazrashiel",
+    "Xazrhiel", "Yazxhara", "Zazrashiel", "Arxhiel", "Bazrothiel", "Cazxhara",
+    "Dazrashiel", "Ezxhara"
+  ],
+  "family": [
+    "Ashscourge", "Bloodthorn", "Chaosweaver", "Darkflame", "Ebonshade", "Fellstrike",
+    "Grimtorment", "Hellscream", "Ironblight", "Jadedclaw", "Killchain", "Lichborne",
+    "Malicewing", "Nightterror", "Obsidianheart", "Plagueborn", "Ruinstalker",
+    "Shadowbane", "Tormentclaw", "Umbralash", "Voidwalker", "Wrathborn",
+    "Abyssgazer", "Brimstone", "Corruptfang", "Doomhowl", "Embercurse",
+    "Firescourge", "Ghoulfeast", "Hexbinder", "Infernowrath", "Jadescourge",
+    "Knellringer", "Lashwound", "Maelstrom", "Netherbane", "Onyxclaw",
+    "Pyrestorm", "Quakeborn", "Ravencurse", "Soulreaver", "Thornscourge",
+    "Undyingflame", "Venomstrike", "Warpfire", "Xenoblight", "Yieldbane",
+    "Zealscourge", "Ashrender", "Blightforge", "Cinderscorch", "Dreadmaw",
+    "Eclipseborn"
+  ],
+  "place_prefixes": [
+    "Ash", "Brim", "Char", "Dread", "Ember", "Fell", "Grim", "Hell",
+    "Ix", "Jaz", "Khaz", "Lash", "Mal", "Neth", "Onyx", "Pyre",
+    "Quez", "Raz", "Scorch", "Thrax", "Umbra", "Vex", "Wrath", "Xar",
+    "Yzz", "Zex", "Abys", "Blaze", "Cinder", "Doom", "Eclipse", "Flame",
+    "Ghast", "Hex", "Inferno", "Jagged", "Knell", "Lava", "Murk", "Nox",
+    "Obsid", "Plague", "Ruin", "Shadow", "Thorn", "Under", "Void", "Warp",
+    "Xeno", "Yawning", "Zero", "Blight", "Crypt", "Dark", "Ebon"
+  ],
+  "place_suffixes": [
+    "maw", "pit", "void", "chasm", "forge", "pyre", "blight", "scorch",
+    "flame", "ash", "cinder", "ruin", "waste", "tomb", "crypt", "abyss",
+    "gate", "rift", "scar", "wound", "burn", "char", "brand", "mark",
+    "bane", "curse", "hex", "pox", "fang", "claw", "spine", "bone",
+    "skull", "eye", "maw", "gulch", "gorge", "vale", "deep", "hollow",
+    "throne", "spire", "tower", "keep", "hold", "den", "lair", "nest",
+    "reach", "haven", "ward", "watch", "fall", "storm", "wraith"
+  ]
+}

@@ -58,7 +58,19 @@ pnpm run lint       # ESLint
 ```
 
 ## Current Phase
-Phase 2: World Generation (pending)
+Phase 3: Simulation Systems (pending)
+
+### Phase 2 Tasks — COMPLETE
+World generation pipeline: geology → ecology → cosmology → races → pre-history → initialization → refinement.
+Deterministic from seed. 9 configurable parameters with named presets.
+- [x] 2.1 — Project scaffold + tooling
+- [x] 2.2 — Terrain generation (heightmap, tectonics, hydrology, climate, biomes, resources, ley lines)
+- [x] 2.3 — Ecology (biome classification, resource placement, flora, fauna)
+- [x] 2.4 — Cosmological framework (pantheon, magic system, planar structure)
+- [x] 2.5 — Racial genesis & name generation (races, population, Markov names, 7 cultures)
+- [x] 2.6 — Pre-history simulation (year-by-year abstract sim, ruins, wars, legends, artifacts)
+- [x] 2.7 — Current state initialization (settlements, factions, characters, tensions)
+- [x] 2.8 — Post-generation refinement UI (menu, validator, applier)
 
 ### Phase 1 Tasks — COMPLETE
 - [x] 1.1 — ECS Foundation (branded IDs, components, entity manager, world)

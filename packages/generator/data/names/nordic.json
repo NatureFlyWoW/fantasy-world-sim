@@ -1,0 +1,49 @@
+{
+  "male": [
+    "Bjorn", "Ragnar", "Tormund", "Sigurd", "Halvard", "Eirik", "Gunnar", "Kjartan",
+    "Leif", "Sven", "Thorvald", "Ulf", "Vidar", "Yngvar", "Arne", "Brynjar",
+    "Dagfinn", "Einar", "Falk", "Grimr", "Hakon", "Ivar", "Jorund", "Ketil",
+    "Lars", "Magnus", "Njord", "Olaf", "Peder", "Rolf", "Skald", "Torvald",
+    "Ulfrik", "Valdur", "Wulfgar", "Asmund", "Bjarni", "Dreng", "Egil", "Fenrir",
+    "Guthrum", "Haldor", "Ingolf", "Jarl", "Knud", "Lodur", "Magni", "Nori",
+    "Orm", "Ranulf", "Styrbjorn", "Thrain", "Vakr", "Askr", "Brand", "Dag"
+  ],
+  "female": [
+    "Astrid", "Brynhild", "Dagny", "Eira", "Freya", "Gudrun", "Hilda", "Ingrid",
+    "Jorunn", "Kari", "Lagertha", "Magnhild", "Nanna", "Olva", "Ragnhild", "Sif",
+    "Thora", "Ulfhild", "Valdis", "Ylva", "Asa", "Bergljot", "Dalla", "Eydis",
+    "Frida", "Gunnhild", "Hervor", "Idun", "Jord", "Kelda", "Liv", "Marta",
+    "Njola", "Oddny", "Revna", "Sigrun", "Thyra", "Unnr", "Vigdis", "Yrsa",
+    "Alva", "Borghild", "Dis", "Embla", "Freja", "Groa", "Helga", "Inga",
+    "Jarnsaxa", "Kata", "Lofn", "Mist", "Nott", "Ran", "Svala", "Tova"
+  ],
+  "family": [
+    "Ironhammer", "Stormborn", "Frostbeard", "Wolfsbane", "Ravenclaw", "Shieldbreaker",
+    "Bloodaxe", "Stonefist", "Wyrmslayer", "Blackthorn", "Winterhold", "Battlecry",
+    "Thunderson", "Bearhand", "Coldforge", "Drakken", "Elkhorn", "Fjordwalker",
+    "Greystone", "Hallstrom", "Icevein", "Jarlssen", "Kragborn", "Longstride",
+    "Mountainheart", "Nordhaven", "Oakenshield", "Permafrost", "Quickblade", "Runemark",
+    "Snowdrift", "Trollbane", "Ulfhednar", "Valkyr", "Windhelm", "Ashwood",
+    "Bonecrusher", "Cliffwalker", "Darkholm", "Eaglecrest", "Firebrand", "Galeforce",
+    "Halvsson", "Ironfell", "Jokulheim", "Koldbrann", "Lyngstad", "Mjolnir",
+    "Nordvind", "Ormstad", "Rimeforge", "Skjoldur", "Torsson", "Ulfberg"
+  ],
+  "place_prefixes": [
+    "Frost", "Storm", "Iron", "Wolf", "Raven", "Stone", "Ice", "Dark",
+    "Thunder", "Bear", "Cold", "Drake", "Elk", "Fjord", "Grey", "Hall",
+    "Krag", "Long", "Mountain", "Nord", "Oak", "Pine", "Rune", "Snow",
+    "Troll", "Ulf", "Valk", "Wind", "Ash", "Bone", "Cliff", "Eagle",
+    "Fire", "Gale", "Helm", "Jokul", "Kold", "Lyng", "Mjol", "Orm",
+    "Rime", "Skjold", "Thor", "Wyrd", "Ygg", "Byr", "Drang", "Eld",
+    "Forn", "Grim", "Hrafn", "Skar", "Skog", "Varg", "Heid"
+  ],
+  "place_suffixes": [
+    "heim", "gard", "fell", "borg", "stead", "fjord", "holm", "mark",
+    "holt", "dale", "keep", "vald", "grund", "strand", "by", "vik",
+    "stad", "land", "forge", "hall", "peak", "hold", "watch", "wall",
+    "gate", "bridge", "haven", "mouth", "ford", "ward", "reach", "run",
+    "vale", "crest", "spire", "den", "nest", "pass", "ridge", "sund",
+    "toft", "brekka", "nes", "vag", "ang", "dalen", "foss", "hamn",
+    "klev", "lund", "skar", "tun", "vatn", "voll", "oy"
+  ]
+}
