@@ -58,15 +58,14 @@ pnpm run lint       # ESLint
 ```
 
 ## Current Phase
-Phase 1: Core Foundation
+Phase 2: World Generation (pending)
 
-### Phase 1 Tasks
+### Phase 1 Tasks — COMPLETE
 - [x] 1.1 — ECS Foundation (branded IDs, components, entity manager, world)
 - [x] 1.2 — Event system (EventQueue, Event types, dispatch)
 - [x] 1.3 — Time system (WorldClock, TimeController, TickScheduler)
-- [ ] 1.4 — Simulation loop orchestrator
-- [ ] 1.5 — Spatial indexing (Quadtree)
-- [ ] 1.6 — Level-of-Detail manager
+- [x] 1.4 — Simulation loop orchestrator + LoD manager
+- [ ] 1.5 — Spatial indexing (Quadtree) — deferred to Phase 2
 
 ## Decisions Log
 - 2024: ECS uses Map-backed component stores, monotonic entity IDs (no recycling),
@@ -81,6 +80,9 @@ Phase 1: Core Foundation
   months × 30 days = 360 days/year. WorldTime interface for structured dates,
   TickNumber (raw number) for event timestamps. TickScheduler pre-registers 27
   default systems. TimeController supports Paused/Normal/Fast7/30/365/UltraFast3650/SlowMotion.
+- 2024: Simulation engine: 13-step tick order implemented. LoD zones: Full (50),
+  Reduced (200), Abstract (beyond). Significance override threshold: 85. All
+  core infrastructure ready for Phase 2.
 
 ## Known Issues
 (none currently)

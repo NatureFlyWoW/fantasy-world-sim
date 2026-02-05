@@ -10,3 +10,6 @@ export * from './events/index.js';
 
 // Time module
 export * from './time/index.js';
+
+// Engine module
+export * from './engine/index.js';
