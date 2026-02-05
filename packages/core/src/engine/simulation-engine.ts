@@ -22,6 +22,7 @@ import type { World } from '../ecs/world.js';
 import type { WorldClock } from '../time/world-clock.js';
 import type { EventBus } from '../events/event-bus.js';
 import type { EventLog } from '../events/event-log.js';
+import type { CascadeEngine } from '../events/cascade-engine.js';
 import type { SystemRegistry } from './system-registry.js';
 import type { WorldEvent } from '../events/types.js';
 
@@ -41,7 +42,8 @@ export class SimulationEngine {
     private readonly clock: WorldClock,
     private readonly eventBus: EventBus,
     private readonly eventLog: EventLog,
-    private readonly systemRegistry: SystemRegistry
+    private readonly systemRegistry: SystemRegistry,
+    private readonly cascadeEngine?: CascadeEngine
   ) {
     // Subscribe to all events to capture them during tick
     this.eventBus.onAny((event) => {
@@ -91,6 +93,21 @@ export class SimulationEngine {
     // After all systems execute, log events from this tick
     for (const event of this.pendingEvents) {
       this.eventLog.append(event);
+    }
+
+    // Step 10: EVENT RESOLUTION — process cascades
+    if (this.cascadeEngine !== undefined) {
+      // Process newly emitted events for potential consequences
+      for (const event of this.pendingEvents) {
+        this.cascadeEngine.processEvent(event, currentTick);
+      }
+      // Resolve any consequences due this tick (including from prior ticks)
+      const cascadeResult = this.cascadeEngine.resolveTick(currentTick);
+      // Cascade-generated events are already emitted/logged by the CascadeEngine
+      // Add them to pendingEvents so tick listeners see them
+      for (const event of cascadeResult.eventsGenerated) {
+        this.pendingEvents.push(event);
+      }
     }
 
     this.tickCount++;

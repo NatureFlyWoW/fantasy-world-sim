@@ -30,3 +30,35 @@ export {
   linkConsequence,
   type CreateEventOptions,
 } from './event-factory.js';
+
+// Cascade engine
+export {
+  CascadeEngine,
+  type PendingConsequence,
+  type CascadeResult,
+  type RandomFn,
+} from './cascade-engine.js';
+
+// Dampening functions
+export {
+  calculateDampenedProbability,
+  adjustDampeningForSignificance,
+  shouldContinueCascade,
+} from './dampening.js';
+
+// Cross-domain transition rules
+export {
+  getTransitions,
+  getTransitionModifier,
+  hasTransition,
+  getTargetCategories,
+  type CrossDomainTransition,
+} from './cross-domain-rules.js';
+
+// Narrative arc detector
+export {
+  NarrativeArcDetector,
+  ArcPhase,
+  resetArcIdCounter,
+  type NarrativeArc,
+} from './narrative-arc-detector.js';
