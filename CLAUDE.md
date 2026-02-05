@@ -62,7 +62,7 @@ Phase 1: Core Foundation
 
 ### Phase 1 Tasks
 - [x] 1.1 — ECS Foundation (branded IDs, components, entity manager, world)
-- [ ] 1.2 — Event system (EventQueue, Event types, dispatch)
+- [x] 1.2 — Event system (EventQueue, Event types, dispatch)
 - [ ] 1.3 — Time system (TickClock, frequencies)
 - [ ] 1.4 — Simulation loop orchestrator
 - [ ] 1.5 — Spatial indexing (Quadtree)
@@ -74,6 +74,9 @@ Phase 1: Core Foundation
   placeholders — will be fleshed out per-system.
 - 2024: World.query() starts with smallest store for efficiency
 - 2024: Tests placed in src/ alongside implementation (*.test.ts pattern)
+- 2024: Event queue is a significance-priority binary heap. Event log indexes by id,
+  entity, and time for efficient queries. ConsequenceRule on each event defines
+  cascade potential with dampening.
 
 ## Known Issues
 (none currently)

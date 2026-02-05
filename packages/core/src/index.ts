@@ -4,3 +4,6 @@
 
 // ECS module
 export * from './ecs/index.js';
+
+// Events module
+export * from './events/index.js';
