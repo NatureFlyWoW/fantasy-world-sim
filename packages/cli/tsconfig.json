@@ -7,7 +7,15 @@
     "baseUrl": ".",
     "paths": {
       "@fws/cli": ["./src/index.ts"],
-      "@fws/cli/*": ["./src/*"]
+      "@fws/cli/*": ["./src/*"],
+      "@fws/core": ["../core/src/index.ts"],
+      "@fws/core/*": ["../core/src/*"],
+      "@fws/generator": ["../generator/src/index.ts"],
+      "@fws/generator/*": ["../generator/src/*"],
+      "@fws/renderer": ["../renderer/src/index.ts"],
+      "@fws/renderer/*": ["../renderer/src/*"],
+      "@fws/narrative": ["../narrative/src/index.ts"],
+      "@fws/narrative/*": ["../narrative/src/*"]
     }
   },
   "include": ["src/**/*"],

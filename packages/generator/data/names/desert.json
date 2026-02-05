@@ -1,0 +1,49 @@
+{
+  "male": [
+    "Khalid", "Rashid", "Zahar", "Farid", "Nasir", "Tahir", "Jamal", "Hakim",
+    "Samir", "Qadir", "Amir", "Bashir", "Daris", "Eshan", "Ghazal", "Hamid",
+    "Ibrahim", "Jalal", "Kareem", "Latif", "Mansur", "Nadim", "Omar", "Pasha",
+    "Rafiq", "Salah", "Tariq", "Usman", "Wahid", "Yusuf", "Zahir", "Adnan",
+    "Badr", "Cyrus", "Darian", "Ehsan", "Faisal", "Ghaffar", "Hasan", "Idris",
+    "Jahan", "Kamran", "Lutfi", "Majid", "Nadir", "Othman", "Qasim", "Rayan",
+    "Sabir", "Talib", "Uzair", "Waleed", "Yasir", "Zubair", "Akhtar", "Bilal"
+  ],
+  "female": [
+    "Aaliyah", "Basira", "Dalila", "Eshra", "Farida", "Ghalia", "Halima", "Inara",
+    "Jamila", "Kalila", "Layla", "Mariam", "Nadira", "Ophira", "Parisa", "Qadira",
+    "Rashida", "Samira", "Tahira", "Umara", "Vahida", "Wardah", "Yasmin", "Zahra",
+    "Amira", "Bushra", "Cyra", "Dunya", "Emira", "Fatimah", "Gazala", "Habiba",
+    "Inas", "Juwayra", "Karima", "Lubna", "Madiha", "Nahla", "Oma", "Parveen",
+    "Qamar", "Rabia", "Safiya", "Tamara", "Uzma", "Veena", "Wafa", "Yara",
+    "Zainab", "Aisha", "Bahija", "Chahira", "Durra", "Ezhara", "Ghaziya"
+  ],
+  "family": [
+    "al-Rashid", "al-Hakim", "al-Nasir", "al-Zahir", "al-Qadir", "al-Farid",
+    "al-Tahir", "al-Samir", "al-Bashir", "al-Khalid", "al-Wahid", "al-Latif",
+    "ibn-Salar", "ibn-Tariq", "ibn-Jamal", "ibn-Ghazal", "ibn-Hamid", "ibn-Kareem",
+    "al-Mansuri", "al-Nadimi", "al-Omari", "al-Rafiq", "al-Salahi", "al-Udhari",
+    "Sandwalker", "Duneborn", "Oasiskeeper", "Starguide", "Sunforged", "Mirageseeker",
+    "Dustweaver", "Palmshade", "Scorpionhand", "Siroccoborn", "Windcarver",
+    "Flamedancer", "Sandstorm", "Goldenveil", "Moonoasis", "Dawnrider",
+    "al-Adnan", "al-Badr", "al-Darian", "al-Ehsan", "al-Faisal", "al-Hasan",
+    "al-Idris", "al-Jahan", "al-Kamran", "al-Majid", "al-Qasim", "al-Rayan",
+    "al-Sabir", "al-Waleed"
+  ],
+  "place_prefixes": [
+    "Al", "Ash", "Bab", "Dar", "El", "Fas", "Gha", "Haj", "Ish", "Jab",
+    "Kha", "Lam", "Mah", "Nah", "Qal", "Ras", "Sal", "Tal", "Wad", "Zam",
+    "Aba", "Bir", "Dum", "Far", "Gul", "Har", "Jaz", "Kar", "Lut", "Mar",
+    "Nar", "Qas", "Sar", "Taz", "Wah", "Zar", "Ayn", "Bas", "Dhu", "Ghan",
+    "Hib", "Jed", "Kaf", "Lub", "Maz", "Naj", "Qar", "Rub", "Saf", "Tab",
+    "Umm", "Yam", "Zur", "Ard", "Burj"
+  ],
+  "place_suffixes": [
+    "abad", "istan", "pur", "azar", "iyah", "oud", "esh", "azar",
+    "asir", "ain", "dhar", "ghar", "ifah", "jar", "kand", "mand",
+    "nahr", "qand", "rash", "shar", "thar", "wadi", "yaan", "zahr",
+    "abul", "bian", "dari", "fani", "ghul", "hara", "jira", "kari",
+    "lahi", "mara", "nabi", "qadi", "rabi", "sari", "tani", "wari",
+    "yari", "zari", "bahr", "dahr", "fahr", "gahr", "hahr", "kahr",
+    "mahr", "nahr", "rahn", "sahn", "tahn", "wahn", "yahn"
+  ]
+}

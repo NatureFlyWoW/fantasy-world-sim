@@ -1,0 +1,52 @@
+{
+  "male": [
+    "Thorin", "Durin", "Grimgar", "Balin", "Korgath", "Drogni", "Thordak", "Gundrik",
+    "Brokk", "Dolgrim", "Magni", "Vargrim", "Thrain", "Gimrik", "Baldur", "Koldrim",
+    "Drugar", "Gortek", "Thorgrim", "Brundak", "Dagrim", "Ekthor", "Fundrik",
+    "Galdur", "Haldrek", "Ingdur", "Jordak", "Keldrim", "Logrim", "Mordrak",
+    "Naldur", "Ongdrik", "Paldrek", "Ragdur", "Stondrak", "Thuldrim", "Uldrek",
+    "Vondrik", "Wargrim", "Zagdur", "Angrim", "Borgdak", "Caldrek", "Dothrim",
+    "Eldrak", "Forgrim", "Gondrek", "Haldrim", "Igdrak", "Jorgrim", "Krondak",
+    "Logdrek", "Morgrim", "Norgdak", "Othrek", "Porgrim"
+  ],
+  "female": [
+    "Dagna", "Helga", "Brynda", "Koldra", "Thordis", "Gurdra", "Magda", "Valdra",
+    "Griselda", "Baldra", "Dagmara", "Ekthra", "Fundra", "Galdra", "Haldra",
+    "Ingdra", "Jordra", "Keldra", "Logdra", "Mordra", "Naldra", "Ondra",
+    "Paldra", "Ragdra", "Stondra", "Thuldra", "Uldra", "Vondra", "Wargda",
+    "Zagdra", "Angra", "Borgda", "Caldra", "Dothra", "Eldra", "Forgda",
+    "Gondra", "Hildra", "Igdra", "Jorgda", "Kronda", "Lithda", "Mogra",
+    "Nordra", "Othda", "Porgda", "Ragnda", "Sigdra", "Throkda", "Ulgda",
+    "Valkra", "Wuldra", "Yorgda", "Zuldra", "Brogda", "Drungda"
+  ],
+  "family": [
+    "Ironforge", "Stonehammer", "Deepdelver", "Goldvein", "Anvilborn", "Coalbrand",
+    "Darkmine", "Earthshaker", "Flameguard", "Granitewall", "Hammerfall", "Ironbelly",
+    "Jadepick", "Kegsplitter", "Leadfoot", "Mithrilbeard", "Nickelback", "Orebreaker",
+    "Pickaxe", "Quartzfist", "Rubyeye", "Steelhelm", "Tinderbox", "Underhill",
+    "Veinseeker", "Warhammer", "Axegrinder", "Blackanvil", "Copperbeard",
+    "Diamondback", "Emberstoke", "Forgefist", "Gravelking", "Hardstone",
+    "Ironcask", "Jewelcutter", "Kragmore", "Lodestone", "Magmaborn",
+    "Nailbender", "Obsidianfist", "Platinumedge", "Runecarver", "Silvervein",
+    "Thunderpick", "Unyielding", "Volcanborn", "Wyrmgold", "Zincbeard",
+    "Adamantine", "Bronzebeard", "Cragborn", "Deepaxe", "Elderforge"
+  ],
+  "place_prefixes": [
+    "Khaz", "Gund", "Thord", "Barak", "Karak", "Drog", "Grim", "Borg",
+    "Klad", "Mord", "Varg", "Dol", "Thul", "Brok", "Kold", "Grim",
+    "Dun", "Gor", "Thag", "Brun", "Dag", "Ek", "Fun", "Gal",
+    "Hal", "Ing", "Jor", "Kel", "Log", "Mor", "Nal", "Ong",
+    "Pal", "Rag", "Ston", "Thul", "Uld", "Von", "War", "Zag",
+    "Ang", "Borg", "Cal", "Doth", "Eld", "For", "Gon", "Iron",
+    "Jorg", "Kron", "Mag", "Nor", "Oth", "Por", "Rud"
+  ],
+  "place_suffixes": [
+    "gund", "drak", "heim", "hold", "delve", "forge", "mine", "deep",
+    "hall", "vault", "gate", "guard", "keep", "rock", "stone", "barr",
+    "durn", "grim", "keld", "mund", "thar", "grod", "krag", "bund",
+    "drek", "gard", "keld", "mund", "thal", "grot", "krag", "brek",
+    "dum", "garn", "krag", "mur", "thane", "grom", "krum", "brum",
+    "dur", "gath", "krak", "murn", "thrak", "grum", "krek", "barg",
+    "drek", "gund", "kald", "murk", "thrum", "grak", "kurg", "bruk"
+  ]
+}

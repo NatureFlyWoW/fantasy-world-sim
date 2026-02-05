@@ -1,0 +1,61 @@
+{
+  "male": [
+    "Ashbloom", "Briarfox", "Cobaltmoss", "Dewdrop", "Elderberry", "Fernwick",
+    "Glimmer", "Huckleberry", "Ivywood", "Juniperseed", "Kelpie", "Larkspur",
+    "Meadowlark", "Nettlesting", "Oakwhisper", "Pucksworth", "Quillberry",
+    "Rosethorne", "Spriggan", "Thistlewick", "Umberleaf", "Vineroot", "Willowwisp",
+    "Yarrowstem", "Zephyrbloom", "Acornsnap", "Bluebell", "Cloverwind",
+    "Dandelion", "Echobreeze", "Foxglove", "Gossamer", "Hazelnut", "Indigomoth",
+    "Jasperleaf", "Kindlewood", "Lichenmoss", "Marigold", "Nightshade",
+    "Orchidvine", "Pebbleskip", "Quicksilver", "Raindew", "Starling",
+    "Toadstool", "Umbramoth", "Violetash", "Windchime", "Xylophone",
+    "Yarrow", "Zinniaspark", "Applecrisp", "Buttercup", "Cricketleap",
+    "Daisycharm", "Emberglow"
+  ],
+  "female": [
+    "Amaryllis", "Blossomwing", "Crystaldew", "Daisybell", "Echosong", "Fawnlily",
+    "Glitterdust", "Honeysuckle", "Irisbloom", "Jasminewing", "Kaleidoscope",
+    "Lilacbreeze", "Moonpetal", "Nightrose", "Orchidmist", "Petalshine",
+    "Quillflower", "Rosedew", "Sunpetal", "Thistlebloom", "Umberbell",
+    "Violetmist", "Willowsong", "Xylosong", "Yarrowbell", "Zinniabreeze",
+    "Anemone", "Briardew", "Chamomile", "Daffodil", "Eglantine", "Featherglow",
+    "Gardenrose", "Heatherbell", "Ivymist", "Joybloom", "Kingfisher",
+    "Lavenderwind", "Mapleshine", "Nutmegrose", "Opaldew", "Primrosewing",
+    "Quartzbell", "Rainpetal", "Snowdrop", "Tulipshine", "Umbradew",
+    "Verbenawind", "Wisteriabell", "Xyrisglow", "Yellowdew", "Zenithbloom",
+    "Azaleamist", "Bellflower", "Cherrybloom"
+  ],
+  "family": [
+    "Moonshadow", "Starwhisper", "Dewdancer", "Thornberry", "Willowmere",
+    "Glimmerwood", "Mistwalker", "Sunfire", "Nightbloom", "Briarrose",
+    "Crystalbrook", "Amberleaf", "Goldenbow", "Ivyspire", "Jadeblossom",
+    "Pearlmist", "Sapphirewing", "Emeraldthorn", "Duskwarden", "Featherlight",
+    "Honeydew", "Iristhorn", "Lunarbloom", "Meadowlark", "Nightingale",
+    "Oakenheart", "Petalwind", "Quillrose", "Raindancer", "Silentwater",
+    "Thistledown", "Twilightvale", "Verdantshore", "Willowmere", "Zephyrveil",
+    "Ashenbloom", "Birchglen", "Cedarshade", "Dawnpetal", "Eldergrove",
+    "Fernhollow", "Gildenleaf", "Hazelwind", "Ivythorn", "Junipersong",
+    "Kingfisher", "Larkwhistle", "Mushroombend", "Nectarbloom", "Orchidvale",
+    "Pinecone", "Quailsong", "Robinperch", "Snailshell", "Toadstool"
+  ],
+  "place_prefixes": [
+    "Shimmer", "Glimmer", "Sparkle", "Dew", "Moon", "Star", "Sun", "Bloom",
+    "Petal", "Leaf", "Thorn", "Briar", "Willow", "Fern", "Moss", "Glen",
+    "Meadow", "Blossom", "Crystal", "Amber", "Golden", "Silver", "Jade",
+    "Pearl", "Sapphire", "Emerald", "Dusk", "Dawn", "Twilight", "Mist",
+    "Rain", "Snow", "Frost", "Spring", "Summer", "Autumn", "Winter",
+    "Honey", "Berry", "Apple", "Cherry", "Plum", "Peach", "Hazel",
+    "Clover", "Thistle", "Dandy", "Violet", "Lily", "Rose", "Ivy",
+    "Fawn", "Robin", "Wren", "Lark"
+  ],
+  "place_suffixes": [
+    "dell", "glen", "vale", "hollow", "glade", "grove", "wood", "brook",
+    "spring", "pond", "mere", "thicket", "bower", "garden", "meadow",
+    "field", "copse", "shire", "burrow", "nest", "nook", "ring",
+    "circle", "dance", "song", "whisper", "dream", "wish", "charm",
+    "spell", "weave", "twirl", "skip", "leap", "drift", "flutter",
+    "shine", "glow", "spark", "gleam", "bloom", "petal", "leaf",
+    "thorn", "vine", "root", "bough", "branch", "bark", "moss",
+    "dew", "mist", "rain", "snow", "frost"
+  ]
+}
