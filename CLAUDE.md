@@ -55,6 +55,8 @@ pnpm run test       # Run all tests
 pnpm run test:watch # Watch mode
 pnpm run typecheck  # TypeScript validation
 pnpm run lint       # ESLint
+pnpm run start       # Generate world and run (placeholder until Phase 4 UI)
+pnpm run start -- --seed 42  # Deterministic generation with fixed seed
 ```
 
 ## Current Phase
@@ -126,6 +128,11 @@ Deterministic from seed. 9 configurable parameters with named presets.
   Religion (divine power, interventions), Cultural (tech, art, philosophy, language),
   Ecology (depletion, degradation, territories), Secrets (asymmetry, revelation, discovery).
   1384 tests total. Systems communicate via EventBus and shared component state.
+- Pre-Phase 4: Added smoke test integration test (365-tick Small world validation)
+  and pnpm run start entry point. Smoke test validates all 10 systems produce
+  well-formed events, cascade chains respect depth limits, entity references are
+  valid, and state is consistent. Start script generates world, runs 10-tick
+  verification, and prints placeholder banner. Both use standard_fantasy preset.
 
 ## Known Issues
 (none currently)

@@ -12,7 +12,8 @@
     "typecheck": "pnpm -r run typecheck",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "start": "pnpm --filter @fws/cli run start"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
