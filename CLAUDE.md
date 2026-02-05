@@ -58,7 +58,25 @@ pnpm run lint       # ESLint
 ```
 
 ## Current Phase
-Phase 3: Simulation Systems (pending)
+Phase 4: Narrative & Rendering (pending)
+
+### Phase 3 Tasks — COMPLETE
+Simulation systems: Character AI, Memory/Reputation, Faction/Political (with Treaties),
+Economic, Military, Magic, Religion, Cultural Evolution (with Oral Tradition),
+Ecological Pressure, Secret Knowledge.
+All systems communicate through events and cascade engine.
+Secret Knowledge creates information asymmetry for Character AI.
+Ecological Pressure creates environmental constraints on civilization.
+- [x] 3.1 — Character AI System (6-phase pipeline: Perceive→Evaluate→Generate→Score→Execute→Reflect)
+- [x] 3.2 — Memory & Reputation System (memory decay, reputation propagation, grudges, propaganda)
+- [x] 3.3 — Faction & Political System (governments, diplomacy, treaties, enforcement, coups)
+- [x] 3.4 — Economic System (resource production, trade networks, markets, economic events)
+- [x] 3.5 — Military & Warfare (army composition, battles, sieges, campaigns, war consequences)
+- [x] 3.6 — Magic System (research, institutions, artifact consciousness, catastrophes)
+- [x] 3.7 — Religion System (divine power, interventions, church politics, syncretism)
+- [x] 3.8 — Cultural Evolution (technology, artistic movements, philosophy, language, oral tradition)
+- [x] 3.9 — Ecological Pressure (resource depletion, degradation, creature territories, invasive species)
+- [x] 3.10 — Secret Knowledge (information asymmetry, revelation, perception filtering, discovery)
 
 ### Phase 2 Tasks — COMPLETE
 World generation pipeline: geology → ecology → cosmology → races → pre-history → initialization → refinement.
@@ -101,6 +119,13 @@ Deterministic from seed. 9 configurable parameters with named presets.
   Max cascade depth: 10. Narrative arc detection identifies rising-action patterns.
 - 2024: Quadtree spatial index built. All core infrastructure ready for Phase 2.
   Phase 1 deliverables: ECS, Events, Time, SimLoop, Cascade Engine, Spatial Index.
+- 2025: Phase 3 simulation systems complete. 10 interconnected systems:
+  Character AI (6-phase decision loop), Memory/Reputation (decay, propagation, grudges),
+  Faction/Political (treaties, enforcement), Economic (production, trade, markets),
+  Military (battles, sieges, campaigns), Magic (research, artifacts, catastrophes),
+  Religion (divine power, interventions), Cultural (tech, art, philosophy, language),
+  Ecology (depletion, degradation, territories), Secrets (asymmetry, revelation, discovery).
+  1384 tests total. Systems communicate via EventBus and shared component state.
 
 ## Known Issues
 (none currently)

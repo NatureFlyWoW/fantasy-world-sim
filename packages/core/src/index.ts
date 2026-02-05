@@ -16,3 +16,6 @@ export * from './engine/index.js';
 
 // Spatial module
 export * from './spatial/index.js';
+
+// Systems module
+export * from './systems/index.js';
