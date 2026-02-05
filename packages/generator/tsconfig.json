@@ -7,7 +7,9 @@
     "baseUrl": ".",
     "paths": {
       "@fws/generator": ["./src/index.ts"],
-      "@fws/generator/*": ["./src/*"]
+      "@fws/generator/*": ["./src/*"],
+      "@fws/core": ["../core/src/index.ts"],
+      "@fws/core/*": ["../core/src/*"]
     }
   },
   "include": ["src/**/*"],
