@@ -42,7 +42,7 @@ ASCII-aesthetic terminal interface with dual event streams: raw logs + narrative
 - Pure functions for simulation logic, classes for entities/stores
 - Events are immutable records
 - Branded types for all IDs: EntityId, CharacterId, FactionId, SiteId,
-  ArtifactId, EventId, DeityId, BookId
+  ArtifactId, EventId, DeityId, BookId, RegionId, WarId
 - Test every system in isolation with Vitest
 - Systems communicate ONLY through event queue and shared component state
 - Never reference other systems directly
@@ -58,10 +58,22 @@ pnpm run lint       # ESLint
 ```
 
 ## Current Phase
-Phase 0: Project scaffolding (in progress)
+Phase 1: Core Foundation
+
+### Phase 1 Tasks
+- [x] 1.1 — ECS Foundation (branded IDs, components, entity manager, world)
+- [ ] 1.2 — Event system (EventQueue, Event types, dispatch)
+- [ ] 1.3 — Time system (TickClock, frequencies)
+- [ ] 1.4 — Simulation loop orchestrator
+- [ ] 1.5 — Spatial indexing (Quadtree)
+- [ ] 1.6 — Level-of-Detail manager
 
 ## Decisions Log
-(updated each session)
+- 2024: ECS uses Map-backed component stores, monotonic entity IDs (no recycling),
+  branded types for compile-time safety. All component interfaces defined as
+  placeholders — will be fleshed out per-system.
+- 2024: World.query() starts with smallest store for efficiency
+- 2024: Tests placed in src/ alongside implementation (*.test.ts pattern)
 
 ## Known Issues
-(updated each session)
+(none currently)
