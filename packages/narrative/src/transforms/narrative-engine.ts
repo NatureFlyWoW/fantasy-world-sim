@@ -98,18 +98,58 @@ export class NarrativeEngine {
       }
     }
 
-    // Create global fallback template
+    // Create global fallback template - uses subtype for description since
+    // event.data.description is not always available
     const globalFallback: NarrativeTemplate = {
       id: '__global_fallback__',
       category: 'Personal' as unknown as import('@fws/core').EventCategory,
       subtype: 'default',
       tone: NarrativeTone.EpicHistorical,
       significanceRange: { min: 0, max: 100 },
-      template: 'An event occurred: {event.data.description}',
+      template: '{#if character.name}{character.name} was involved in an event.{#else}An event of note occurred.{/if}',
       requiredContext: [],
     };
 
     return { byCategory, defaults, globalFallback };
+  }
+
+  /**
+   * Normalize a subtype for template matching.
+   * Handles prefixed subtypes like "culture.technology_invented" → "technology_invention".
+   */
+  private normalizeSubtype(subtype: string): string[] {
+    const variants: string[] = [];
+
+    // Add exact subtype first
+    variants.push(subtype);
+
+    // If subtype has a prefix (e.g., "culture.technology_invented"), try suffix
+    const dotIndex = subtype.lastIndexOf('.');
+    if (dotIndex >= 0) {
+      const suffix = subtype.slice(dotIndex + 1);
+      variants.push(suffix);
+
+      // Try common transformations for past tense → noun form
+      // technology_invented → technology_invention
+      // movement_spread → movement
+      if (suffix.endsWith('_invented')) {
+        variants.push(suffix.replace('_invented', '_invention'));
+      }
+      if (suffix.endsWith('_created')) {
+        variants.push(suffix.replace('_created', ''));
+      }
+      if (suffix.endsWith('_founded')) {
+        variants.push(suffix.replace('_founded', '_school'));
+      }
+      if (suffix.endsWith('_born')) {
+        variants.push(suffix.replace('_born', ''));
+      }
+      if (suffix.endsWith('_emerged')) {
+        variants.push(suffix.replace('_emerged', '_change'));
+      }
+    }
+
+    return variants;
   }
 
   /**
@@ -121,13 +161,16 @@ export class NarrativeEngine {
   ): TemplateMatch {
     const categoryMap = this.registry.byCategory.get(event.category);
 
-    // Try exact match (category + subtype)
+    // Try multiple subtype variations
     if (categoryMap !== undefined) {
-      const subtypeTemplates = categoryMap.get(event.subtype);
-      if (subtypeTemplates !== undefined) {
-        const match = this.selectBestTemplate(subtypeTemplates, tone, event.significance);
-        if (match !== undefined) {
-          return { template: match, matchQuality: 'exact' };
+      const subtypeVariants = this.normalizeSubtype(event.subtype);
+      for (const variant of subtypeVariants) {
+        const subtypeTemplates = categoryMap.get(variant);
+        if (subtypeTemplates !== undefined) {
+          const match = this.selectBestTemplate(subtypeTemplates, tone, event.significance);
+          if (match !== undefined) {
+            return { template: match, matchQuality: 'exact' };
+          }
         }
       }
     }
@@ -218,36 +261,59 @@ export class NarrativeEngine {
   private buildEvaluationContext(context: TemplateContext): EvaluationContext {
     const entities = new Map<string, ResolvedEntity>();
 
-    // Resolve participants
+    // Track which indexed slots are filled for each entity type
+    let characterIndex = 0;
+    let factionIndex = 0;
+    let siteIndex = 0;
+
+    // Resolve participants - try ALL types and add with appropriate prefixes
+    // This ensures templates can use {character.name} or {faction.name} based on what's resolved
     for (let i = 0; i < context.event.participants.length; i++) {
       const participantId = context.event.participants[i];
       if (participantId === undefined) continue;
 
       const idNum = participantId as unknown as number;
 
-      // Try to resolve as character first, then faction, site, etc.
-      let resolved = this.resolver.resolveCharacter(idNum);
-      if (resolved !== undefined) {
-        entities.set(`character${i}`, resolved);
-      } else {
-        resolved = this.resolver.resolveFaction(idNum);
-        if (resolved !== undefined) {
-          entities.set(`faction${i}`, resolved);
-        } else {
-          resolved = this.resolver.resolveSite(idNum);
-          if (resolved !== undefined) {
-            entities.set(`site${i}`, resolved);
-          }
+      // Try each entity type and populate the appropriate slot
+      const character = this.resolver.resolveCharacter(idNum);
+      if (character !== undefined) {
+        entities.set(`character${characterIndex}`, character);
+        // Also set as character (no index) for templates using simple {character.name}
+        if (characterIndex === 0 && !entities.has('character')) {
+          entities.set('character', character);
         }
+        characterIndex++;
+      }
+
+      const faction = this.resolver.resolveFaction(idNum);
+      if (faction !== undefined) {
+        entities.set(`faction${factionIndex}`, faction);
+        if (factionIndex === 0 && !entities.has('faction')) {
+          entities.set('faction', faction);
+        }
+        factionIndex++;
+      }
+
+      const site = this.resolver.resolveSite(idNum);
+      if (site !== undefined) {
+        entities.set(`site${siteIndex}`, site);
+        // Don't set 'site' here as location takes priority
+        siteIndex++;
       }
     }
 
-    // Resolve location
+    // Resolve location - this takes priority for {site.name} without index
     if (context.event.location !== undefined) {
-      const siteId = context.event.location as unknown as number;
-      const site = this.resolver.resolveSite(siteId);
-      if (site !== undefined) {
-        entities.set('site0', site);
+      const locationId = context.event.location as unknown as number;
+      const location = this.resolver.resolveSite(locationId);
+      if (location !== undefined) {
+        // Set as both 'site' (no index) and 'location' for flexibility
+        entities.set('site', location);
+        entities.set('location', location);
+        // If no participant site was found, also set site0
+        if (!entities.has('site0')) {
+          entities.set('site0', location);
+        }
       }
     }
 

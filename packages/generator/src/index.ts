@@ -22,4 +22,14 @@ export * from './character/index.js';
 export * from './history/index.js';
 
 // Integration module (ECS bridge)
-export { populateWorldFromGenerated, type GeneratedWorldData, type PopulationResult } from './integration/populate-world.js';
+export {
+  populateWorldFromGenerated,
+  initializeSystemsFromGenerated,
+} from './integration/populate-world.js';
+export type {
+  GeneratedWorldData,
+  ExtendedGeneratedWorldData,
+  PopulationResult,
+  InitializableSystems,
+  SystemInitResult,
+} from './integration/populate-world.js';

@@ -273,7 +273,21 @@ export class TemplateParser {
     }
 
     if (entity === undefined) {
-      return `{${parsed.entityType}.${parsed.property}}`;
+      // Return readable placeholder based on entity type instead of raw template
+      switch (parsed.entityType) {
+        case 'character':
+          return parsed.property === 'name' ? 'someone' : '';
+        case 'faction':
+          return parsed.property === 'name' ? 'a faction' : '';
+        case 'site':
+          return parsed.property === 'name' ? 'a place' : '';
+        case 'artifact':
+          return parsed.property === 'name' ? 'an artifact' : '';
+        case 'deity':
+          return parsed.property === 'name' ? 'a god' : '';
+        default:
+          return '';
+      }
     }
 
     // Update current gender if this is a character

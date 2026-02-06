@@ -140,6 +140,34 @@ describe('NarrativeEngine', () => {
 
       expect(result.templateId).toBe('__global_fallback__');
     });
+
+    it('should match templates with prefixed event subtypes', () => {
+      // Templates use simple subtypes like "technology_invention"
+      // but simulation events use prefixed subtypes like "culture.technology_invented"
+      const templates: NarrativeTemplate[] = [
+        {
+          id: 'test.technology',
+          category: EventCategory.Cultural,
+          subtype: 'technology_invented',  // suffix matches after stripping prefix
+          tone: NarrativeTone.EpicHistorical,
+          significanceRange: { min: 0, max: 100 },
+          template: 'A new technology was invented.',
+          requiredContext: [],
+        },
+      ];
+
+      const engine = new NarrativeEngine(templates);
+      // Event uses prefixed subtype "culture.technology_invented"
+      const event = createEvent({
+        category: EventCategory.Cultural,
+        subtype: 'culture.technology_invented',
+      });
+      const result = engine.generateNarrative(createContext(event));
+
+      // Should match the template by stripping the prefix
+      expect(result.templateId).toBe('test.technology');
+      expect(result.body).toContain('technology');
+    });
   });
 
   describe('tone selection', () => {

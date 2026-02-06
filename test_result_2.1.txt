@@ -1,0 +1,282 @@
+]633;E;{   pnpm run start -- --seed 42 --ticks 50\x3b   pnpm run test\x3b   pnpm run typecheck\x3b } > test_result_2.1.txt 2>&1;776f9f37-79c8-4eab-8ca9-5767d80a37f4]633;C
+> aeternum@0.0.1 start C:\Users\Caus\fantasy-world-sim
+> pnpm --filter @fws/cli run start "--" "--seed" "42" "--ticks" "50"
+
+
+> @fws/cli@0.0.1 start C:\Users\Caus\fantasy-world-sim\packages\cli
+> tsx ./src/index.ts "--" "--seed" "42" "--ticks" "50"
+
+
+
+╔═════════════════════════════════════╗
+║  ÆTERNUM - Fantasy World Simulator  ║
+║  Seed: 42                           ║
+║  (Terminal UI Mode)                 ║
+╚═════════════════════════════════════╝
+
+
+Generating world...
+World generated in 110ms
+
+=== GENERATED WORLD ===
+Map: 200×200
+Races: 5
+Gods: 7
+Factions: 4
+Settlements: 40
+Rulers: 4
+Notables: 11
+Tensions: 2
+Historical Figures: 3
+Artifacts: 3
+Ruins: 0
+========================
+
+=== ECS ENTITIES ===
+Settlements: 40
+Factions: 4
+Characters: 15
+Total: 59
+====================
+
+Running initial simulation ticks...
+Initial events: 165
+
+
+
+╔═════════════════════════╗
+║  ÆTERNUM - Terminal UI  ║
+║                         ║
+║  Press F1 for help      ║
+║  Press Q to quit        ║
+╚═════════════════════════╝
+
+
+Starting terminal UI...
+
+Fatal error: ReferenceError: require is not defined
+    at Application.createScreen (C:\Users\Caus\fantasy-world-sim\packages\renderer\src\app.ts:382:29)
+    at Application.start (C:\Users\Caus\fantasy-world-sim\packages\renderer\src\app.ts:137:10)
+    at launchTerminalUI (C:\Users\Caus\fantasy-world-sim\packages\cli\src\index.ts:380:7)
+    at main (C:\Users\Caus\fantasy-world-sim\packages\cli\src\index.ts:470:5)
+    at <anonymous> (C:\Users\Caus\fantasy-world-sim\packages\cli\src\index.ts:91:3)
+    at ModuleJob.run (node:internal/modules/esm/module_job:345:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:651:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)
+C:\Users\Caus\fantasy-world-sim\packages\cli:
+ ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  @fws/cli@0.0.1 start: `tsx ./src/index.ts "--" "--seed" "42" "--ticks" "50"`
+Exit status 1
+ ELIFECYCLE  Command failed with exit code 1.
+
+> aeternum@0.0.1 test C:\Users\Caus\fantasy-world-sim
+> vitest run
+
+
+[1m[7m[36m RUN [39m[27m[22m [36mv2.1.9 [39m[90mC:/Users/Caus/fantasy-world-sim[39m
+
+ [32m✓[39m packages/core/src/systems/religion.test.ts [2m([22m[2m77 tests[22m[2m)[22m[90m 31[2mms[22m[39m
+ [32m✓[39m packages/core/src/systems/ecology.test.ts [2m([22m[2m112 tests[22m[2m)[22m[90m 24[2mms[22m[39m
+ [32m✓[39m packages/core/src/systems/culture.test.ts [2m([22m[2m60 tests[22m[2m)[22m[90m 23[2mms[22m[39m
+ [32m✓[39m packages/core/src/systems/warfare.test.ts [2m([22m[2m59 tests[22m[2m)[22m[90m 23[2mms[22m[39m
+ [32m✓[39m packages/core/src/systems/magic.test.ts [2m([22m[2m62 tests[22m[2m)[22m[90m 23[2mms[22m[39m
+ [32m✓[39m packages/core/src/engine/simulation-engine.test.ts [2m([22m[2m33 tests[22m[2m)[22m[90m 20[2mms[22m[39m
+ [32m✓[39m packages/generator/src/cosmology/cosmology.test.ts [2m([22m[2m44 tests[22m[2m)[22m[90m 21[2mms[22m[39m
+ [32m✓[39m packages/core/src/events/cascade-engine.test.ts [2m([22m[2m39 tests[22m[2m)[22m[90m 17[2mms[22m[39m
+ [32m✓[39m packages/core/src/systems/secrets.test.ts [2m([22m[2m48 tests[22m[2m)[22m[90m 29[2mms[22m[39m
+ [32m✓[39m packages/core/src/systems/memory-reputation.test.ts [2m([22m[2m54 tests[22m[2m)[22m[90m 20[2mms[22m[39m
+ [32m✓[39m packages/core/src/systems/character-ai.test.ts [2m([22m[2m42 tests[22m[2m)[22m[90m 33[2mms[22m[39m
+ [32m✓[39m packages/core/src/systems/economics.test.ts [2m([22m[2m59 tests[22m[2m)[22m[90m 35[2mms[22m[39m
+ [32m✓[39m packages/core/src/systems/faction-treaty.test.ts [2m([22m[2m51 tests[22m[2m)[22m[90m 31[2mms[22m[39m
+[2m03:43:39[22m [33m[1m[vite][22m[39m [33mwarning: [33mThis case clause will never be evaluated because it duplicates an earlier case clause[33m
+212|  
+213|        case 'right':
+214|        case 'l':
+   |             ^
+215|          this.cursorX++;
+216|          return true;
+[39m
+  Plugin: [35mvite:esbuild[39m
+  File: [36mC:/Users/Caus/fantasy-world-sim/packages/renderer/src/panels/relationships-panel.ts[39m
+ [32m✓[39m packages/narrative/src/styles/tones.test.ts [2m([22m[2m30 tests[22m[2m)[22m[90m 26[2mms[22m[39m
+ [32m✓[39m packages/core/src/events/narrative-arc-detector.test.ts [2m([22m[2m17 tests[22m[2m)[22m[90m 13[2mms[22m[39m
+ [32m✓[39m packages/renderer/src/layout-manager.test.ts [2m([22m[2m33 tests[22m[2m)[22m[90m 11[2mms[22m[39m
+ [32m✓[39m packages/narrative/src/transforms/narrative-engine.test.ts [2m([22m[2m18 tests[22m[2m)[22m[90m 18[2mms[22m[39m
+ [32m✓[39m packages/renderer/src/panels/character-inspector.test.ts [2m([22m[2m29 tests[22m[2m)[22m[90m 19[2mms[22m[39m
+ [32m✓[39m packages/narrative/src/chronicler/lost-history.test.ts [2m([22m[2m31 tests[22m[2m)[22m[90m 19[2mms[22m[39m
+ [32m✓[39m packages/narrative/src/transforms/template-parser.test.ts [2m([22m[2m40 tests[22m[2m)[22m[90m 23[2mms[22m[39m
+ [32m✓[39m packages/renderer/src/map/overlay.test.ts [2m([22m[2m44 tests[22m[2m)[22m[90m 21[2mms[22m[39m
+ [32m✓[39m packages/narrative/src/vignettes/vignette-generator.test.ts [2m([22m[2m23 tests[22m[2m)[22m[90m 27[2mms[22m[39m
+ [32m✓[39m packages/renderer/src/panels/sub-inspectors.test.ts [2m([22m[2m30 tests[22m[2m)[22m[90m 48[2mms[22m[39m
+ [32m✓[39m packages/core/src/time/tick-scheduler.test.ts [2m([22m[2m33 tests[22m[2m)[22m[90m 17[2mms[22m[39m
+ [32m✓[39m packages/renderer/src/panels/inspector-panel.test.ts [2m([22m[2m42 tests[22m[2m)[22m[90m 44[2mms[22m[39m
+ [32m✓[39m packages/core/src/events/event-log.test.ts [2m([22m[2m25 tests[22m[2m)[22m[90m 18[2mms[22m[39m
+ [32m✓[39m packages/narrative/src/vignettes/vignette-trigger.test.ts [2m([22m[2m19 tests[22m[2m)[22m[90m 19[2mms[22m[39m
+ [32m✓[39m packages/renderer/src/map/tile-renderer.test.ts [2m([22m[2m41 tests[22m[2m)[22m[90m 22[2mms[22m[39m
+ [32m✓[39m packages/narrative/src/chronicler/bias-filter.test.ts [2m([22m[2m16 tests[22m[2m)[22m[90m 17[2mms[22m[39m
+ [32m✓[39m packages/renderer/src/panels/graph-layout.test.ts [2m([22m[2m30 tests[22m[2m)[22m[90m 16[2mms[22m[39m
+ [32m✓[39m packages/renderer/src/panels/graph-renderer.test.ts [2m([22m[2m32 tests[22m[2m)[22m[90m 25[2mms[22m[39m
+ [32m✓[39m packages/renderer/src/panels/relationships-panel.test.ts [2m([22m[2m40 tests[22m[2m)[22m[90m 41[2mms[22m[39m
+ [32m✓[39m packages/renderer/src/panels/stats.test.ts [2m([22m[2m33 tests[22m[2m)[22m[90m 51[2mms[22m[39m
+[90mstdout[2m | packages/renderer/src/map/map-visual.test.ts[2m > [22m[2mMapVisual[2m > [22m[2mViewport rendering with real terrain[2m > [22m[2mTest 1: renders 40x20 viewport at position (100,100) zoom 1 with biome chars
+[22m[39mFound biome chars: █, ▲, ░, ~, ·
+
+[90mstdout[2m | packages/renderer/src/map/map-visual.test.ts[2m > [22m[2mMapVisual[2m > [22m[2mViewport rendering with real terrain[2m > [22m[2mTest 3: renders with political overlay showing faction colors
+[22m[39mFactions visible: 0, 1, 2, 3
+
+ [32m✓[39m packages/renderer/src/map/map-visual.test.ts [2m([22m[2m3 tests[22m[2m)[22m[33m 552[2mms[22m[39m
+ [32m✓[39m packages/core/src/spatial/quadtree.test.ts [2m([22m[2m29 tests[22m[2m)[22m[90m 78[2mms[22m[39m
+ [32m✓[39m packages/renderer/src/map/viewport.test.ts [2m([22m[2m44 tests[22m[2m)[22m[90m 26[2mms[22m[39m
+ [32m✓[39m packages/core/src/ecs/world.test.ts [2m([22m[2m24 tests[22m[2m)[22m[90m 22[2mms[22m[39m
+ [32m✓[39m packages/narrative/src/chronicler/chronicler.test.ts [2m([22m[2m14 tests[22m[2m)[22m[90m 18[2mms[22m[39m
+ [32m✓[39m packages/core/src/engine/lod-manager.test.ts [2m([22m[2m25 tests[22m[2m)[22m[90m 20[2mms[22m[39m
+ [32m✓[39m packages/generator/src/character/names.test.ts [2m([22m[2m26 tests[22m[2m)[22m[90m 25[2mms[22m[39m
+ [32m✓[39m packages/renderer/src/panels/timeline.test.ts [2m([22m[2m36 tests[22m[2m)[22m[90m 27[2mms[22m[39m
+ [32m✓[39m packages/renderer/src/theme.test.ts [2m([22m[2m36 tests[22m[2m)[22m[90m 21[2mms[22m[39m
+ [32m✓[39m packages/generator/src/config/config.test.ts [2m([22m[2m36 tests[22m[2m)[22m[90m 18[2mms[22m[39m
+ [32m✓[39m packages/renderer/src/panels/event-formatter.test.ts [2m([22m[2m29 tests[22m[2m)[22m[90m 18[2mms[22m[39m
+[90mstdout[2m | packages/generator/src/integration/smoke-test.test.ts[2m > [22m[2mSmoke Test: 365-tick Small World Integration
+[22m[39m
+=== ECS POPULATION ===
+Settlements: 40 entities
+Factions: 4 entities
+Characters: 15 entities
+Total: 59 entities
+======================
+
+
+=== SYSTEM INITIALIZATION ===
+Artifacts registered: 7
+Regions registered: 40
+Languages created: 2
+Trade connections: 6
+Wars started: 1
+==============================
+
+
+[90mstdout[2m | packages/generator/src/integration/smoke-test.test.ts[2m > [22m[2mSmoke Test: 365-tick Small World Integration[2m > [22m[2mgenerates a Small world without errors
+[22m[39m
+=== GENERATED WORLD SUMMARY ===
+Map: 200×200
+Races: 5
+Gods: 7
+Factions: 4
+Settlements: 40
+Rulers: 4
+Notables: 11
+Tensions: 2
+Pre-History Legendary Figures: 3
+Pre-History Artifacts: 3
+Pre-History Ruins: 0
+Pre-History Wars: 16
+================================
+
+
+[90mstdout[2m | packages/generator/src/integration/smoke-test.test.ts[2m > [22m[2mSmoke Test: 365-tick Small World Integration[2m > [22m[2mruns 365 ticks without errors
+[22m[39m
+=== SIMULATION SUMMARY ===
+Ticks executed: 365
+Current tick: 365
+Total events: 8341
+==========================
+
+
+[90mstdout[2m | packages/generator/src/integration/smoke-test.test.ts[2m > [22m[2mSmoke Test: 365-tick Small World Integration[2m > [22m[2mproduces events spanning multiple categories
+[22m[39m
+=== EVENTS BY CATEGORY ===
+Political: 40
+Magical: 12
+Cultural: 8
+Religious: 863
+Scientific: 1284
+Personal: 2138
+Economic: 3982
+Disaster: 2
+Military: 12
+Categories with events: 9
+==========================
+
+
+[90mstdout[2m | packages/generator/src/integration/smoke-test.test.ts[2m > [22m[2mSmoke Test: 365-tick Small World Integration[2m > [22m[2mvalidates all events have valid structure
+[22m[39m
+Valid events: 8341, Invalid: 0
+
+[90mstdout[2m | packages/generator/src/integration/smoke-test.test.ts[2m > [22m[2mSmoke Test: 365-tick Small World Integration[2m > [22m[2mrespects cascade maximum depth (10)
+[22m[39m
+=== CASCADE ANALYSIS ===
+Events with causes: 451
+Max chain depth found: 1
+========================
+
+
+[90mstdout[2m | packages/generator/src/integration/smoke-test.test.ts[2m > [22m[2mSmoke Test: 365-tick Small World Integration[2m > [22m[2mvalidates entity references in events are valid
+[22m[39m
+=== ENTITY REFERENCES ===
+Total entity references: 8382
+Unique entities referenced: 66
+Dangling references: 0
+=========================
+
+
+[90mstdout[2m | packages/generator/src/integration/smoke-test.test.ts[2m > [22m[2mSmoke Test: 365-tick Small World Integration[2m > [22m[2mmaintains stable clock state after 365 ticks
+[22m[39m
+=== WORLD TIME ===
+Tick: 365
+Date: Year 2, Month 1, Day 6
+==================
+
+
+[90mstdout[2m | packages/generator/src/integration/smoke-test.test.ts[2m > [22m[2mSmoke Test: 365-tick Small World Integration[2m > [22m[2mexports event snapshot for renderer fixtures
+[22m[39m
+=== EVENT SNAPSHOT ===
+Exported 8341 events to:
+  C:\Users\Caus\fantasy-world-sim\packages\generator\src\integration\test-output\smoke-test-events-365.json
+======================
+
+
+ [32m✓[39m packages/generator/src/integration/smoke-test.test.ts [2m([22m[2m8 tests[22m[2m)[22m[33m 829[2mms[22m[39m
+   [33m[2m✓[22m[39m Smoke Test: 365-tick Small World Integration[2m > [22mruns 365 ticks without errors [33m396[2mms[22m[39m
+ [32m✓[39m packages/generator/src/rng.test.ts [2m([22m[2m30 tests[22m[2m)[22m[90m 254[2mms[22m[39m
+ [32m✓[39m packages/core/src/spatial/spatial-index.test.ts [2m([22m[2m21 tests[22m[2m)[22m[90m 97[2mms[22m[39m
+ [32m✓[39m packages/core/src/events/event-factory.test.ts [2m([22m[2m12 tests[22m[2m)[22m[90m 13[2mms[22m[39m
+ [32m✓[39m packages/core/src/time/types.test.ts [2m([22m[2m34 tests[22m[2m)[22m[90m 21[2mms[22m[39m
+ [32m✓[39m packages/core/src/time/world-clock.test.ts [2m([22m[2m39 tests[22m[2m)[22m[90m 28[2mms[22m[39m
+ [32m✓[39m packages/renderer/src/panels/event-log-panel.test.ts [2m([22m[2m57 tests[22m[2m)[22m[90m 101[2mms[22m[39m
+ [32m✓[39m packages/core/src/time/time-controller.test.ts [2m([22m[2m39 tests[22m[2m)[22m[90m 14[2mms[22m[39m
+ [32m✓[39m packages/core/src/ecs/types.test.ts [2m([22m[2m19 tests[22m[2m)[22m[90m 11[2mms[22m[39m
+ [32m✓[39m packages/core/src/ecs/component-store.test.ts [2m([22m[2m18 tests[22m[2m)[22m[90m 15[2mms[22m[39m
+ [32m✓[39m packages/core/src/events/event-bus.test.ts [2m([22m[2m14 tests[22m[2m)[22m[90m 16[2mms[22m[39m
+ [32m✓[39m packages/core/src/events/event-queue.test.ts [2m([22m[2m18 tests[22m[2m)[22m[90m 19[2mms[22m[39m
+ [32m✓[39m packages/generator/src/civilization/civilization.test.ts [2m([22m[2m21 tests[22m[2m)[22m[33m 811[2mms[22m[39m
+ [32m✓[39m packages/core/src/ecs/entity-manager.test.ts [2m([22m[2m17 tests[22m[2m)[22m[90m 15[2mms[22m[39m
+ [32m✓[39m packages/generator/src/terrain/biomes.test.ts [2m([22m[2m20 tests[22m[2m)[22m[90m 8[2mms[22m[39m
+ [32m✓[39m packages/generator/src/terrain/hydrology.test.ts [2m([22m[2m7 tests[22m[2m)[22m[90m 84[2mms[22m[39m
+ [32m✓[39m packages/generator/src/history/pre-history.test.ts [2m([22m[2m15 tests[22m[2m)[22m[33m 1700[2mms[22m[39m
+   [33m[2m✓[22m[39m PreHistorySimulator[2m > [22mruns without crashing for shallow depth (100 years) on a small world [33m303[2mms[22m[39m
+ [32m✓[39m packages/generator/src/terrain/heightmap.test.ts [2m([22m[2m6 tests[22m[2m)[22m[33m 313[2mms[22m[39m
+ [32m✓[39m packages/generator/src/terrain/world-map.test.ts [2m([22m[2m11 tests[22m[2m)[22m[33m 1080[2mms[22m[39m
+ [32m✓[39m packages/generator/src/civilization/current-state.test.ts [2m([22m[2m26 tests[22m[2m)[22m[33m 2612[2mms[22m[39m
+ [32m✓[39m packages/generator/src/terrain/ecology.test.ts [2m([22m[2m27 tests[22m[2m)[22m[33m 2984[2mms[22m[39m
+   [33m[2m✓[22m[39m FloraDistributor[2m > [22mshould not place flora on ocean tiles [33m376[2mms[22m[39m
+ [32m✓[39m packages/cli/src/menus/refinement.test.ts [2m([22m[2m35 tests[22m[2m)[22m[33m 2603[2mms[22m[39m
+   [33m[2m✓[22m[39m RefinementMenu[2m > [22mproduces a world summary with all sections [33m399[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m66 passed[39m[22m[90m (66)[39m
+[2m      Tests [22m [1m[32m2142 passed[39m[22m[90m (2142)[39m
+[2m   Start at [22m 03:43:37
+[2m   Duration [22m 5.27s[2m (transform 12.09s, setup 0ms, collect 35.89s, tests 15.28s, environment 20ms, prepare 18.74s)[22m
+
+
+> aeternum@0.0.1 typecheck C:\Users\Caus\fantasy-world-sim
+> pnpm -r run typecheck
+
+Scope: 5 of 6 workspace projects
+packages/core typecheck$ tsc --noEmit
+packages/core typecheck: Done
+packages/generator typecheck$ tsc --noEmit
+packages/renderer typecheck$ tsc --noEmit
+packages/narrative typecheck$ tsc --noEmit
+packages/narrative typecheck: Done
+packages/generator typecheck: Done
+packages/renderer typecheck: Done
+packages/cli typecheck$ tsc --noEmit
+packages/cli typecheck: Done

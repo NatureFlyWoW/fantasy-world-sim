@@ -209,10 +209,11 @@ describe('TemplateParser', () => {
       expect(result).toBe('Climax');
     });
 
-    it('should return placeholder for missing entities', () => {
+    it('should return readable placeholder for missing entities', () => {
       const context = createContext({ entities: new Map() });
       const result = parser.resolveReference('faction.name', context);
-      expect(result).toBe('{faction.name}');
+      // Returns readable "a faction" instead of raw template "{faction.name}"
+      expect(result).toBe('a faction');
     });
   });
 
