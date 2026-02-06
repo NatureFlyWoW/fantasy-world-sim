@@ -470,7 +470,71 @@ function launchTerminalUI(
     smartCSR: true,
     title: 'Æternum - Fantasy World Simulator',
     fullUnicode: true,
+    mouse: true,
   });
+
+  // Force blessed's internal dimensions to match reality.
+  // On MINGW64/Windows (especially mintty), blessed detects 1x1 because
+  // Program reads `output.columns || 1` and MSYS2 PTY doesn't expose
+  // columns/rows to Node's Windows TTY layer. The 1x1 rendering buffer
+  // causes black areas and offset content.
+  //
+  // Dimension detection strategy:
+  //   1. process.stdout.columns/rows (works in ConPTY / real TTYs)
+  //   2. PowerShell $Host.UI.RawUI.WindowSize (Windows, needs stdin fd)
+  //   3. `mode con` for columns (Windows, lines is scroll buffer)
+  //   4. `tput` (Unix/MSYS2 — returns defaults with piped stdio)
+  //   5. Hardcoded 120x40
+  {
+    const { execSync } = cliRequire('node:child_process') as typeof import('node:child_process');
+    const isValid = (v: number | undefined): v is number =>
+      typeof v === 'number' && v > 1;
+
+    let cols: number | undefined = isValid(process.stdout.columns) ? process.stdout.columns : undefined;
+    let rows: number | undefined = isValid(process.stdout.rows) ? process.stdout.rows : undefined;
+
+    // PowerShell — most reliable on Windows, gets actual visible window size
+    if (cols === undefined || rows === undefined) {
+      try {
+        const psCmd = 'powershell.exe -NoProfile -NonInteractive -Command "$s=$Host.UI.RawUI.WindowSize;Write-Host $s.Width $s.Height"';
+        const result = execSync(psCmd, { encoding: 'utf8', timeout: 2000, stdio: [0, 'pipe', 'pipe'] }).trim();
+        const parts = result.split(/\s+/);
+        if (parts.length >= 2) {
+          const c = parseInt(parts[0] ?? '', 10);
+          const r = parseInt(parts[1] ?? '', 10);
+          if (!isNaN(c) && c > 1) cols = cols ?? c;
+          if (!isNaN(r) && r > 1) rows = rows ?? r;
+        }
+      } catch {
+        // PowerShell not available or timed out
+      }
+    }
+
+    // mode con for columns (lines is scroll buffer, not useful)
+    if (cols === undefined) {
+      try {
+        const modeResult = execSync('mode con', { encoding: 'utf8', timeout: 500, stdio: ['pipe', 'pipe', 'pipe'] });
+        const colMatch = modeResult.match(/(?:Columns|Spalten)[:\s]+?(\d+)/i);
+        if (colMatch !== null) {
+          const c = parseInt(colMatch[1] ?? '', 10);
+          if (!isNaN(c) && c > 1) cols = c;
+        }
+      } catch {
+        // mode con not available
+      }
+    }
+
+    cols = cols ?? 120;
+    rows = rows ?? 40;
+
+    const prog = screen.program as { cols?: number; rows?: number };
+    prog.cols = cols;
+    prog.rows = rows;
+
+    if (typeof (screen as unknown as { realloc?: () => void }).realloc === 'function') {
+      (screen as unknown as { realloc: () => void }).realloc();
+    }
+  }
 
   // Box factory for creating blessed elements
   // Note: Do NOT call screen.append here - BasePanel.constructor does it
@@ -752,6 +816,9 @@ async function main(): Promise<void> {
         riverId: tile.riverId,
         leyLine: tile.leyLine,
         resources: tile.resources,
+        elevation: tile.elevation,
+        temperature: tile.temperature,
+        rainfall: tile.rainfall,
       };
     };
 

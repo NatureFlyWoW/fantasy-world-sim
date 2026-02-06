@@ -11,16 +11,16 @@ import { CATEGORY_COLORS, getSignificanceColor } from '../theme.js';
  * Category icons for display.
  */
 export const CATEGORY_ICONS: Readonly<Record<EventCategory, string>> = {
-  [EventCategory.Political]: '\u269C',    // ⚜
-  [EventCategory.Military]: '\u2694',     // ⚔
-  [EventCategory.Magical]: '\u2726',      // ✦
-  [EventCategory.Cultural]: '\uD83C\uDFAD', // 🎭
-  [EventCategory.Religious]: '\u271D',    // ✝
-  [EventCategory.Economic]: '\uD83D\uDCB0', // 💰
-  [EventCategory.Personal]: '\uD83D\uDC64', // 👤
-  [EventCategory.Disaster]: '\uD83D\uDC80', // 💀
-  [EventCategory.Scientific]: '\uD83D\uDD2C', // 🔬
-  [EventCategory.Exploratory]: '\uD83D\uDDFA', // 🗺
+  [EventCategory.Political]: '\u269C',  // ⚜
+  [EventCategory.Military]: '\u2694',   // ⚔
+  [EventCategory.Magical]: '\u2726',    // ✦
+  [EventCategory.Cultural]: '\u266B',   // ♫
+  [EventCategory.Religious]: '\u271D',  // ✝
+  [EventCategory.Economic]: '\u2696',   // ⚖
+  [EventCategory.Personal]: '\u2660',   // ♠
+  [EventCategory.Disaster]: '\u2620',   // ☠
+  [EventCategory.Scientific]: '\u2604', // ☄
+  [EventCategory.Exploratory]: '\u2609', // ☉
 } as const;
 
 /**

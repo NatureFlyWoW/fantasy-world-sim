@@ -9,10 +9,12 @@ import { BasePanel } from '../panel.js';
 import { THEME } from '../theme.js';
 import { Viewport } from './viewport.js';
 import type { ZoomLevel } from './viewport.js';
-import { renderTile, renderAveragedRegion, renderEntityMarker, compositeEntityOnTile } from './tile-renderer.js';
+import { renderEntityMarker, compositeEntityOnTile } from './tile-renderer.js';
 import type { RenderableTile, MapEntity, RenderedTile } from './tile-renderer.js';
 import { OverlayManager, OverlayType } from './overlay.js';
 import type { OverlayModification } from './overlay.js';
+import { TerrainStyler } from './terrain-styler.js';
+import type { NeighborBiomes } from './terrain-styler.js';
 import { Minimap, createMinimapBox, DEFAULT_MINIMAP_CONFIG } from './minimap.js';
 
 /**
@@ -80,6 +82,9 @@ export class MapPanel extends BasePanel {
   // Selection handler
   private onSelectionChanged: SelectionHandler | null = null;
 
+  // Advanced terrain styler
+  private terrainStyler: TerrainStyler = new TerrainStyler();
+
   // Render cache
   private renderCache: Map<string, RenderedTile> = new Map();
   private cacheValid = false;
@@ -93,6 +98,12 @@ export class MapPanel extends BasePanel {
     boxFactory: (opts: blessed.Widgets.BoxOptions) => blessed.Widgets.BoxElement
   ) {
     super(screen, layout, boxFactory);
+
+    // Map panel content is always sized to fit exactly — disable scrolling
+    // to prevent blessed's scroll manager from clipping the rendered map
+    const box = this.getBox() as unknown as Record<string, unknown>;
+    box['scrollable'] = false;
+    box['alwaysScroll'] = false;
 
     // Initialize viewport centered on panel
     const innerDims = this.getInnerDimensions();
@@ -157,6 +168,14 @@ export class MapPanel extends BasePanel {
   }
 
   /**
+   * Set the world seed for terrain styling noise.
+   */
+  setWorldSeed(seed: number): void {
+    this.terrainStyler = new TerrainStyler(seed);
+    this.invalidateCache();
+  }
+
+  /**
    * Get the viewport.
    */
   getViewport(): Viewport {
@@ -206,6 +225,14 @@ export class MapPanel extends BasePanel {
 
     const innerDims = this.getInnerDimensions();
 
+    // Sync viewport with actual panel dimensions (blessed box may have
+    // been resized since the last explicit resize() call)
+    if (innerDims.width !== this.viewport.screenWidth || innerDims.height !== this.viewport.screenHeight) {
+      this.viewport.setScreenSize(innerDims.width, innerDims.height);
+      this.viewport.clampToWorld(this.worldWidth, this.worldHeight);
+      this.invalidateCache();
+    }
+
     // Build content string
     let content = '';
 
@@ -242,6 +269,16 @@ export class MapPanel extends BasePanel {
     if (this.minimapBox !== null) {
       this.minimap.renderToBox(this.minimapBox, this.viewport, context);
     }
+  }
+
+  /**
+   * Handle mouse click — move cursor to clicked world position.
+   */
+  handleClick(x: number, y: number): boolean {
+    const worldPos = this.viewport.screenToWorld(x, y);
+    this.setCursorPosition(worldPos.x, worldPos.y);
+    this.invalidateCache();
+    return true;
   }
 
   /**
@@ -289,6 +326,15 @@ export class MapPanel extends BasePanel {
       // Minimap toggle
       case 'm':
         this.minimap.toggle();
+        return true;
+
+      // Mouse wheel zoom
+      case 'wheelup':
+        this.zoomIn();
+        return true;
+
+      case 'wheeldown':
+        this.zoomOut();
         return true;
 
       // Selection
@@ -376,6 +422,22 @@ export class MapPanel extends BasePanel {
   }
 
   /**
+   * Get neighbor biome info for border dithering.
+   */
+  private getNeighborBiomes(wx: number, wy: number): NeighborBiomes {
+    const n = this.tileLookup?.(wx, wy - 1);
+    const s = this.tileLookup?.(wx, wy + 1);
+    const e = this.tileLookup?.(wx + 1, wy);
+    const w = this.tileLookup?.(wx - 1, wy);
+    return {
+      ...(n != null ? { north: n.biome } : {}),
+      ...(s != null ? { south: s.biome } : {}),
+      ...(e != null ? { east: e.biome } : {}),
+      ...(w != null ? { west: w.biome } : {}),
+    };
+  }
+
+  /**
    * Render a single cell at world coordinates.
    */
   private renderCell(wx: number, wy: number, context: RenderContext): RenderedTile {
@@ -390,15 +452,20 @@ export class MapPanel extends BasePanel {
     let cell: RenderedTile;
 
     if (this.viewport.zoom === 1) {
-      // Full detail - single tile
+      // Full detail - single tile with advanced styling
       const tile = this.tileLookup?.(wx, wy);
-      cell = tile !== null && tile !== undefined
-        ? renderTile(tile)
-        : { char: ' ', fg: '#000000', bg: '#000000' };
+      if (tile !== null && tile !== undefined) {
+        const neighbors = this.getNeighborBiomes(wx, wy);
+        cell = this.terrainStyler.styleTile(tile, wx, wy, neighbors);
+      } else {
+        cell = { char: ' ', fg: '#0a0a1a', bg: '#0a0a1a' };
+      }
     } else {
-      // Zoomed out - average multiple tiles
+      // Zoomed out - average multiple tiles with advanced styling
       const tiles = this.getTilesInRegion(wx, wy, this.viewport.zoom);
-      cell = renderAveragedRegion(tiles);
+      cell = tiles.length > 0
+        ? this.terrainStyler.styleAveragedRegion(tiles, wx, wy)
+        : { char: ' ', fg: '#0a0a1a', bg: '#0a0a1a' };
     }
 
     // Apply entity marker if present

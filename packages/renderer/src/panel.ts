@@ -41,9 +41,7 @@ export abstract class BasePanel {
           fg: layout.focused ? THEME.ui.borderFocused : THEME.ui.borderBlurred,
         },
       },
-      scrollable: true,
       mouse: true,
-      keys: true,
       tags: true,
     });
 
@@ -63,13 +61,22 @@ export abstract class BasePanel {
   abstract handleInput(key: string): boolean;
 
   /**
+   * Handle mouse click at panel-relative coordinates.
+   * @param _x - Column within the panel's content area (0-based)
+   * @param _y - Row within the panel's content area (0-based)
+   * @returns true if the click was handled
+   */
+  handleClick(_x: number, _y: number): boolean {
+    return false;
+  }
+
+  /**
    * Focus this panel (visual indicator).
    */
   focus(): void {
     this.layout.focused = true;
     this.box.style.border = { fg: THEME.ui.borderFocused };
     this.box.focus();
-    this.screen.render();
   }
 
   /**
@@ -78,7 +85,6 @@ export abstract class BasePanel {
   blur(): void {
     this.layout.focused = false;
     this.box.style.border = { fg: THEME.ui.borderBlurred };
-    this.screen.render();
   }
 
   /**
@@ -89,7 +95,6 @@ export abstract class BasePanel {
     this.layout.height = height;
     this.box.width = width;
     this.box.height = height;
-    this.screen.render();
   }
 
   /**
@@ -100,7 +105,6 @@ export abstract class BasePanel {
     this.layout.y = y;
     this.box.top = y;
     this.box.left = x;
-    this.screen.render();
   }
 
   /**
@@ -284,6 +288,24 @@ export class MockScreen {
     if (handlers !== undefined) {
       for (const h of handlers) {
         h(ch, keyEvent);
+      }
+    }
+  }
+
+  simulateClick(x: number, y: number): void {
+    const handlers = this.eventHandlers.get('click');
+    if (handlers !== undefined) {
+      for (const h of handlers) {
+        h(null, { x, y });
+      }
+    }
+  }
+
+  simulateWheel(direction: 'wheelup' | 'wheeldown'): void {
+    const handlers = this.eventHandlers.get(direction);
+    if (handlers !== undefined) {
+      for (const h of handlers) {
+        h();
       }
     }
   }

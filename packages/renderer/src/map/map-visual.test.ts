@@ -18,6 +18,7 @@ import { OverlayManager, OverlayType, PoliticalOverlay } from './overlay.js';
 import type { TerritoryData } from './overlay.js';
 import type { RenderContext } from '../types.js';
 import type { World, WorldClock, EventLog, EventBus, SpatialIndex } from '@fws/core';
+import { TerrainStyler } from './terrain-styler.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -54,6 +55,9 @@ interface GeneratorTile {
   riverId?: number;
   leyLine?: boolean;
   resources?: readonly string[];
+  elevation?: number;
+  temperature?: number;
+  rainfall?: number;
 }
 
 /**
@@ -481,6 +485,144 @@ describe('MapVisual', () => {
           .filter(Boolean)
           .join(', ')
       );
+    });
+  });
+
+  describe('Enhanced terrain rendering', () => {
+    it('Test 4: renders 40x20 viewport at zoom 1 with TerrainStyler showing char variety', () => {
+      const viewport = new Viewport(40, 20, 100, 100, 1);
+      const styler = new TerrainStyler(42);
+
+      const lines: string[] = [];
+
+      for (let sy = 0; sy < viewport.screenHeight; sy++) {
+        let line = '';
+        for (let sx = 0; sx < viewport.screenWidth; sx++) {
+          const worldPos = viewport.screenToWorld(sx, sy);
+          const tile = worldMap.getTile(worldPos.x, worldPos.y);
+
+          if (tile !== undefined) {
+            const renderableTile: RenderableTile = {
+              biome: tile.biome,
+              ...(tile.riverId !== undefined ? { riverId: tile.riverId } : {}),
+              ...(tile.leyLine !== undefined ? { leyLine: tile.leyLine } : {}),
+              ...(tile.resources !== undefined ? { resources: tile.resources } : {}),
+              ...(tile.elevation !== undefined ? { elevation: tile.elevation } : {}),
+              ...(tile.temperature !== undefined ? { temperature: tile.temperature } : {}),
+              ...(tile.rainfall !== undefined ? { rainfall: tile.rainfall } : {}),
+            };
+
+            // Get neighbor biomes for border dithering
+            const n = worldMap.getTile(worldPos.x, worldPos.y - 1);
+            const s = worldMap.getTile(worldPos.x, worldPos.y + 1);
+            const e = worldMap.getTile(worldPos.x + 1, worldPos.y);
+            const w = worldMap.getTile(worldPos.x - 1, worldPos.y);
+            const neighbors = {
+              ...(n !== undefined ? { north: n.biome } : {}),
+              ...(s !== undefined ? { south: s.biome } : {}),
+              ...(e !== undefined ? { east: e.biome } : {}),
+              ...(w !== undefined ? { west: w.biome } : {}),
+            };
+
+            const rendered = styler.styleTile(renderableTile, worldPos.x, worldPos.y, neighbors);
+            line += rendered.char;
+          } else {
+            line += ' ';
+          }
+        }
+        lines.push(line);
+      }
+
+      writeOutput(
+        'test4-enhanced-zoom1.txt',
+        lines,
+        `Enhanced Terrain (TerrainStyler) at zoom=1\nViewport: 40x20 at (100,100)\nWorld: ${worldMap.getWidth()}x${worldMap.getHeight()}\nSeed: 42\n\nCharacter variety from weighted biome pools + noise selection + border dithering.`
+      );
+
+      expect(lines.length).toBe(20);
+      for (const line of lines) {
+        expect(line.length).toBe(40);
+      }
+
+      // Count unique characters — enhanced renderer should produce many more
+      const allChars = new Set<string>();
+      for (const line of lines) {
+        for (const char of line) {
+          allChars.add(char);
+        }
+      }
+
+      console.log(`Enhanced renderer unique chars: ${allChars.size} (${[...allChars].join('')})`);
+      // Old renderer produced ~6 unique chars; enhanced should produce 15+
+      expect(allChars.size).toBeGreaterThanOrEqual(8);
+    });
+
+    it('Test 5: renders 40x20 viewport at zoom 4 with TerrainStyler', () => {
+      const viewport = new Viewport(40, 20, 100, 100, 4);
+      const styler = new TerrainStyler(42);
+      const zoom = viewport.zoom;
+
+      const lines: string[] = [];
+
+      for (let sy = 0; sy < viewport.screenHeight; sy++) {
+        let line = '';
+        for (let sx = 0; sx < viewport.screenWidth; sx++) {
+          const worldPos = viewport.screenToWorld(sx, sy);
+
+          // Gather tiles in region
+          const tiles: RenderableTile[] = [];
+          for (let dy = 0; dy < zoom; dy++) {
+            for (let dx = 0; dx < zoom; dx++) {
+              const wx = worldPos.x + dx;
+              const wy = worldPos.y + dy;
+              if (wx >= 0 && wx < worldMap.getWidth() && wy >= 0 && wy < worldMap.getHeight()) {
+                const tile = worldMap.getTile(wx, wy);
+                if (tile !== undefined) {
+                  tiles.push({
+                    biome: tile.biome,
+                    ...(tile.riverId !== undefined ? { riverId: tile.riverId } : {}),
+                    ...(tile.leyLine !== undefined ? { leyLine: tile.leyLine } : {}),
+                    ...(tile.resources !== undefined ? { resources: tile.resources } : {}),
+                    ...(tile.elevation !== undefined ? { elevation: tile.elevation } : {}),
+                    ...(tile.temperature !== undefined ? { temperature: tile.temperature } : {}),
+                    ...(tile.rainfall !== undefined ? { rainfall: tile.rainfall } : {}),
+                  });
+                }
+              }
+            }
+          }
+
+          if (tiles.length > 0) {
+            const rendered = styler.styleAveragedRegion(tiles, worldPos.x, worldPos.y);
+            line += rendered.char;
+          } else {
+            line += ' ';
+          }
+        }
+        lines.push(line);
+      }
+
+      writeOutput(
+        'test5-enhanced-zoom4.txt',
+        lines,
+        `Enhanced Terrain (TerrainStyler) at zoom=4\nViewport: 40x20 at (100,100) (each char = 4x4 tiles)\nWorld: ${worldMap.getWidth()}x${worldMap.getHeight()}\nSeed: 42`
+      );
+
+      expect(lines.length).toBe(20);
+      for (const line of lines) {
+        expect(line.length).toBe(40);
+      }
+
+      // Unique chars should be varied
+      const allChars = new Set<string>();
+      for (const line of lines) {
+        for (const char of line) {
+          allChars.add(char);
+        }
+      }
+
+      console.log(`Enhanced zoom-4 unique chars: ${allChars.size} (${[...allChars].join('')})`);
+      expect(allChars.size).toBeGreaterThanOrEqual(5);
     });
   });
 });

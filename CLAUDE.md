@@ -66,6 +66,22 @@ pnpm run start -- --headless         # Run without UI (for testing/CI)
 pnpm run start -- --ticks 100        # Run specific tick count (headless mode)
 ```
 
+## Subagent Routing Preferences
+When delegating complex tasks to subagents, prefer these domain specialists:
+- Game logic, game simulation, gameplay loop, ECS design, game graphics, game UI → voltagent-domains:game-developer
+
+- Backend architecture, APIs → voltagent-domains:backend-developer or voltagent-domains:fullstack-developer
+
+- Adding TypeScript to projects, implementing complex type definitions, migrating JavaScript to TypeScript, building type-safe  applications. voltagent-lang:typescript-pro
+
+- Summing up, collecting and merging together knowledge and data sources, combining many into few -> voltagent-meta:knowledge-synthesizer
+
+Organizing, planing, making priorities and refinement tasks -> voltagent-meta:agent-organizer
+
+Use best judgment for tasks that span multiple domains or are too 
+small to warrant delegation.
+
+
 ## Current Phase
 Phase 8: (Next)
 
@@ -235,7 +251,7 @@ Deterministic from seed. 9 configurable parameters with named presets.
   | 2.1d | ✅ | Map terrain colors | tileLookup wired, biomes visible |
   | 2.1e | ✅ | Startup sequencing | Simulation waits for Space press |
   | 2.1f | ✅ | EntityResolver | Narrative resolves {character.name} |
-  | 2.1g | 🔧 | Layout proportions | Panels render but sizing may need tuning |
+  | 2.1g | ✅ | Layout proportions | Fixed: single LayoutManager + menu bar offset |
   Startup sequence: generateWorld → createPanels → app.start → renderInitialFrame
   → display "Speed: Paused | Press Space to begin" → wait for input → startSimLoop.
   2142 tests passing.
@@ -348,6 +364,45 @@ Deterministic from seed. 9 configurable parameters with named presets.
   progress notes, emotional memory coloring, ally/rival relationships, secret
   reflection, recent events, closing. Deterministic from seed. 82 new tests
   (46 dreaming + 36 introspection), 2612 total. Phase 7 complete.
+- 2026: UI Overhaul Phase 1. Four fixes merged to main from ui-overhaul/phase-1:
+  (1) Event log default minSignificance raised 0→40 in createDefaultFilter(),
+  filtering out noisy CharacterAI actions (befriend/craft/study at sig ~20).
+  (2) Keybinding catch-all: app.ts setupKeyBindings() replaced 4 hardcoded
+  delegation blocks with single screen.on('keypress') handler that forwards all
+  non-global keys to focused panel. Number keys 1-7 context-aware (Inspector
+  section toggles vs panel switching). (3) Map init fix: CLI created duplicate
+  LayoutManager causing double height subtraction; now uses Application's single
+  LayoutManager via app.getLayoutManager(). Added applyLayout() call in
+  renderInitialFrame() to sync panel dimensions before first render. (4) Top menu
+  bar: MenuBar class (blessed box, top:0, height:1) with panel names, navigation
+  via Tab/arrow keys. LayoutManager updated with MENU_BAR_HEIGHT=1, all layout
+  functions offset panel y-values. Theme extended with 4 menu colors. 65 new tests
+  (30 app + 14 menu-bar + 10 viewport-resize + 11 layout-manager), 2726 total.
+- 2026: UI Overhaul Phase 2. Five fixes for resize, keyboard, mouse, and color:
+  (1) Resize black screen fix: removed premature screen.render() calls from
+  BasePanel resize()/moveTo()/focus()/blur() — caller batches renders via
+  applyLayout(). Added forceRender parameter to applyLayout() that re-renders
+  all panel content after layout changes. Resize handler, maximizeCurrentPanel(),
+  cycleLayout(), handleEscape() all pass forceRender=true. Cross-platform resize
+  listens on both screen 'resize' and process.stdout 'resize'. Terminal dimension
+  detection: PowerShell $Host.UI.RawUI.WindowSize fallback for mintty/MSYS2 where
+  process.stdout.columns is undefined. syncBlessedDimensions() patches
+  screen.program.cols/rows + screen.realloc() to fix blessed's 1x1 buffer.
+  (2) Keyboard fix: removed keys:true and scrollable:true from BasePanel
+  constructor (blessed intercepted arrow keys). Added 'f','b' to globalKeys set
+  so focus/bookmark keybindings aren't forwarded to panels.
+  (3) Mouse support: setupMouseHandling() in Application with click-to-focus +
+  panel-relative click delegation, wheelup/wheeldown forwarded to focused panel.
+  BasePanel.handleClick() default no-op. MapPanel: click moves cursor,
+  wheelup/down zooms. EventLogPanel: wheelup/down scrolls by 3 lines.
+  MockScreen extended with simulateClick() and simulateWheel().
+  (4) Color fix: patchBlessedColorMatching() monkey-patches blessed.colors.match()
+  which uses luma-weighted distance that maps dark saturated colors to greyscale
+  palette entries (232-255). Replacement uses unweighted Euclidean distance across
+  all 256 entries, separately tracking best colored (non-grey-diagonal) cube entry.
+  For saturated inputs (>10%), prefers colored entry unless >4x worse than grey.
+  Result cached by RGB hash. Called in createScreen() before widget creation.
+  (5) Help overlay updated with mouse click and scroll entries.
 
 ## Known Issues
 - EventCategory.Exploratory has no system producing events (by design — no exploration

@@ -42,6 +42,9 @@ export interface RenderableTile {
   readonly riverId?: number;
   readonly leyLine?: boolean;
   readonly resources?: readonly string[];
+  readonly elevation?: number;
+  readonly temperature?: number;
+  readonly rainfall?: number;
 }
 
 /**

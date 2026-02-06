@@ -568,11 +568,13 @@ export class EventLogPanel extends BasePanel {
     // Show placeholder message when there are no events
     if (this.filteredEvents.length === 0) {
       if (row === 0) {
-        const message = 'No events yet - simulation paused';
-        const padding = Math.floor((width - message.length) / 2);
-        return '{#888888-fg}' + ' '.repeat(padding) + message + ' '.repeat(width - padding - message.length) + '{/}';
+        const fullMessage = 'No events yet - simulation paused';
+        const message = fullMessage.slice(0, width);
+        const padding = Math.max(0, Math.floor((width - message.length) / 2));
+        const rightPad = Math.max(0, width - padding - message.length);
+        return '{#888888-fg}' + ' '.repeat(padding) + message + ' '.repeat(rightPad) + '{/}';
       }
-      return ' '.repeat(width);
+      return ' '.repeat(Math.max(0, width));
     }
 
     const eventIndex = this.scrollOffset + row;
@@ -631,11 +633,11 @@ export class EventLogPanel extends BasePanel {
       } else if (row === 2) {
         return this.boxDrawBottomBorder(width);
       }
-      return ' '.repeat(width);
+      return ' '.repeat(Math.max(0, width));
     }
 
     const event = this.selectedEvent;
-    const narrativeLines = this.buildNarrativeContent(event, context);
+    const narrativeLines = this.buildNarrativeContent(event, context, width);
 
     // Build box with content
     if (row === 0) {
@@ -643,7 +645,7 @@ export class EventLogPanel extends BasePanel {
     } else if (row === 1) {
       // Title line
       const title = this.formatter.getEventDescription(event);
-      const truncatedTitle = title.slice(0, width - 4);
+      const truncatedTitle = title.slice(0, Math.max(0, width - 4));
       return this.boxDrawLine(truncatedTitle, width, true);
     } else if (row === 2) {
       // Divider
@@ -653,19 +655,28 @@ export class EventLogPanel extends BasePanel {
       const contentLine = narrativeLines[contentRow];
 
       if (contentRow < narrativeLines.length && contentLine !== undefined) {
-        return this.boxDrawLine(contentLine.slice(0, width - 4), width);
+        // narrativeLines are plain text — safe to measure and slice
+        const truncated = contentLine.slice(0, Math.max(0, width - 4));
+        // First narrative line (row 3, contentRow 0) is the title — render bold
+        if (contentRow === 0) {
+          return this.boxDrawLine(truncated, width, true);
+        }
+        return this.boxDrawLine(truncated, width);
       } else if (contentRow === narrativeLines.length) {
         return this.boxDrawBottomBorder(width);
       }
     }
 
-    return ' '.repeat(width);
+    return ' '.repeat(Math.max(0, width));
   }
 
   /**
    * Build narrative content for an event.
+   * Returns plain text lines WITHOUT blessed tags — formatting is applied
+   * later in renderRightPaneLine/boxDrawLine to avoid tag corruption
+   * during measurement and slicing.
    */
-  private buildNarrativeContent(event: WorldEvent, context: RenderContext): string[] {
+  private buildNarrativeContent(event: WorldEvent, context: RenderContext, wrapWidth: number): string[] {
     const lines: string[] = [];
 
     // Generate narrative using the narrative engine
@@ -696,26 +707,27 @@ export class EventLogPanel extends BasePanel {
       displayBody = biasedOutput.narrative.length > 0 ? biasedOutput.narrative : narrative.body;
     }
 
-    // Add narrative title
-    lines.push(`{bold}${narrative.title}{/}`);
+    // Add narrative title (plain text — bold applied by boxDrawLine)
+    lines.push(narrative.title);
     lines.push('');
 
-    // Wrap narrative body into lines
-    const wrappedBody = this.wrapText(displayBody, 35);
+    // Wrap narrative body into lines using actual content width
+    const contentWidth = Math.max(10, wrapWidth - 4);
+    const wrappedBody = this.wrapText(displayBody, contentWidth);
     lines.push(...wrappedBody);
     lines.push('');
 
-    // Significance bar
+    // Significance bar (plain text version)
     lines.push(`Significance: ${this.formatter.formatSignificanceBar(event.significance)}`);
 
     // Check for vignette trigger
     this.checkVignetteTrigger(event, context);
 
-    // If there's a vignette, show indicator
+    // If there's a vignette, show indicator (plain text — color applied later)
     if (this.currentVignette !== null && this.currentVignette.eventId === event.id) {
       lines.push('');
-      lines.push('{#ffcc00-fg}★ Vignette Available{/}');
-      lines.push('{#888888-fg}Press "v" to view{/}');
+      lines.push('\u2605 Vignette Available');
+      lines.push('Press "v" to view');
     }
 
     return lines;
@@ -812,16 +824,17 @@ export class EventLogPanel extends BasePanel {
     }
 
     const lines: string[] = [];
-    const innerWidth = width - 4;
+    const innerWidth = Math.max(0, width - 4);
 
     // Top border with flourish
     lines.push('{#ffcc00-fg}╔' + '═'.repeat(innerWidth) + '╗{/}');
 
     // Title with archetype
     const archetypeName = this.formatArchetypeName(this.currentVignette.archetype);
-    const titleLine = ` ★ ${archetypeName} ★ `;
-    const titlePadding = Math.floor((innerWidth - titleLine.length) / 2);
-    lines.push('{#ffcc00-fg}║{/}{bold}' + ' '.repeat(titlePadding) + titleLine + ' '.repeat(innerWidth - titlePadding - titleLine.length) + '{/}{#ffcc00-fg}║{/}');
+    const titleLine = ` ★ ${archetypeName} ★ `.slice(0, innerWidth);
+    const titlePadding = Math.max(0, Math.floor((innerWidth - titleLine.length) / 2));
+    const titleRightPad = Math.max(0, innerWidth - titlePadding - titleLine.length);
+    lines.push('{#ffcc00-fg}║{/}{bold}' + ' '.repeat(titlePadding) + titleLine + ' '.repeat(titleRightPad) + '{/}{#ffcc00-fg}║{/}');
 
     // Divider
     lines.push('{#ffcc00-fg}╠' + '═'.repeat(innerWidth) + '╣{/}');
@@ -909,15 +922,15 @@ export class EventLogPanel extends BasePanel {
    * Box drawing helpers.
    */
   private boxDrawTopBorder(width: number): string {
-    return '\u2554' + '\u2550'.repeat(width - 2) + '\u2557'; // ╔═══╗
+    return '\u2554' + '\u2550'.repeat(Math.max(0, width - 2)) + '\u2557'; // ╔═══╗
   }
 
   private boxDrawMiddleBorder(width: number): string {
-    return '\u2560' + '\u2550'.repeat(width - 2) + '\u2563'; // ╠═══╣
+    return '\u2560' + '\u2550'.repeat(Math.max(0, width - 2)) + '\u2563'; // ╠═══╣
   }
 
   private boxDrawBottomBorder(width: number): string {
-    return '\u255A' + '\u2550'.repeat(width - 2) + '\u255D'; // ╚═══╝
+    return '\u255A' + '\u2550'.repeat(Math.max(0, width - 2)) + '\u255D'; // ╚═══╝
   }
 
   private boxDrawLine(text: string, width: number, bold = false): string {
@@ -1012,6 +1025,14 @@ export class EventLogPanel extends BasePanel {
 
       case 'v':
         this.showVignette();
+        return true;
+
+      case 'wheelup':
+        this.scrollUp(3);
+        return true;
+
+      case 'wheeldown':
+        this.scrollDown(3);
         return true;
 
       default:
@@ -1231,6 +1252,28 @@ export class EventLogPanel extends BasePanel {
     this.scrollOffset = Math.max(0, this.filteredEvents.length - innerDims.height);
     this.selectedIndex = this.filteredEvents.length - 1;
     this.autoScroll = true;
+    this.updateSelectedEvent();
+  }
+
+  /**
+   * Scroll up by a number of lines (for mouse wheel).
+   */
+  private scrollUp(lines: number): void {
+    this.scrollOffset = Math.max(0, this.scrollOffset - lines);
+    this.selectedIndex = Math.max(0, Math.min(this.selectedIndex, this.scrollOffset + this.getInnerDimensions().height - 1));
+    this.autoScroll = false;
+    this.updateSelectedEvent();
+  }
+
+  /**
+   * Scroll down by a number of lines (for mouse wheel).
+   */
+  private scrollDown(lines: number): void {
+    const innerDims = this.getInnerDimensions();
+    const maxScroll = Math.max(0, this.filteredEvents.length - innerDims.height);
+    this.scrollOffset = Math.min(maxScroll, this.scrollOffset + lines);
+    this.selectedIndex = Math.max(this.scrollOffset, this.selectedIndex);
+    this.autoScroll = this.scrollOffset >= maxScroll;
     this.updateSelectedEvent();
   }
 

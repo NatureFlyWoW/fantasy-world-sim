@@ -60,6 +60,13 @@ export {
 } from './minimap.js';
 export type { MinimapConfig, MinimapTileLookup, MinimapCell } from './minimap.js';
 
+// Terrain styler
+export { TerrainStyler } from './terrain-styler.js';
+export type { NeighborBiomes } from './terrain-styler.js';
+
+// Simplex noise
+export { SimplexNoise, fbm } from './simplex-noise.js';
+
 // Map panel
 export { MapPanel, createMapPanelLayout } from './map-panel.js';
 export type {

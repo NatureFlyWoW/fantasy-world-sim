@@ -139,15 +139,14 @@ describe('Application key delegation', () => {
       expect(inspectorPanel.inputLog).toEqual(['o', 'r', 't', 'd']);
     });
 
-    it('delegates EventLog keys b/g/v/h to focused EventLog panel', () => {
+    it('delegates EventLog keys g/v/h to focused EventLog panel (b is global)', () => {
       app.focusPanel(PanelId.EventLog);
 
-      screen.simulateKeypress('b', { name: 'b' });
       screen.simulateKeypress('g', { name: 'g' });
       screen.simulateKeypress('v', { name: 'v' });
       screen.simulateKeypress('h', { name: 'h' });
 
-      expect(eventLogPanel.inputLog).toEqual(['b', 'g', 'v', 'h']);
+      expect(eventLogPanel.inputLog).toEqual(['g', 'v', 'h']);
     });
 
     it('delegates slash (/) to focused panel for search', () => {
@@ -189,11 +188,10 @@ describe('Application key delegation', () => {
       expect(mapPanel.inputLog).toEqual(['home', 'end']);
     });
 
-    it('delegates f and z keys to focused panel', () => {
-      screen.simulateKeypress('f', { name: 'f' });
+    it('delegates z key to focused panel (f is global)', () => {
       screen.simulateKeypress('z', { name: 'z' });
 
-      expect(mapPanel.inputLog).toEqual(['f', 'z']);
+      expect(mapPanel.inputLog).toEqual(['z']);
     });
 
     it('delegates c key to focused panel', () => {
@@ -316,9 +314,9 @@ describe('Application key delegation', () => {
     it('delegates to EventLog when EventLog is focused', () => {
       app.focusPanel(PanelId.EventLog);
 
-      screen.simulateKeypress('b', { name: 'b' });
+      screen.simulateKeypress('g', { name: 'g' });
 
-      expect(eventLogPanel.inputLog).toEqual(['b']);
+      expect(eventLogPanel.inputLog).toEqual(['g']);
       expect(mapPanel.inputLog).toEqual([]);
     });
 
