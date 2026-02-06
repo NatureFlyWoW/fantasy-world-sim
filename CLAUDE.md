@@ -76,6 +76,7 @@ and complexity score derived from cascade chains.
 - [x] 7.1 — World DNA Fingerprint (WorldFingerprintCalculator with 6 domains, civ palette, sparklines, complexity score; FingerprintPanel with hex chart, colored faction bar, sparklines, progress bar; 49 tests)
 - [x] 7.2 — "What If" Timeline Branching (WorldSnapshotManager with deep-clone snapshot/restore, BranchRunner with 5 divergence actions and MAX_BRANCHES=3, BranchComparisonPanel with 3 views and divergence counter; 50 tests)
 - [x] 7.3 — Save/Load & Export (SaveManager with full/incremental saves, gzip compression, auto-save rotation; ExportManager with 5 export types in 3 formats; SaveLoadController with Ctrl+S/F5/F6 keybindings; 58 tests)
+- [x] 7.4 — Procedural Heraldry (ASCII shield templates per culture: knightly/round/totem; 5 field divisions; 28 charges in 4 categories; tincture derivation from faction values/biome; heraldry evolution on political events; 3 display sizes; FactionInspector integration; 60 tests)
 
 ### Phase 6 Tasks — COMPLETE
 Player interaction: simulation controls (auto-slowdown on significant events),

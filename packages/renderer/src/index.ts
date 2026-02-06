@@ -84,6 +84,9 @@ export * from './map/index.js';
 // Panels module
 export * from './panels/index.js';
 
+// Widgets module
+export * from './widgets/index.js';
+
 // Factory function
 import type { RenderContext } from './types.js';
 import type { AppConfig } from './app.js';

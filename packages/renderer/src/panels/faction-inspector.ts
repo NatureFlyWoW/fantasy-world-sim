@@ -1,11 +1,17 @@
 /**
  * Faction Inspector - renders detailed faction information.
- * Provides sections: overview, government, territory, military, diplomacy, economy, leadership, history.
+ * Provides sections: overview, heraldry, government, territory, military, diplomacy, economy, leadership, history.
  */
 
 import type { EntityId } from '@fws/core';
 import type { RenderContext } from '../types.js';
 import type { InspectorSection, InspectorMode } from './inspector-panel.js';
+import {
+  generateCoatOfArms,
+  renderLargeCoatOfArms,
+  describeCoatOfArms,
+} from '../widgets/heraldry.js';
+import type { FactionProperties } from '../widgets/heraldry.js';
 
 /**
  * Bar rendering constants.
@@ -24,6 +30,7 @@ export class FactionInspector {
   getSections(): InspectorSection[] {
     return [
       { id: 'overview', title: 'Overview', collapsed: false },
+      { id: 'heraldry', title: 'Heraldry', collapsed: false },
       { id: 'government', title: 'Government', collapsed: false },
       { id: 'territory', title: 'Territory', collapsed: true },
       { id: 'military', title: 'Military', collapsed: true },
@@ -98,6 +105,8 @@ export class FactionInspector {
     switch (sectionId) {
       case 'overview':
         return this.renderOverviewSection(entityId, context);
+      case 'heraldry':
+        return this.renderHeraldry(entityId, context);
       case 'government':
         return this.renderGovernment(entityId, context);
       case 'territory':
@@ -162,6 +171,82 @@ export class FactionInspector {
     }
 
     return lines;
+  }
+
+  /**
+   * Render heraldry section with ASCII coat of arms.
+   */
+  private renderHeraldry(entityId: EntityId, context: RenderContext): string[] {
+    const { world } = context;
+    const lines: string[] = [];
+
+    // Gather faction properties from available components
+    const status = world.hasStore('Status')
+      ? world.getComponent(entityId, 'Status') as { titles?: string[] } | undefined
+      : undefined;
+    const culture = world.hasStore('Culture')
+      ? world.getComponent(entityId, 'Culture') as { traditions?: string[]; values?: string[] } | undefined
+      : undefined;
+    const military = world.hasStore('Military')
+      ? world.getComponent(entityId, 'Military') as { strength?: number } | undefined
+      : undefined;
+
+    const factionName = (status?.titles !== undefined && status.titles.length > 0)
+      ? (status.titles[0] ?? `Faction #${entityId}`)
+      : `Faction #${entityId}`;
+
+    // Derive culture string from values/traditions heuristic
+    const cultureId = this.deriveCultureId(culture?.values ?? []);
+
+    const props: FactionProperties = {
+      name: factionName,
+      culture: cultureId,
+      color: '#888888',
+      militaryStrength: military?.strength ?? 50,
+      economicWealth: 50,
+      culturalInfluence: 50,
+      tendencies: culture?.values ?? [],
+    };
+
+    const arms = generateCoatOfArms(props);
+    const shieldLines = renderLargeCoatOfArms(arms);
+    lines.push(...shieldLines);
+    lines.push('');
+    lines.push(describeCoatOfArms(arms));
+
+    return lines;
+  }
+
+  /**
+   * Derive a culture id string from faction values.
+   * Falls back to 'nordic' if no match found.
+   */
+  private deriveCultureId(values: readonly string[]): string {
+    const CULTURE_KEYWORDS: Readonly<Record<string, readonly string[]>> = {
+      nordic:   ['militaristic', 'expansionist', 'seafaring'],
+      elvish:   ['artistic', 'scholarly', 'mystical'],
+      dwarven:  ['industrious', 'isolationist'],
+      desert:   ['nomadic', 'mercantile'],
+      eastern:  ['religious', 'scholarly'],
+      fey:      ['artistic', 'mystical'],
+      infernal: ['expansionist', 'militaristic'],
+    };
+
+    let bestCulture = 'nordic';
+    let bestScore = 0;
+
+    for (const [culture, keywords] of Object.entries(CULTURE_KEYWORDS)) {
+      let score = 0;
+      for (const v of values) {
+        if (keywords.includes(v)) score++;
+      }
+      if (score > bestScore) {
+        bestScore = score;
+        bestCulture = culture;
+      }
+    }
+
+    return bestCulture;
   }
 
   /**
@@ -563,7 +648,7 @@ export class FactionInspector {
     lines.push('═══ Full Details ═══');
     lines.push('');
 
-    const allSections = ['overview', 'government', 'territory', 'military', 'diplomacy', 'economy', 'leadership', 'history'];
+    const allSections = ['overview', 'heraldry', 'government', 'territory', 'military', 'diplomacy', 'economy', 'leadership', 'history'];
 
     for (const sectionId of allSections) {
       const title = sectionId.charAt(0).toUpperCase() + sectionId.slice(1);

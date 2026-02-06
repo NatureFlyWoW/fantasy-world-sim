@@ -224,13 +224,14 @@ describe('FactionInspector', () => {
   });
 
   describe('getSections', () => {
-    it('returns 8 sections', () => {
-      expect(sections).toHaveLength(8);
+    it('returns 9 sections', () => {
+      expect(sections).toHaveLength(9);
     });
 
     it('includes required sections', () => {
       const sectionIds = sections.map(s => s.id);
       expect(sectionIds).toContain('overview');
+      expect(sectionIds).toContain('heraldry');
       expect(sectionIds).toContain('government');
       expect(sectionIds).toContain('territory');
       expect(sectionIds).toContain('military');
