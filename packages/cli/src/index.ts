@@ -61,20 +61,12 @@ import {
   createApp,
   PanelId,
   MapPanel,
-  createMapPanelLayout,
   EventLogPanel,
-  createEventLogPanelLayout,
   InspectorPanel,
-  createInspectorPanelLayout,
   RelationshipsPanel,
-  createRelationshipsPanelLayout,
   TimelinePanel,
-  createTimelinePanelLayout,
   StatisticsPanel,
-  createStatsPanelLayout,
   FingerprintPanel,
-  createFingerprintPanelLayout,
-  LayoutManager,
 } from '@fws/renderer';
 import type { RenderContext, PanelLayout } from '@fws/renderer';
 import type * as blessed from 'blessed';
@@ -486,11 +478,27 @@ function launchTerminalUI(
     return blessedModule.box(opts);
   };
 
-  // Calculate layout based on screen size
-  const screenWidth = screen.width as number;
-  const screenHeight = (screen.height as number) - 1; // Reserve 1 row for status bar
-  const layoutManager = new LayoutManager({ width: screenWidth, height: screenHeight });
-  const layout = layoutManager.getCurrentLayout();
+  // Create the application FIRST so we use its single LayoutManager for
+  // panel construction.  This eliminates the previous double-LayoutManager
+  // race condition: the CLI used to create its own LayoutManager (with a
+  // status-bar height subtraction that the LayoutManager already handles
+  // internally), resulting in panels created with incorrect dimensions.
+  // Now panels are created with the Application's default layout (120x40)
+  // and app.start() -> renderInitialFrame() -> applyLayout() will resize
+  // them to match the actual screen size.
+  const app = createApp(context, { targetFps: 30 });
+
+  // Inject the screen and box factory
+  app.setFactories(
+    () => screen,
+    boxFactory
+  );
+
+  // Use the Application's LayoutManager to get initial panel layouts.
+  // These will use the default 120x40 dimensions; app.start() will later
+  // resize them to actual screen size via applyLayout().
+  const appLayoutManager = app.getLayoutManager();
+  const layout = appLayoutManager.getCurrentLayout();
 
   // Helper to get layout for a panel
   const getLayout = (id: PanelId): PanelLayout => {
@@ -502,7 +510,7 @@ function launchTerminalUI(
     return { id, x: 0, y: 0, width: 40, height: 20, focused: false };
   };
 
-  // Create all panels
+  // Create all panels using the Application's LayoutManager
   const mapPanel = new MapPanel(screen, getLayout(PanelId.Map), boxFactory);
   mapPanel.setWorldSize(worldMapWidth, worldMapHeight);
   if (context.tileLookup !== undefined) {
@@ -523,15 +531,6 @@ function launchTerminalUI(
   const statsPanel = new StatisticsPanel(screen, getLayout(PanelId.Statistics), boxFactory);
 
   const fingerprintPanel = new FingerprintPanel(screen, getLayout(PanelId.Fingerprint), boxFactory);
-
-  // Create the application with screen and box factory injection
-  const app = createApp(context, { targetFps: 30 });
-
-  // Inject the screen and box factory
-  app.setFactories(
-    () => screen,
-    boxFactory
-  );
 
   // Register all panels
   app.registerPanel(mapPanel, PanelId.Map);
