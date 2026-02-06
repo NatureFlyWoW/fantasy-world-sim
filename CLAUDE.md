@@ -42,7 +42,11 @@ ASCII-aesthetic terminal interface with dual event streams: raw logs + narrative
 - Pure functions for simulation logic, classes for entities/stores
 - Events are immutable records
 - Branded types for all IDs: EntityId, CharacterId, FactionId, SiteId,
-  ArtifactId, EventId, DeityId, BookId, RegionId, WarId
+  ArtifactId, EventId, DeityId, BookId, RegionId, WarId, InfluenceActionId
+- Influence system produces events mapped to existing categories
+  (Religious, Personal, Cultural, Economic, Ecological) — never a
+  separate 'Influence' category. Player actions must feel like natural
+  world events.
 - Test every system in isolation with Vitest
 - Systems communicate ONLY through event queue and shared component state
 - Never reference other systems directly
@@ -62,7 +66,11 @@ pnpm run start -- --ticks 100        # Run specific tick count (headless mode)
 ```
 
 ## Current Phase
-Phase 6: Polish & Integration (pending)
+Phase 6: Player Interaction (pending)
+
+### Phase 6 Tasks — PENDING
+- [ ] 6.1 — Simulation Controls (time controls, focus, bookmarks, notifications)
+- [ ] 6.2 — Influence System (18 actions, believability, resistance, IP economy)
 
 ### Phase 5 Tasks — COMPLETE
 Narrative engine complete. Chronicler system applies faction and ideological bias.
@@ -213,6 +221,39 @@ Deterministic from seed. 9 configurable parameters with named presets.
   Startup sequence: generateWorld → createPanels → app.start → renderInitialFrame
   → display "Speed: Paused | Press Space to begin" → wait for input → startSimLoop.
   2142 tests passing.
+- 2025: Phase 6 influence system uses EXISTING EventCategory values instead of adding
+  new EventCategory.Influence. This follows Design Pillar 3 (cultivation, not commands)
+  and ensures influence events cascade naturally through existing systems.
+  Mapping: InspireIdea/ArrangeMeeting/PersonalityNudge/RevealSecret/LuckModifier → Personal;
+  PropheticDream/VisionOfFuture/EmpowerChampion → Religious;
+  AdjustWeather/MinorGeology/AnimalMigration/TriggerNaturalEvent → Disaster;
+  ResourceDiscovery → Economic; PromoteArt/StrengthenTradition/IntroduceForeignConcept → Cultural;
+  EncourageResearch → Scientific. 17 action types total with costs, cooldowns, significance ranges.
+- 2025: Pre-Phase 6 TimeController audit. TimeController in core provides: 7 speed modes
+  (Paused/SlowMotion/Normal/Fast7/30/365/UltraFast3650), pause()/play()/fastForward()/slowMotion(),
+  step units (day/week/month/year via getTicksForStep()), auto slow-down on significance.
+  BUT: app.ts does NOT use TimeController — manages speed in its own state, duplicating logic.
+  Phase 6.1 needs: (1) Wire app.ts to use TimeController instead of duplicating state,
+  (2) Add single-step mode (step by day/week/month while paused), (3) Auto slow-down on
+  significance >85 events, (4) Speed change events for UI notifications. 2143 tests passing.
+- 2025: Pre-Phase 6 LoD Manager audit. LevelOfDetailManager provides: setFocus(x,y) for
+  focus position, getDetailLevel(x,y) returning 'full'|'reduced'|'abstract', zone radii
+  (Full=50, Reduced=200, Abstract=beyond), promoteToFullDetail(x,y,duration) for temporary
+  overrides on significant events, shouldSimulateEntity(pos,sig?) for simulation filtering.
+  MISSING: (1) Zone change events/callbacks when focus moves, (2) app.ts.setFocusLocation()
+  not wired to LevelOfDetailManager.setFocus(). Phase 6.1 needs to connect renderer focus
+  to LoD manager for influence system distance cost calculations.
+- 2025: Influence system tick positioning design. SimulationEngine.tick() follows 13-step
+  order: TIME ADVANCE → systems 2-9 → EVENT RESOLUTION → tick listeners. Influence actions
+  should be processed BETWEEN ticks (after tick N completes, before tick N+1 starts) to
+  avoid modifying the existing pipeline. Implementation: add processInfluenceQueue() call
+  at start of tick() before clearing pendingEvents. Influence events then cascade naturally
+  through the next tick's systems. This preserves the clean 13-step architecture.
+- 2026: Pre-Phase 6 review complete. Narrative engine wired into renderer
+  pipeline. Influence events map to existing EventCategories (no new category)
+  for natural feel. Influence actions processed between ticks (queued,
+  applied before next tick starts). Focus system uses existing LoD manager
+  setCenter/updateCenter API.
 
 ## Known Issues
 - EventCategory.Exploratory has no system producing events (by design — no exploration
