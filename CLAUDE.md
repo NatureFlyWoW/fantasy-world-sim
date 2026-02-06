@@ -254,6 +254,9 @@ Deterministic from seed. 9 configurable parameters with named presets.
   for natural feel. Influence actions processed between ticks (queued,
   applied before next tick starts). Focus system uses existing LoD manager
   setCenter/updateCenter API.
+- 2026: Pre-Phase 6 performance baseline (Small world, 365 ticks, seed 42):
+  Generation: 110ms, Simulation: 114ms, Per-tick: 0.31ms, Memory: 40MB heap / 134MB RSS, Events: 8343.
+  9/10 event categories active. Economic (3997) and Personal (2132) dominate.
 
 ## Known Issues
 - EventCategory.Exploratory has no system producing events (by design — no exploration

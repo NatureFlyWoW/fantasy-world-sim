@@ -19,7 +19,8 @@
     "dev": "tsc --watch",
     "build": "tsc",
     "typecheck": "tsc --noEmit",
-    "start": "tsx ./src/index.ts"
+    "start": "tsx ./src/index.ts",
+    "perf": "tsx src/integration/perf-baseline.ts"
   },
   "devDependencies": {
     "tsx": "^4.7.0"
