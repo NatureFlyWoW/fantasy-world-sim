@@ -24,3 +24,15 @@ export type {
   Vignette,
   VignetteGeneratorContext,
 } from './vignette-generator.js';
+
+// Character introspection
+export {
+  generateIntrospection,
+  determineVoice,
+  VoiceType,
+} from './introspection.js';
+
+export type {
+  IntrospectionContext,
+  Introspection,
+} from './introspection.js';

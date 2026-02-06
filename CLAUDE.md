@@ -67,16 +67,19 @@ pnpm run start -- --ticks 100        # Run specific tick count (headless mode)
 ```
 
 ## Current Phase
-Phase 7: World Identity & Polish
+Phase 8: (Next)
 
-### Phase 7 Tasks
-World DNA fingerprint captures each world's unique character as a composite
-identity signature: domain balance, civilization palette, historical sparklines,
-and complexity score derived from cascade chains.
+### Phase 7 Tasks — COMPLETE
+Extended systems: World DNA Fingerprint (6-domain radial chart), Timeline Branching
+(what-if scenarios, max 3 branches), Save/Load with auto-save and export,
+Procedural Heraldry (ASCII shields with cultural variation and evolution),
+Dreaming Layer (5 dream types, prophetic dream integration), Character Introspection
+(first-person monologue from personality/memories).
 - [x] 7.1 — World DNA Fingerprint (WorldFingerprintCalculator with 6 domains, civ palette, sparklines, complexity score; FingerprintPanel with hex chart, colored faction bar, sparklines, progress bar; 49 tests)
 - [x] 7.2 — "What If" Timeline Branching (WorldSnapshotManager with deep-clone snapshot/restore, BranchRunner with 5 divergence actions and MAX_BRANCHES=3, BranchComparisonPanel with 3 views and divergence counter; 50 tests)
 - [x] 7.3 — Save/Load & Export (SaveManager with full/incremental saves, gzip compression, auto-save rotation; ExportManager with 5 export types in 3 formats; SaveLoadController with Ctrl+S/F5/F6 keybindings; 58 tests)
 - [x] 7.4 — Procedural Heraldry (ASCII shield templates per culture: knightly/round/totem; 5 field divisions; 28 charges in 4 categories; tincture derivation from faction values/biome; heraldry evolution on political events; 3 display sizes; FactionInspector integration; 60 tests)
+- [x] 7.5 — Extended Character Systems (DreamingSystem with 5 dream types driven by emotional memory load, PlantedDream queue for PropheticDream influence integration; generateIntrospection with 8 voice types producing 100-300 word first-person monologue from personality/goals/memories/secrets; 82 tests)
 
 ### Phase 6 Tasks — COMPLETE
 Player interaction: simulation controls (auto-slowdown on significant events),
@@ -327,6 +330,24 @@ Deterministic from seed. 9 configurable parameters with named presets.
   F6 (export menu). SaveStorage interface enables in-memory testing. All saves go to
   ~/.aeternum/saves/, exports to ~/.aeternum/exports/. 58 new tests (27 save + 31
   export), 2470 total.
+
+- 2026: Phase 7.5 Extended Character Systems. DreamingSystem in
+  packages/core/src/systems/dreaming.ts runs daily at CHARACTER_AI execution order.
+  5 dream types: GoalResolution (stress reduction), FearReinforcement (phobia from
+  trauma), CreativeInspiration (+20% research bonus), SecretProcessing (suspicion
+  boost), OralTraditionVision (cultural identity). Dream probability formula:
+  emotionalLoad/100 × 0.3 (max 30% per night). Emotional load = average of top 5
+  memories by absolute emotional weight. PlantedDream queue integrates with
+  PropheticDream influence action — planted dreams processed before natural dreams,
+  preventing double-dreaming same tick. Events emitted as Personal/character.dream.
+  Character Introspection in packages/narrative/src/vignettes/introspection.ts
+  generates 100-300 word first-person monologue. 8 voice types determined from
+  personality trait combinations (AmbitiousPatient, ImpulsivePassionate, Scholarly,
+  ParanoidKnowledgeable, Empathetic, BraveIdealistic, CunningPragmatic, Default).
+  Monologue assembles opening, location/faction context, goal reflection with
+  progress notes, emotional memory coloring, ally/rival relationships, secret
+  reflection, recent events, closing. Deterministic from seed. 82 new tests
+  (46 dreaming + 36 introspection), 2612 total. Phase 7 complete.
 
 ## Known Issues
 - EventCategory.Exploratory has no system producing events (by design — no exploration

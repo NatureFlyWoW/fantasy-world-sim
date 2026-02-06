@@ -504,3 +504,24 @@ export type {
   CivPaletteEntry,
   WorldFingerprint,
 } from './world-fingerprint.js';
+
+// Dreaming system
+export {
+  DreamingSystem,
+  DreamType,
+  ALL_DREAM_TYPES,
+  DEFAULT_DREAMING_CONFIG,
+  computeEmotionalLoad,
+  calculateDreamProbability,
+  computeDreamTypeWeights,
+  selectDreamType,
+  buildDreamEffect,
+  selectDreamDescription,
+} from './dreaming.js';
+export type {
+  DreamRecord,
+  DreamEffect,
+  DreamTypeContext,
+  PlantedDream,
+  DreamingConfig,
+} from './dreaming.js';

@@ -123,6 +123,18 @@ export type {
   VignetteGeneratorContext,
 } from './vignettes/index.js';
 
+// Character introspection
+export {
+  generateIntrospection,
+  determineVoice,
+  VoiceType,
+} from './vignettes/index.js';
+
+export type {
+  IntrospectionContext,
+  Introspection,
+} from './vignettes/index.js';
+
 import { ALL_TEMPLATES } from './templates/index.js';
 import { NarrativeEngine } from './transforms/narrative-engine.js';
 import type { NarrativeEngineConfig, EntityResolver } from './templates/types.js';
