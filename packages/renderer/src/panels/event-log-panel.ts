@@ -30,6 +30,7 @@ import type {
   Vignette,
   VignetteTriggerContext,
   VignetteGeneratorContext,
+  EntityResolver,
 } from '@fws/narrative';
 
 /**
@@ -212,6 +213,14 @@ export class EventLogPanel extends BasePanel {
       locationFilter: new Set(),
       searchQuery: '',
     };
+  }
+
+  /**
+   * Set the entity resolver for narrative generation.
+   * This recreates the narrative engine with the new resolver.
+   */
+  setEntityResolver(resolver: EntityResolver): void {
+    this.narrativeEngine = createDefaultNarrativeEngine({ defaultTone: this.currentTone }, resolver);
   }
 
   /**
@@ -556,6 +565,16 @@ export class EventLogPanel extends BasePanel {
     _height: number,
     context: RenderContext
   ): string {
+    // Show placeholder message when there are no events
+    if (this.filteredEvents.length === 0) {
+      if (row === 0) {
+        const message = 'No events yet - simulation paused';
+        const padding = Math.floor((width - message.length) / 2);
+        return '{#888888-fg}' + ' '.repeat(padding) + message + ' '.repeat(width - padding - message.length) + '{/}';
+      }
+      return ' '.repeat(width);
+    }
+
     const eventIndex = this.scrollOffset + row;
 
     if (eventIndex >= this.filteredEvents.length) {

@@ -3,6 +3,9 @@
  * Orchestrates the screen, panels, and input handling.
  */
 
+import { createRequire } from 'node:module';
+const require = createRequire(import.meta.url);
+
 import type * as blessed from 'blessed';
 import type { WorldEvent, Unsubscribe } from '@fws/core';
 import type { RenderContext, AppState, SelectedEntity, KeyBinding, LayoutPreset } from './types.js';
@@ -92,9 +95,12 @@ export class Application {
   private state: AppState;
   private running = false;
   private renderInterval: ReturnType<typeof setInterval> | null = null;
+  private simulationInterval: ReturnType<typeof setInterval> | null = null;
   private eventSubscription: Unsubscribe | null = null;
   private pendingEvents: WorldEvent[] = [];
   private lastRenderTime = 0;
+  private lastTickTime = 0;
+  private simulationStarted = false;
 
   // Factory functions for blessed elements (injected for testability)
   private screenFactory: (() => blessed.Widgets.Screen) | null = null;
@@ -108,7 +114,7 @@ export class Application {
     this.layoutManager = new LayoutManager({ width: 120, height: 40 });
 
     this.state = {
-      speed: SimulationSpeed.Normal,
+      speed: SimulationSpeed.Paused,
       selectedEntity: null,
       focusedPanel: PanelId.Map,
       focusLocation: null,
@@ -129,20 +135,45 @@ export class Application {
 
   /**
    * Start the application.
+   * Note: Simulation does NOT start until player presses Space.
+   * Call renderInitialFrame() after registering panels to show the initial state.
+   * The render loop starts AFTER renderInitialFrame() to ensure the first frame
+   * is fully painted before the loop begins.
    */
   start(): void {
     if (this.running) return;
 
     this.running = true;
+    this.simulationStarted = false;
     this.createScreen();
     this.createStatusBar();
     this.setupKeyBindings();
     this.subscribeToEvents();
-    this.startRenderLoop();
+    // NOTE: Render loop is NOT started here - it starts in renderInitialFrame()
+    // NOTE: Simulation loop is NOT started here - it starts when player presses Space
+  }
 
+  /**
+   * Force render all panels and the screen synchronously.
+   * Call this after all panels are registered and have their initial data set.
+   * This also starts the render loop after the initial frame is painted.
+   */
+  renderInitialFrame(): void {
+    // Render each registered panel with its initial content
+    for (const [id, panel] of this.panels) {
+      const layout = this.layoutManager.getCurrentLayout().panels.get(id);
+      if (layout !== undefined && layout.width > 0 && layout.height > 0) {
+        panel.render(this.context);
+      }
+    }
+
+    // Force screen render - paint the complete initial frame
     if (this.screen !== null) {
       this.screen.render();
     }
+
+    // NOW start the render loop, after the initial frame is fully painted
+    this.startRenderLoop();
   }
 
   /**
@@ -156,6 +187,11 @@ export class Application {
     if (this.renderInterval !== null) {
       clearInterval(this.renderInterval);
       this.renderInterval = null;
+    }
+
+    if (this.simulationInterval !== null) {
+      clearInterval(this.simulationInterval);
+      this.simulationInterval = null;
     }
 
     if (this.eventSubscription !== null) {
@@ -247,10 +283,17 @@ export class Application {
 
   /**
    * Toggle simulation pause/play.
+   * On first press, starts the simulation loop.
    */
   togglePause(): void {
     if (this.state.speed === SimulationSpeed.Paused) {
       this.state = { ...this.state, speed: SimulationSpeed.Normal };
+
+      // Start simulation loop on first unpause
+      if (!this.simulationStarted) {
+        this.simulationStarted = true;
+        this.startSimulationLoop();
+      }
     } else {
       this.state = { ...this.state, speed: SimulationSpeed.Paused };
     }
@@ -360,9 +403,12 @@ export class Application {
       this.processPendingEvents();
     }
 
-    // Render each panel
-    for (const panel of this.panels.values()) {
-      panel.render(this.context);
+    // Render each visible panel (skip panels with 0 dimensions)
+    for (const [id, panel] of this.panels) {
+      const layout = this.layoutManager.getCurrentLayout().panels.get(id);
+      if (layout !== undefined && layout.width > 0 && layout.height > 0) {
+        panel.render(this.context);
+      }
     }
 
     if (this.screen !== null) {
@@ -482,6 +528,14 @@ export class Application {
   private updateStatusBar(): void {
     if (this.statusBar === null) return;
 
+    // Show startup message if simulation hasn't started yet
+    if (!this.simulationStarted) {
+      const time = this.context.clock.currentTime;
+      const dateStr = formatWorldTime(time.year, time.month, time.day);
+      this.statusBar.setContent(` ${dateStr}  |  Speed: Paused  |  Press Space to begin  |  F1: Help  |  Q: Quit `);
+      return;
+    }
+
     const time = this.context.clock.currentTime;
     const dateStr = formatWorldTime(time.year, time.month, time.day);
     const speedStr = `Speed: ${getSpeedDisplayName(this.state.speed)}`;
@@ -596,6 +650,42 @@ export class Application {
     this.renderInterval = setInterval(() => {
       this.render();
     }, interval);
+  }
+
+  /**
+   * Start the simulation tick loop.
+   * Ticks the engine based on current speed setting.
+   */
+  private startSimulationLoop(): void {
+    // Base tick interval: 100ms = 10 ticks/second at Normal speed
+    const baseInterval = 100;
+    this.simulationInterval = setInterval(() => {
+      if (this.context.engine === undefined) return;
+      if (this.state.speed === SimulationSpeed.Paused) return;
+
+      const now = Date.now();
+      const elapsed = now - this.lastTickTime;
+
+      // Calculate how many ticks to run based on speed
+      // At Normal (1x), run 1 tick per interval
+      // At Fast7 (7x), run 7 ticks per interval
+      let ticksToRun = 0;
+      if (this.state.speed === SimulationSpeed.SlowMotion) {
+        // Slow motion: tick every 200ms
+        if (elapsed >= 200) {
+          ticksToRun = 1;
+        }
+      } else {
+        // Normal and fast speeds: tick based on multiplier
+        ticksToRun = Math.floor(this.state.speed);
+      }
+
+      if (ticksToRun > 0) {
+        this.context.engine.run(ticksToRun);
+        this.lastTickTime = now;
+        this.updateStatusBar();
+      }
+    }, baseInterval);
   }
 
   /**

@@ -44,6 +44,7 @@ export abstract class BasePanel {
       scrollable: true,
       mouse: true,
       keys: true,
+      tags: true,
     });
 
     screen.append(this.box);

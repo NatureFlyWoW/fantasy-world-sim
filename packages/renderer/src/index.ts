@@ -23,6 +23,8 @@ export type {
   SelectedEntity,
   AppState,
   LayoutPreset,
+  RenderableTile,
+  TileLookup,
 } from './types.js';
 
 // Theme

@@ -284,9 +284,9 @@ export class StatisticsPanel extends BasePanel {
     const maxCount = Math.max(1, ...categoryData.map(([, count]) => count));
 
     for (const [category, count] of categoryData) {
-      const barWidth = Math.min(width - 20, 30);
+      const barWidth = Math.max(0, Math.min(width - 20, 30));
       const filledWidth = Math.round((count / maxCount) * barWidth);
-      const bar = FULL_CHAR.repeat(filledWidth) + EMPTY_CHAR.repeat(barWidth - filledWidth);
+      const bar = FULL_CHAR.repeat(filledWidth) + EMPTY_CHAR.repeat(Math.max(0, barWidth - filledWidth));
       const label = category.padEnd(12);
       lines.push(`${label} ${bar} ${count}`);
     }
@@ -312,7 +312,7 @@ export class StatisticsPanel extends BasePanel {
 
     for (let i = 0; i < 4; i++) {
       const count = sigBuckets[i] ?? 0;
-      const barWidth = Math.min(width - 25, 25);
+      const barWidth = Math.max(0, Math.min(width - 25, 25));
       const filledWidth = Math.round((count / maxSig) * barWidth);
       const bar = FULL_CHAR.repeat(filledWidth);
       const label = (sigLabels[i] ?? '').padEnd(18);

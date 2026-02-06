@@ -7,6 +7,7 @@ import type { WorldClock } from '@fws/core';
 import type { EventLog } from '@fws/core';
 import type { EventBus } from '@fws/core';
 import type { SpatialIndex } from '@fws/core';
+import type { SimulationEngine } from '@fws/core';
 
 /**
  * Panel identifiers for the UI layout.
@@ -31,6 +32,22 @@ export interface KeyBinding {
 }
 
 /**
+ * Minimal tile interface for map rendering.
+ * Mirrors essential fields from @fws/generator TerrainTile.
+ */
+export interface RenderableTile {
+  readonly biome: string;
+  readonly riverId?: number;
+  readonly leyLine?: boolean;
+  readonly resources?: readonly string[];
+}
+
+/**
+ * Tile lookup function type for map rendering.
+ */
+export type TileLookup = (x: number, y: number) => RenderableTile | null;
+
+/**
  * Rendering context provided to all panels.
  * Contains references to the simulation state needed for display.
  */
@@ -40,6 +57,8 @@ export interface RenderContext {
   readonly eventLog: EventLog;
   readonly eventBus: EventBus;
   readonly spatialIndex: SpatialIndex;
+  readonly engine?: SimulationEngine;
+  readonly tileLookup?: TileLookup;
 }
 
 /**

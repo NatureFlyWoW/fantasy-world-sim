@@ -200,6 +200,19 @@ Deterministic from seed. 9 configurable parameters with named presets.
   epithet insertion, foreshadowing (rising arcs), retrospective (cascade chains),
   dramatic irony (secrets). Fallback chain: specific template → category default →
   global fallback. Tone substitutions transform vocabulary (kingdom→realm). 2029 tests.
+- 2025: Pre-Phase 6 runtime bugfixes for terminal UI launch:
+  | Fix | Status | Description | Solution |
+  |-----|--------|-------------|----------|
+  | 2.1a | ✅ | CJS/ESM require fix | `createRequire` added for blessed import |
+  | 2.1b | ✅ | Keybinding registration | Keys 1-6, Tab, arrows bound in app.ts |
+  | 2.1c | ✅ | blessed `tags: true` | Color tags now parsed in BasePanel |
+  | 2.1d | ✅ | Map terrain colors | tileLookup wired, biomes visible |
+  | 2.1e | ✅ | Startup sequencing | Simulation waits for Space press |
+  | 2.1f | ✅ | EntityResolver | Narrative resolves {character.name} |
+  | 2.1g | 🔧 | Layout proportions | Panels render but sizing may need tuning |
+  Startup sequence: generateWorld → createPanels → app.start → renderInitialFrame
+  → display "Speed: Paused | Press Space to begin" → wait for input → startSimLoop.
+  2142 tests passing.
 
 ## Known Issues
 - EventCategory.Exploratory has no system producing events (by design — no exploration

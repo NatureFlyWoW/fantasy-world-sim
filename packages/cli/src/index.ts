@@ -46,6 +46,8 @@ import type { WorldEvent } from '@fws/core';
 import {
   createApp,
   PanelId,
+  MapPanel,
+  createMapPanelLayout,
   EventLogPanel,
   createEventLogPanelLayout,
   InspectorPanel,
@@ -56,8 +58,15 @@ import {
   createTimelinePanelLayout,
   StatisticsPanel,
   createStatsPanelLayout,
+  LayoutManager,
 } from '@fws/renderer';
-import type { RenderContext } from '@fws/renderer';
+import type { RenderContext, PanelLayout } from '@fws/renderer';
+import type * as blessed from 'blessed';
+import { createRequire } from 'node:module';
+const cliRequire = createRequire(import.meta.url);
+
+// Narrative imports for EntityResolver
+import type { EntityResolver, ResolvedEntity, Gender } from '@fws/narrative';
 
 // Generator imports
 import {
@@ -288,6 +297,80 @@ function createSimulationEngine(
 }
 
 /**
+ * Build an EntityResolver from generated data.
+ * This allows the narrative engine to resolve entity IDs to names.
+ */
+function buildEntityResolver(
+  generatedData: ReturnType<typeof generateWorld>,
+  populationResult: ReturnType<typeof populateWorldFromGenerated>
+): EntityResolver {
+  // Build character ID → data maps
+  const characterData = new Map<number, ResolvedEntity>();
+  const allCharacters = [...generatedData.rulers, ...generatedData.notables];
+
+  for (const char of allCharacters) {
+    const charId = populationResult.characterIds.get(char.name);
+    if (charId !== undefined) {
+      const idNum = charId as unknown as number;
+      characterData.set(idNum, {
+        name: char.name,
+        title: char.status.title.length > 0 ? char.status.title : undefined,
+        gender: char.gender as Gender,
+      });
+    }
+  }
+
+  // Build faction ID → data maps
+  const factionData = new Map<number, ResolvedEntity>();
+  for (let i = 0; i < generatedData.factions.length; i++) {
+    const faction = generatedData.factions[i];
+    if (faction === undefined) continue;
+    const factionId = populationResult.factionIds.get(i);
+    if (factionId !== undefined) {
+      const idNum = factionId as unknown as number;
+      factionData.set(idNum, {
+        name: faction.name,
+      });
+    }
+  }
+
+  // Build settlement/site ID → data maps
+  const siteData = new Map<number, ResolvedEntity>();
+  for (let i = 0; i < generatedData.settlements.length; i++) {
+    const settlement = generatedData.settlements[i];
+    if (settlement === undefined) continue;
+    const siteId = populationResult.settlementIds.get(i);
+    if (siteId !== undefined) {
+      const idNum = siteId as unknown as number;
+      siteData.set(idNum, {
+        name: settlement.name,
+      });
+    }
+  }
+
+  // Build deity ID → data maps from pantheon
+  const deityData = new Map<number, ResolvedEntity>();
+  for (let i = 0; i < generatedData.pantheon.gods.length; i++) {
+    const deity = generatedData.pantheon.gods[i];
+    if (deity === undefined) continue;
+    // Deities don't have separate entity IDs in current implementation,
+    // but we add them using their array index as a fallback
+    deityData.set(i, {
+      name: deity.name,
+      title: deity.title,
+    });
+  }
+
+  return {
+    resolveCharacter: (id: number) => characterData.get(id),
+    resolveFaction: (id: number) => factionData.get(id),
+    resolveSite: (id: number) => siteData.get(id),
+    resolveArtifact: (_id: number) => undefined, // Not yet populated
+    resolveDeity: (id: number) => deityData.get(id),
+  };
+}
+
+/**
  * Print a fancy box with a message.
  */
 function printBox(lines: string[]): void {
@@ -357,15 +440,9 @@ function runHeadless(
 function launchTerminalUI(
   context: RenderContext,
   worldMapWidth: number,
-  worldMapHeight: number
+  worldMapHeight: number,
+  entityResolver: EntityResolver
 ): void {
-  // Create the application
-  const app = createApp(context, { targetFps: 30 });
-
-  // We need blessed for box factory - will be loaded by Application
-  // The panels will be created and registered by the application
-  // For now, we'll just start the app which sets up the screen
-
   console.log('\n');
   printBox([
     'ÆTERNUM - Terminal UI',
@@ -376,8 +453,82 @@ function launchTerminalUI(
   console.log('\n');
   console.log('Starting terminal UI...\n');
 
-  // Start the application
+  // Load blessed dynamically (CJS module)
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const blessedModule = cliRequire('blessed') as typeof blessed;
+
+  // Create the blessed screen
+  const screen = blessedModule.screen({
+    smartCSR: true,
+    title: 'Æternum - Fantasy World Simulator',
+    fullUnicode: true,
+  });
+
+  // Box factory for creating blessed elements
+  // Note: Do NOT call screen.append here - BasePanel.constructor does it
+  const boxFactory = (opts: blessed.Widgets.BoxOptions): blessed.Widgets.BoxElement => {
+    return blessedModule.box(opts);
+  };
+
+  // Calculate layout based on screen size
+  const screenWidth = screen.width as number;
+  const screenHeight = (screen.height as number) - 1; // Reserve 1 row for status bar
+  const layoutManager = new LayoutManager({ width: screenWidth, height: screenHeight });
+  const layout = layoutManager.getCurrentLayout();
+
+  // Helper to get layout for a panel
+  const getLayout = (id: PanelId): PanelLayout => {
+    const panelLayout = layout.panels.get(id);
+    if (panelLayout !== undefined) {
+      return panelLayout;
+    }
+    // Fallback layout
+    return { id, x: 0, y: 0, width: 40, height: 20, focused: false };
+  };
+
+  // Create all panels
+  const mapPanel = new MapPanel(screen, getLayout(PanelId.Map), boxFactory);
+  mapPanel.setWorldSize(worldMapWidth, worldMapHeight);
+  if (context.tileLookup !== undefined) {
+    mapPanel.setTileLookup(context.tileLookup);
+  }
+
+  const eventLogPanel = new EventLogPanel(screen, getLayout(PanelId.EventLog), boxFactory);
+  eventLogPanel.setEntityResolver(entityResolver);
+  eventLogPanel.loadEventsFromLog(context);
+  eventLogPanel.subscribeToEvents(context);
+
+  const inspectorPanel = new InspectorPanel(screen, getLayout(PanelId.Inspector), boxFactory);
+
+  const relationshipsPanel = new RelationshipsPanel(screen, getLayout(PanelId.RelationshipGraph), boxFactory);
+
+  const timelinePanel = new TimelinePanel(screen, getLayout(PanelId.Timeline), boxFactory);
+
+  const statsPanel = new StatisticsPanel(screen, getLayout(PanelId.Statistics), boxFactory);
+
+  // Create the application with screen and box factory injection
+  const app = createApp(context, { targetFps: 30 });
+
+  // Inject the screen and box factory
+  app.setFactories(
+    () => screen,
+    boxFactory
+  );
+
+  // Register all panels
+  app.registerPanel(mapPanel, PanelId.Map);
+  app.registerPanel(eventLogPanel, PanelId.EventLog);
+  app.registerPanel(inspectorPanel, PanelId.Inspector);
+  app.registerPanel(relationshipsPanel, PanelId.RelationshipGraph);
+  app.registerPanel(timelinePanel, PanelId.Timeline);
+  app.registerPanel(statsPanel, PanelId.Statistics);
+
+  // Start the application (sets up screen, key bindings, render loop - but NOT simulation)
   app.start();
+
+  // Force a full initial render of all panels BEFORE any simulation ticks
+  // This ensures the map terrain, empty event log, etc. are all visible immediately
+  app.renderInitialFrame();
 }
 
 /**
@@ -452,25 +603,38 @@ async function main(): Promise<void> {
     // Run in headless mode
     runHeadless(engine, clock, eventLog, ticks);
   } else {
-    // Create render context
+    // Create tile lookup function from worldMap
+    const tileLookup = (x: number, y: number) => {
+      const tile = generatedData.worldMap.getTile(x, y);
+      if (tile === undefined) return null;
+      return {
+        biome: tile.biome,
+        riverId: tile.riverId,
+        leyLine: tile.leyLine,
+        resources: tile.resources,
+      };
+    };
+
+    // Create render context with simulation engine and tile lookup
     const context: RenderContext = {
       world: ecsWorld,
       clock,
       eventLog,
       eventBus,
       spatialIndex,
+      engine,
+      tileLookup,
     };
 
-    // Run a few initial ticks to populate the event log
-    console.log('Running initial simulation ticks...');
-    engine.run(10);
-    console.log(`Initial events: ${eventLog.getCount()}\n`);
+    // Build entity resolver for narrative generation
+    const entityResolver = buildEntityResolver(generatedData, populationResult);
 
-    // Launch the terminal UI
+    // Launch the terminal UI (simulation starts paused, player presses Space to begin)
     launchTerminalUI(
       context,
       generatedData.worldMap.getWidth(),
-      generatedData.worldMap.getHeight()
+      generatedData.worldMap.getHeight(),
+      entityResolver
     );
   }
 }
