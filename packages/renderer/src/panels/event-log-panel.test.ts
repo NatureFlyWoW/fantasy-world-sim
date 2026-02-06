@@ -173,9 +173,31 @@ describe('EventLogPanel', () => {
     it('returns filter config', () => {
       const filter = panel.getFilter();
 
-      expect(filter.minSignificance).toBe(0);
+      expect(filter.minSignificance).toBe(40);
       expect(filter.searchQuery).toBe('');
       expect(filter.categories.size).toBeGreaterThan(0);
+    });
+
+    it('default filter has minSignificance of 40 to suppress low-significance noise', () => {
+      const freshPanel = panel;
+      const filter = freshPanel.getFilter();
+      expect(filter.minSignificance).toBe(40);
+    });
+
+    it('filters out events below default significance threshold', () => {
+      // Create a fresh panel to test default behavior
+      const screen2 = new MockScreen();
+      const boxFactory2 = createMockBoxFactory(screen2);
+      const layout2 = createEventLogPanelLayout(0, 0, 80, 24);
+      const freshPanel = new EventLogPanel(screen2 as unknown as any, layout2, boxFactory2 as unknown as any);
+
+      // Add a low-significance event (typical CharacterAI noise)
+      freshPanel.addEvent(createMockEvent(100, { significance: 20 }));
+      // Add a meaningful event
+      freshPanel.addEvent(createMockEvent(101, { significance: 50 }));
+
+      expect(freshPanel.getTotalEventCount()).toBe(2);
+      expect(freshPanel.getFilteredEventCount()).toBe(1);
     });
   });
 

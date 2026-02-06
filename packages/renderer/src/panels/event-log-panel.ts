@@ -208,7 +208,7 @@ export class EventLogPanel extends BasePanel {
 
     return {
       categories,
-      minSignificance: 0,
+      minSignificance: 40,
       entityFilter: new Set(),
       locationFilter: new Set(),
       searchQuery: '',
