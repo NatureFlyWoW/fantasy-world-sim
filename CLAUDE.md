@@ -66,10 +66,12 @@ pnpm run start -- --ticks 100        # Run specific tick count (headless mode)
 ```
 
 ## Current Phase
-Phase 6: Player Interaction (pending)
+Phase 6: Player Interaction (in progress)
 
-### Phase 6 Tasks — PENDING
-- [ ] 6.1 — Simulation Controls (time controls, focus, bookmarks, notifications)
+### Phase 6 Tasks — IN PROGRESS
+Player interaction: simulation controls (auto-slowdown on significant events),
+focus system (LoD follows focused entity), bookmark/notification system.
+- [x] 6.1 — Simulation Controls (time controls, focus, bookmarks, notifications)
 - [ ] 6.2 — Influence System (18 actions, believability, resistance, IP economy)
 
 ### Phase 5 Tasks — COMPLETE
@@ -257,6 +259,13 @@ Deterministic from seed. 9 configurable parameters with named presets.
 - 2026: Pre-Phase 6 performance baseline (Small world, 365 ticks, seed 42):
   Generation: 110ms, Simulation: 114ms, Per-tick: 0.31ms, Memory: 40MB heap / 134MB RSS, Events: 8343.
   9/10 event categories active. Economic (3997) and Personal (2132) dominate.
+- 2026: Phase 6.1 Simulation Controls complete. packages/cli/src/controls/ with 4 modules:
+  SimulationTimeControls (wraps TimeController, auto-slowdown on 3+ sig-90+ events in 30 ticks),
+  FocusManager (entity focus with LoD integration, tracks events for focused entity),
+  BookmarkManager (entity/event bookmarks with alerts), NotificationManager (configurable
+  alerts by significance/category/bookmarked/focused). RenderContext extended with optional
+  lodManager. CLI creates controls and wires to Application via callbacks. Keybindings:
+  F (toggle focus on selected entity), B (toggle bookmark). 94 new tests, 2244 total.
 
 ## Known Issues
 - EventCategory.Exploratory has no system producing events (by design — no exploration

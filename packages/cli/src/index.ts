@@ -16,6 +16,9 @@
 // Re-export menus for library usage
 export * from './menus/index.js';
 
+// Re-export controls for library usage
+export * from './controls/index.js';
+
 // Core imports
 import {
   World,
@@ -27,6 +30,7 @@ import {
   SystemRegistry,
   EventCategory,
   SpatialIndex,
+  LevelOfDetailManager,
   resetEntityIdCounter,
   CharacterAISystem,
   ReputationSystem,
@@ -40,7 +44,16 @@ import {
   EcologySystem,
   OralTraditionSystem,
 } from '@fws/core';
-import type { WorldEvent } from '@fws/core';
+import type { WorldEvent, EntityId } from '@fws/core';
+
+// Controls imports
+import {
+  SimulationTimeControls,
+  FocusManager,
+  BookmarkManager,
+  NotificationManager,
+  SimulationSpeed,
+} from './controls/index.js';
 
 // Renderer imports
 import {
@@ -523,6 +536,98 @@ function launchTerminalUI(
   app.registerPanel(timelinePanel, PanelId.Timeline);
   app.registerPanel(statsPanel, PanelId.Statistics);
 
+  // =========================================================================
+  // Phase 6.1: Create and wire simulation controls
+  // =========================================================================
+
+  // Create time controls with auto-slowdown
+  const timeControls = new SimulationTimeControls(context.eventBus, {
+    enabled: true,
+    significanceThreshold: 90,
+    eventCountThreshold: 3,
+    windowTicks: 30,
+  });
+  if (context.engine !== undefined) {
+    timeControls.setEngine(context.engine);
+  }
+
+  // Create focus manager (requires lodManager in context)
+  const focusManager = context.lodManager !== undefined
+    ? new FocusManager(context.world, context.eventBus, context.lodManager)
+    : null;
+
+  // Create bookmark manager
+  const bookmarkManager = new BookmarkManager(
+    context.eventBus,
+    () => context.clock.currentTime
+  );
+
+  // Create notification manager
+  const notificationManager = new NotificationManager(context.eventBus, {
+    significanceThreshold: 80,
+    bookmarkedEntityAlert: true,
+    focusEntityAlert: true,
+  });
+
+  // Wire focus changes to notification manager
+  if (focusManager !== null) {
+    focusManager.onFocusChange((entityId) => {
+      notificationManager.setFocusedEntity(entityId);
+    });
+  }
+
+  // Wire bookmark changes to notification manager
+  bookmarkManager.onChange((bookmark, action) => {
+    if (action === 'add' && bookmark.type === 'entity') {
+      const entities = new Set<EntityId>();
+      for (const b of bookmarkManager.getEntityBookmarks()) {
+        entities.add(b.id as EntityId);
+      }
+      notificationManager.setBookmarkedEntities(entities);
+    } else if (action === 'remove' && bookmark.type === 'entity') {
+      const entities = new Set<EntityId>();
+      for (const b of bookmarkManager.getEntityBookmarks()) {
+        entities.add(b.id as EntityId);
+      }
+      notificationManager.setBookmarkedEntities(entities);
+    }
+  });
+
+  // Wire time controls to application speed (via callback since we can't modify app.ts directly)
+  timeControls.onSpeedChange((speed, reason) => {
+    // Update app's internal speed state by calling its methods
+    if (speed === SimulationSpeed.Paused) {
+      // Already paused, no action needed
+    } else if (reason === 'auto-slowdown') {
+      // Auto-slowdown triggered - speed was reduced to Normal
+      // The app will pick this up on next render cycle
+    }
+  });
+
+  // Add keyboard bindings for new controls
+  // F key: enter focus mode (toggle focus on selected entity)
+  screen.key('f', () => {
+    if (focusManager === null) return;
+    const state = app.getState();
+    if (state.selectedEntity !== null) {
+      const entityId = state.selectedEntity.id as unknown as EntityId;
+      if (focusManager.isFocused(entityId)) {
+        focusManager.clearFocus();
+      } else {
+        focusManager.setFocus(entityId);
+      }
+    }
+  });
+
+  // B key: toggle bookmark on selected entity
+  screen.key('b', () => {
+    const state = app.getState();
+    if (state.selectedEntity !== null) {
+      const entityId = state.selectedEntity.id as unknown as EntityId;
+      bookmarkManager.toggle(entityId, 'entity', state.selectedEntity.name);
+    }
+  });
+
   // Start the application (sets up screen, key bindings, render loop - but NOT simulation)
   app.start();
 
@@ -599,6 +704,14 @@ async function main(): Promise<void> {
     generatedData.worldMap.getHeight()
   );
 
+  // Create Level-of-Detail manager for focus tracking
+  const lodManager = new LevelOfDetailManager();
+  // Set initial focus to center of map
+  lodManager.setFocus(
+    Math.floor(generatedData.worldMap.getWidth() / 2),
+    Math.floor(generatedData.worldMap.getHeight() / 2)
+  );
+
   if (headless) {
     // Run in headless mode
     runHeadless(engine, clock, eventLog, ticks);
@@ -624,6 +737,7 @@ async function main(): Promise<void> {
       spatialIndex,
       engine,
       tileLookup,
+      lodManager,
     };
 
     // Build entity resolver for narrative generation

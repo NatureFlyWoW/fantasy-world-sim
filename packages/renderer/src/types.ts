@@ -8,6 +8,7 @@ import type { EventLog } from '@fws/core';
 import type { EventBus } from '@fws/core';
 import type { SpatialIndex } from '@fws/core';
 import type { SimulationEngine } from '@fws/core';
+import type { LevelOfDetailManager } from '@fws/core';
 
 /**
  * Panel identifiers for the UI layout.
@@ -59,6 +60,7 @@ export interface RenderContext {
   readonly spatialIndex: SpatialIndex;
   readonly engine?: SimulationEngine;
   readonly tileLookup?: TileLookup;
+  readonly lodManager?: LevelOfDetailManager;
 }
 
 /**
