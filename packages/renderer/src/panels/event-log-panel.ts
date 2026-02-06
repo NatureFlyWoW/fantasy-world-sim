@@ -10,8 +10,27 @@ import { PanelId } from '../types.js';
 import { BasePanel } from '../panel.js';
 import { THEME, getCategoryColor, getSignificanceColor } from '../theme.js';
 import { EventFormatter, CATEGORY_ICONS, defaultFormatter } from './event-formatter.js';
-import { EventCategory } from '@fws/core';
-import type { WorldEvent, EventId, EntityId, Unsubscribe } from '@fws/core';
+import { EventCategory, PersonalityTrait } from '@fws/core';
+import type { WorldEvent, EventId, EntityId, Unsubscribe, CharacterId } from '@fws/core';
+import {
+  createDefaultNarrativeEngine,
+  NarrativeTone,
+  VignetteTrigger,
+  VignetteGenerator,
+  ChroniclerRegistry,
+  createChronicler,
+  ChroniclerBiasFilter,
+  ChroniclerIdeology,
+  WritingStyle,
+} from '@fws/narrative';
+import type {
+  NarrativeEngine,
+  TemplateContext,
+  Chronicler,
+  Vignette,
+  VignetteTriggerContext,
+  VignetteGeneratorContext,
+} from '@fws/narrative';
 
 /**
  * Filter configuration for the event log.
@@ -64,7 +83,7 @@ export type InspectEntityHandler = (entityId: EntityId) => void;
 /**
  * Panel mode for UI state.
  */
-type PanelMode = 'normal' | 'filter' | 'search' | 'cascade';
+type PanelMode = 'normal' | 'filter' | 'search' | 'cascade' | 'vignette';
 
 /**
  * EventLogPanel provides a dual-pane view of world events.
@@ -109,6 +128,27 @@ export class EventLogPanel extends BasePanel {
   // Cascade tree for cause-effect view
   private cascadeRoot: CascadeNode | null = null;
 
+  // Narrative engine
+  private narrativeEngine: NarrativeEngine;
+  private currentTone: NarrativeTone = NarrativeTone.EpicHistorical;
+  private readonly tones: readonly NarrativeTone[] = [
+    NarrativeTone.EpicHistorical,
+    NarrativeTone.PersonalCharacterFocus,
+    NarrativeTone.Mythological,
+    NarrativeTone.PoliticalIntrigue,
+    NarrativeTone.Scholarly,
+  ];
+
+  // Vignette system
+  private vignetteTrigger: VignetteTrigger;
+  private vignetteGenerator: VignetteGenerator;
+  private currentVignette: Vignette | null = null;
+
+  // Chronicler system
+  private chroniclerRegistry: ChroniclerRegistry;
+  private biasFilter: ChroniclerBiasFilter;
+  private currentChroniclerIndex = 0;
+
   constructor(
     screen: blessed.Widgets.Screen,
     layout: PanelLayout,
@@ -119,8 +159,41 @@ export class EventLogPanel extends BasePanel {
     // Initialize filter with all categories enabled
     this.filter = this.createDefaultFilter();
 
+    // Initialize narrative engine
+    this.narrativeEngine = createDefaultNarrativeEngine({ defaultTone: this.currentTone });
+
+    // Initialize vignette system
+    this.vignetteTrigger = new VignetteTrigger();
+    this.vignetteGenerator = new VignetteGenerator();
+
+    // Initialize chronicler system
+    this.chroniclerRegistry = new ChroniclerRegistry();
+    this.biasFilter = new ChroniclerBiasFilter();
+    this.initializeDefaultChroniclers();
+
     // Set panel title
-    this.setTitle('Event Log');
+    this.setTitle('Event Log [Epic Historical]');
+  }
+
+  /**
+   * Initialize default chroniclers with different ideologies.
+   */
+  private initializeDefaultChroniclers(): void {
+    const now = { year: 1, month: 1, day: 1 };
+    const far = { year: 9999, month: 12, day: 30 };
+    const homeLocation = 1 as unknown as import('@fws/core').SiteId;
+
+    // Create chroniclers with different biases
+    const chroniclers: Chronicler[] = [
+      createChronicler('objective', 'The Chronicler', ChroniclerIdeology.Cynical, WritingStyle.Matter_Of_Fact, homeLocation, now, far),
+      createChronicler('religious', 'Brother Aldric', ChroniclerIdeology.Religious, WritingStyle.Formal, homeLocation, now, far),
+      createChronicler('populist', 'Mira the Scribe', ChroniclerIdeology.Populist, WritingStyle.Intimate, homeLocation, now, far),
+      createChronicler('establishment', 'Court Historian', ChroniclerIdeology.ProEstablishment, WritingStyle.Academic, homeLocation, now, far),
+    ];
+
+    for (const chronicler of chroniclers) {
+      this.chroniclerRegistry.register(chronicler);
+    }
   }
 
   /**
@@ -441,6 +514,8 @@ export class EventLogPanel extends BasePanel {
       content = this.renderFilterView(leftWidth, rightWidth, innerDims.height);
     } else if (this.mode === 'search') {
       content = this.renderSearchView(leftWidth, rightWidth, innerDims.height, context);
+    } else if (this.mode === 'vignette' && this.currentVignette !== null) {
+      content = this.renderVignetteView(innerDims.width, innerDims.height);
     } else {
       content = this.renderNormalView(leftWidth, rightWidth, innerDims.height, context);
     }
@@ -574,32 +649,118 @@ export class EventLogPanel extends BasePanel {
   private buildNarrativeContent(event: WorldEvent, context: RenderContext): string[] {
     const lines: string[] = [];
 
-    // Significance bar
-    lines.push(`Significance: ${this.formatter.formatSignificanceBar(event.significance)}`);
-    lines.push('');
+    // Generate narrative using the narrative engine
+    const templateContext: TemplateContext = {
+      event,
+      world: context.world,
+      clock: context.clock,
+    };
 
-    // Participants
-    lines.push(`Participants: ${this.formatter.formatParticipants(event, context.world)}`);
+    const narrative = this.narrativeEngine.generateNarrative(templateContext, this.currentTone);
 
-    // Location
-    const location = this.formatter.formatLocation(event, context.world);
-    if (location !== null) {
-      lines.push(`Location: ${location}`);
+    // Apply chronicler bias if a chronicler is active
+    const chroniclers = this.chroniclerRegistry.getAll();
+    const currentChronicler = chroniclers[this.currentChroniclerIndex];
+    let displayBody = narrative.body;
+
+    if (currentChronicler !== undefined) {
+      const biasContext = {
+        event,
+        baseNarrative: narrative.body,
+        entityNames: new Map<EntityId, string>(),
+        factionNames: new Map<import('@fws/core').FactionId, string>(),
+        siteNames: new Map<import('@fws/core').SiteId, string>(),
+        currentTime: context.clock.currentTime,
+      };
+
+      const biasedOutput = this.biasFilter.apply(currentChronicler, biasContext);
+      displayBody = biasedOutput.narrative.length > 0 ? biasedOutput.narrative : narrative.body;
     }
 
+    // Add narrative title
+    lines.push(`{bold}${narrative.title}{/}`);
     lines.push('');
 
-    // Narrative placeholder
-    lines.push('[Narrative engine pending -');
-    lines.push('raw event data shown]');
+    // Wrap narrative body into lines
+    const wrappedBody = this.wrapText(displayBody, 35);
+    lines.push(...wrappedBody);
     lines.push('');
 
-    // Event data dump
-    lines.push('Event Data:');
-    const data = event.data as Record<string, unknown>;
-    for (const [key, value] of Object.entries(data)) {
-      const valueStr = typeof value === 'object' ? JSON.stringify(value) : String(value);
-      lines.push(`  ${key}: ${valueStr.slice(0, 30)}`);
+    // Significance bar
+    lines.push(`Significance: ${this.formatter.formatSignificanceBar(event.significance)}`);
+
+    // Check for vignette trigger
+    this.checkVignetteTrigger(event, context);
+
+    // If there's a vignette, show indicator
+    if (this.currentVignette !== null && this.currentVignette.eventId === event.id) {
+      lines.push('');
+      lines.push('{#ffcc00-fg}★ Vignette Available{/}');
+      lines.push('{#888888-fg}Press "v" to view{/}');
+    }
+
+    return lines;
+  }
+
+  /**
+   * Check if a vignette should trigger for this event.
+   */
+  private checkVignetteTrigger(event: WorldEvent, context: RenderContext): void {
+    // Build vignette trigger context
+    const triggerContext: VignetteTriggerContext = {
+      event,
+      participantMemories: new Map(),
+      characterTraits: new Map<CharacterId, ReadonlyMap<PersonalityTrait, number>>(),
+      relationships: new Map(),
+      locationHistory: [],
+      currentTime: context.clock.currentTime,
+    };
+
+    const triggerResult = this.vignetteTrigger.evaluate(triggerContext);
+
+    if (triggerResult.shouldTrigger) {
+      // Generate vignette
+      const vignetteContext: VignetteGeneratorContext = {
+        event,
+        triggerResult,
+        entityNames: new Map(),
+        factionNames: new Map(),
+        siteNames: new Map(),
+        characterTraits: new Map(),
+        characterTitles: new Map(),
+        characterGenders: new Map(),
+      };
+
+      this.currentVignette = this.vignetteGenerator.generate(vignetteContext);
+    } else {
+      // Clear vignette if event doesn't trigger
+      if (this.currentVignette?.eventId !== event.id) {
+        this.currentVignette = null;
+      }
+    }
+  }
+
+  /**
+   * Wrap text to fit within a given width.
+   */
+  private wrapText(text: string, maxWidth: number): string[] {
+    const words = text.split(/\s+/);
+    const lines: string[] = [];
+    let currentLine = '';
+
+    for (const word of words) {
+      if (currentLine.length === 0) {
+        currentLine = word;
+      } else if (currentLine.length + 1 + word.length <= maxWidth) {
+        currentLine += ' ' + word;
+      } else {
+        lines.push(currentLine);
+        currentLine = word;
+      }
+    }
+
+    if (currentLine.length > 0) {
+      lines.push(currentLine);
     }
 
     return lines;
@@ -621,6 +782,65 @@ export class EventLogPanel extends BasePanel {
     }
 
     return paddedLines.join('\n');
+  }
+
+  /**
+   * Render vignette view with special framing.
+   */
+  private renderVignetteView(width: number, height: number): string {
+    if (this.currentVignette === null) {
+      return 'No vignette available';
+    }
+
+    const lines: string[] = [];
+    const innerWidth = width - 4;
+
+    // Top border with flourish
+    lines.push('{#ffcc00-fg}╔' + '═'.repeat(innerWidth) + '╗{/}');
+
+    // Title with archetype
+    const archetypeName = this.formatArchetypeName(this.currentVignette.archetype);
+    const titleLine = ` ★ ${archetypeName} ★ `;
+    const titlePadding = Math.floor((innerWidth - titleLine.length) / 2);
+    lines.push('{#ffcc00-fg}║{/}{bold}' + ' '.repeat(titlePadding) + titleLine + ' '.repeat(innerWidth - titlePadding - titleLine.length) + '{/}{#ffcc00-fg}║{/}');
+
+    // Divider
+    lines.push('{#ffcc00-fg}╠' + '═'.repeat(innerWidth) + '╣{/}');
+
+    // Wrap and display prose
+    const wrappedProse = this.wrapText(this.currentVignette.prose, innerWidth - 2);
+    for (const line of wrappedProse) {
+      if (lines.length >= height - 3) break;
+      const paddedLine = line.padEnd(innerWidth);
+      lines.push('{#ffcc00-fg}║{/} ' + paddedLine.slice(0, innerWidth - 2) + ' {#ffcc00-fg}║{/}');
+    }
+
+    // Fill remaining space
+    while (lines.length < height - 3) {
+      lines.push('{#ffcc00-fg}║{/}' + ' '.repeat(innerWidth) + '{#ffcc00-fg}║{/}');
+    }
+
+    // Word count and mood
+    const infoLine = `${this.currentVignette.wordCount} words | Mood: ${this.currentVignette.mood}`;
+    lines.push('{#ffcc00-fg}╠' + '═'.repeat(innerWidth) + '╣{/}');
+    lines.push('{#ffcc00-fg}║{/}{#888888-fg}' + infoLine.padEnd(innerWidth) + '{/}{#ffcc00-fg}║{/}');
+
+    // Bottom border
+    lines.push('{#ffcc00-fg}╚' + '═'.repeat(innerWidth) + '╝{/}');
+
+    // Instructions
+    lines.push('{#888888-fg}Press ESC to close{/}');
+
+    return lines.slice(0, height).join('\n');
+  }
+
+  /**
+   * Format archetype name for display.
+   */
+  private formatArchetypeName(archetype: string): string {
+    return archetype
+      .replace(/_/g, ' ')
+      .replace(/\b\w/g, c => c.toUpperCase());
   }
 
   /**
@@ -706,6 +926,10 @@ export class EventLogPanel extends BasePanel {
       return this.handleCascadeInput(key);
     }
 
+    if (this.mode === 'vignette') {
+      return this.handleVignetteInput(key);
+    }
+
     // Normal mode
     switch (key) {
       case 'up':
@@ -759,8 +983,74 @@ export class EventLogPanel extends BasePanel {
         this.inspectPrimaryParticipant();
         return true;
 
+      case 't':
+        this.cycleTone();
+        return true;
+
+      case 'h':
+        this.cycleChronicler();
+        return true;
+
+      case 'v':
+        this.showVignette();
+        return true;
+
       default:
         return false;
+    }
+  }
+
+  /**
+   * Cycle through narrative tones.
+   */
+  private cycleTone(): void {
+    const currentIndex = this.tones.indexOf(this.currentTone);
+    const nextIndex = (currentIndex + 1) % this.tones.length;
+    const nextTone = this.tones[nextIndex];
+    if (nextTone !== undefined) {
+      this.currentTone = nextTone;
+      // Update panel title to show current tone
+      const toneName = this.formatToneName(this.currentTone);
+      this.setTitle(`Event Log [${toneName}]`);
+    }
+  }
+
+  /**
+   * Format tone name for display.
+   */
+  private formatToneName(tone: NarrativeTone): string {
+    switch (tone) {
+      case NarrativeTone.EpicHistorical: return 'Epic Historical';
+      case NarrativeTone.PersonalCharacterFocus: return 'Personal';
+      case NarrativeTone.Mythological: return 'Mythological';
+      case NarrativeTone.PoliticalIntrigue: return 'Political';
+      case NarrativeTone.Scholarly: return 'Scholarly';
+      default: return 'Unknown';
+    }
+  }
+
+  /**
+   * Cycle through chroniclers.
+   */
+  private cycleChronicler(): void {
+    const chroniclers = this.chroniclerRegistry.getAll();
+    if (chroniclers.length > 0) {
+      this.currentChroniclerIndex = (this.currentChroniclerIndex + 1) % chroniclers.length;
+      const currentChronicler = chroniclers[this.currentChroniclerIndex];
+      if (currentChronicler !== undefined) {
+        // Update panel title to show chronicler
+        const toneName = this.formatToneName(this.currentTone);
+        this.setTitle(`Event Log [${toneName}] - ${currentChronicler.name}`);
+      }
+    }
+  }
+
+  /**
+   * Show the current vignette in a special mode.
+   */
+  private showVignette(): void {
+    if (this.currentVignette !== null) {
+      this.mode = 'vignette' as PanelMode;
     }
   }
 
@@ -824,6 +1114,18 @@ export class EventLogPanel extends BasePanel {
     if (key === 'escape' || key === 'c') {
       this.mode = 'normal';
       this.cascadeRoot = null;
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * Handle vignette mode input.
+   */
+  private handleVignetteInput(key: string): boolean {
+    if (key === 'escape' || key === 'v') {
+      this.mode = 'normal';
       return true;
     }
 
@@ -1027,6 +1329,42 @@ export class EventLogPanel extends BasePanel {
    */
   getTotalEventCount(): number {
     return this.events.length;
+  }
+
+  /**
+   * Get current narrative tone.
+   */
+  getCurrentTone(): NarrativeTone {
+    return this.currentTone;
+  }
+
+  /**
+   * Get current chronicler.
+   */
+  getCurrentChronicler(): Chronicler | undefined {
+    const chroniclers = this.chroniclerRegistry.getAll();
+    return chroniclers[this.currentChroniclerIndex];
+  }
+
+  /**
+   * Get current vignette.
+   */
+  getCurrentVignette(): Vignette | null {
+    return this.currentVignette;
+  }
+
+  /**
+   * Get all available tones.
+   */
+  getAvailableTones(): readonly NarrativeTone[] {
+    return this.tones;
+  }
+
+  /**
+   * Get all chroniclers.
+   */
+  getChroniclers(): readonly Chronicler[] {
+    return this.chroniclerRegistry.getAll();
   }
 
   /**

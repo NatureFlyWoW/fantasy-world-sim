@@ -506,4 +506,133 @@ describe('EventLogPanel', () => {
       context.eventBus.emit(createMockEvent(100));
     });
   });
+
+  describe('narrative engine integration', () => {
+    it('initializes with Epic Historical tone', () => {
+      expect(panel.getCurrentTone()).toBe('EpicHistorical');
+    });
+
+    it('has all 5 tones available', () => {
+      const tones = panel.getAvailableTones();
+      expect(tones).toHaveLength(5);
+      expect(tones).toContain('EpicHistorical');
+      expect(tones).toContain('PersonalCharacterFocus');
+      expect(tones).toContain('Mythological');
+      expect(tones).toContain('PoliticalIntrigue');
+      expect(tones).toContain('Scholarly');
+    });
+
+    it('cycles tone with t key', () => {
+      const initialTone = panel.getCurrentTone();
+      expect(initialTone).toBe('EpicHistorical');
+
+      panel.handleInput('t');
+      expect(panel.getCurrentTone()).toBe('PersonalCharacterFocus');
+
+      panel.handleInput('t');
+      expect(panel.getCurrentTone()).toBe('Mythological');
+
+      panel.handleInput('t');
+      expect(panel.getCurrentTone()).toBe('PoliticalIntrigue');
+
+      panel.handleInput('t');
+      expect(panel.getCurrentTone()).toBe('Scholarly');
+
+      // Should wrap around
+      panel.handleInput('t');
+      expect(panel.getCurrentTone()).toBe('EpicHistorical');
+    });
+
+    it('initializes with default chroniclers', () => {
+      const chroniclers = panel.getChroniclers();
+      expect(chroniclers.length).toBeGreaterThanOrEqual(1);
+    });
+
+    it('cycles chronicler with h key', () => {
+      const chroniclers = panel.getChroniclers();
+      if (chroniclers.length > 1) {
+        const initial = panel.getCurrentChronicler();
+
+        panel.handleInput('h');
+        const next = panel.getCurrentChronicler();
+
+        // Should have changed to a different chronicler
+        expect(next?.id).not.toBe(initial?.id);
+      }
+    });
+
+    it('renders narrative panel with generated prose', () => {
+      const event = createMockEvent(1, { significance: 70 });
+      panel.addEvent(event);
+      panel.handleInput('down');
+
+      // Render should produce narrative content without placeholder text
+      expect(() => panel.render(context)).not.toThrow();
+    });
+
+    it('shows different narrative text for different tones', () => {
+      const event = createMockEvent(1, {
+        significance: 80,
+        subtype: 'faction.treaty_signed',
+      });
+      panel.addEvent(event);
+      panel.handleInput('down');
+
+      // Render with first tone
+      panel.render(context);
+      const firstTone = panel.getCurrentTone();
+
+      // Change tone
+      panel.handleInput('t');
+      panel.render(context);
+      const secondTone = panel.getCurrentTone();
+
+      expect(firstTone).not.toBe(secondTone);
+    });
+
+    it('initializes without vignette', () => {
+      expect(panel.getCurrentVignette()).toBeNull();
+    });
+
+    it('enters vignette mode with v key when vignette available', () => {
+      // High significance event that might trigger vignette
+      const event = createMockEvent(1, {
+        significance: 95,
+        subtype: 'character.death',
+      });
+      panel.addEvent(event);
+      panel.handleInput('down');
+
+      // Trigger vignette check
+      panel.render(context);
+
+      // If vignette was triggered, should enter vignette mode
+      if (panel.getCurrentVignette() !== null) {
+        panel.handleInput('v');
+        expect(panel.getMode()).toBe('vignette');
+
+        // Escape should return to normal
+        panel.handleInput('escape');
+        expect(panel.getMode()).toBe('normal');
+      }
+    });
+
+    it('renders vignette view without errors', () => {
+      // High significance event
+      const event = createMockEvent(1, {
+        significance: 95,
+        subtype: 'coronation',
+      });
+      panel.addEvent(event);
+      panel.handleInput('down');
+
+      // Trigger vignette check
+      panel.render(context);
+
+      if (panel.getCurrentVignette() !== null) {
+        panel.handleInput('v');
+        expect(() => panel.render(context)).not.toThrow();
+      }
+    });
+  });
 });

@@ -7,12 +7,17 @@
     "baseUrl": ".",
     "paths": {
       "@fws/renderer": ["./src/index.ts"],
-      "@fws/renderer/*": ["./src/*"]
+      "@fws/renderer/*": ["./src/*"],
+      "@fws/core": ["../core/src/index.ts"],
+      "@fws/core/*": ["../core/src/*"],
+      "@fws/narrative": ["../narrative/src/index.ts"],
+      "@fws/narrative/*": ["../narrative/src/*"]
     }
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"],
   "references": [
-    { "path": "../core" }
+    { "path": "../core" },
+    { "path": "../narrative" }
   ]
 }
