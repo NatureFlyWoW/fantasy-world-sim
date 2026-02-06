@@ -76,6 +76,9 @@ export {
 } from './app.js';
 export type { AppConfig } from './app.js';
 
+// Map module
+export * from './map/index.js';
+
 // Factory function
 import type { RenderContext } from './types.js';
 import type { AppConfig } from './app.js';

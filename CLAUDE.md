@@ -64,6 +64,7 @@ Phase 4: Narrative & Rendering (in progress)
 
 ### Phase 4 Tasks
 - [x] 4.1 — Terminal UI Framework (types, BasePanel, theme, layout manager, Application class)
+- [x] 4.2 — World Map Renderer (viewport, tile-renderer, 6 overlays, minimap, MapPanel)
 
 ### Phase 3 Tasks — COMPLETE
 Simulation systems: Character AI, Memory/Reputation, Faction/Political (with Treaties),
@@ -147,6 +148,11 @@ Deterministic from seed. 9 configurable parameters with named presets.
   Status bar shows world date, speed, selected entity, and focus location.
   7 panel types: Map, EventLog, Inspector, Relationships, Timeline, Statistics, Fingerprint.
   MockScreen/MockBox classes enable headless testing. 1461 tests passing.
+- 2025: Map uses viewport with 5 zoom levels (1:1 to 16:1). 6 overlay types toggle
+  independently (Political, Resources, Military, Trade, Magic, Climate). Minimap
+  shows full world with viewport rectangle. Dirty-flag system prevents unnecessary
+  re-renders. Entity markers overlay terrain using Unicode symbols (☼ city, † ruin,
+  ⚔ army, ✝ temple, ✧ academy, ⚑ capital). 1590 tests passing.
 
 ## Known Issues
 - EventCategory.Exploratory has no system producing events (by design — no exploration
