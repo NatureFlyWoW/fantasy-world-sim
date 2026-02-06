@@ -65,6 +65,7 @@ Phase 4: Narrative & Rendering (in progress)
 ### Phase 4 Tasks
 - [x] 4.1 — Terminal UI Framework (types, BasePanel, theme, layout manager, Application class)
 - [x] 4.2 — World Map Renderer (viewport, tile-renderer, 6 overlays, minimap, MapPanel)
+- [x] 4.3 — Dual Event Log (EventFormatter, EventLogPanel with filters, search, bookmarks, cascade)
 
 ### Phase 3 Tasks — COMPLETE
 Simulation systems: Character AI, Memory/Reputation, Faction/Political (with Treaties),
@@ -153,6 +154,11 @@ Deterministic from seed. 9 configurable parameters with named presets.
   shows full world with viewport rectangle. Dirty-flag system prevents unnecessary
   re-renders. Entity markers overlay terrain using Unicode symbols (☼ city, † ruin,
   ⚔ army, ✝ temple, ✧ academy, ⚑ capital). 1590 tests passing.
+- 2025: Event log splits raw data (left 55%) and narrative prose (right 45%).
+  Narrative panel shows placeholder until Phase 5 narrative engine is built.
+  Filter supports category, significance threshold, entity, and location.
+  Cascade chain visualized as indented tree. Live EventBus subscription with
+  flash highlights (>80) and terminal bell (>95). 1669 tests passing.
 
 ## Known Issues
 - EventCategory.Exploratory has no system producing events (by design — no exploration
