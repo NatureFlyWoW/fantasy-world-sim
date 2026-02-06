@@ -41,3 +41,43 @@ export { CharacterInspector } from './character-inspector.js';
 export { LocationInspector } from './location-inspector.js';
 export { FactionInspector } from './faction-inspector.js';
 export { ArtifactInspector } from './artifact-inspector.js';
+
+// Graph layout and rendering
+export {
+  layoutGraph,
+  createGraphNode,
+  createGraphEdge,
+  truncateLabel,
+  affinityToRelationType,
+  affinityToStrength,
+  nodesOverlap,
+  resolveOverlaps,
+  filterByDepth,
+  DEFAULT_LAYOUT_CONFIG,
+} from './graph-layout.js';
+export type {
+  GraphNode,
+  GraphEdge,
+  Graph,
+  LayoutConfig,
+  RelationshipStrength,
+  RelationshipType,
+} from './graph-layout.js';
+
+export {
+  RenderGrid,
+  GraphRenderer,
+  RELATIONSHIP_COLORS,
+  STRENGTH_LINES,
+  ARROWS,
+  ENTITY_ICONS,
+  renderLegend,
+} from './graph-renderer.js';
+export type { GridCell } from './graph-renderer.js';
+
+// Relationships panel
+export {
+  RelationshipsPanel,
+  createRelationshipsPanelLayout,
+} from './relationships-panel.js';
+export type { RelationshipFilter } from './relationships-panel.js';

@@ -67,6 +67,7 @@ Phase 4: Narrative & Rendering (in progress)
 - [x] 4.2 — World Map Renderer (viewport, tile-renderer, 6 overlays, minimap, MapPanel)
 - [x] 4.3 — Dual Event Log (EventFormatter, EventLogPanel with filters, search, bookmarks, cascade)
 - [x] 4.4 — Entity Inspector (InspectorPanel, CharacterInspector, LocationInspector, FactionInspector, ArtifactInspector)
+- [x] 4.5 — Relationship Graph (graph-layout, graph-renderer, RelationshipsPanel with depth, filters)
 
 ### Phase 3 Tasks — COMPLETE
 Simulation systems: Character AI, Memory/Reputation, Faction/Political (with Treaties),
@@ -165,6 +166,13 @@ Deterministic from seed. 9 configurable parameters with named presets.
   components (Attribute→character, Position+Population→location, Territory→faction,
   CreationHistory/OwnershipChain→artifact). Inspect history enables back/forward
   navigation. Sections collapsible with number keys. 1770 tests passing.
+- 2025: Relationship Graph uses concentric ring layout (BFS from center entity).
+  graph-layout.ts provides node positioning with overlap resolution.
+  graph-renderer.ts draws ASCII graph with colored edges (11 relationship types:
+  ally, friend, family, rival, enemy, neutral, member, leader, vassal, trade,
+  unknown). Line styles show strength (═ strong, ─ moderate, · weak).
+  RelationshipsPanel supports depth 1-3 hops, 6 filters (all, positive, negative,
+  family, political, economic), cursor navigation, legend toggle. 1872 tests passing.
 
 ## Known Issues
 - EventCategory.Exploratory has no system producing events (by design — no exploration
