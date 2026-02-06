@@ -149,6 +149,8 @@ export class Application {
     this.createStatusBar();
     this.setupKeyBindings();
     this.subscribeToEvents();
+    // Apply layout to update all registered panels with actual screen dimensions
+    this.applyLayout();
     // NOTE: Render loop is NOT started here - it starts in renderInitialFrame()
     // NOTE: Simulation loop is NOT started here - it starts when player presses Space
   }
