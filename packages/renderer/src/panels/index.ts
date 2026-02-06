@@ -23,3 +23,21 @@ export type {
   GoToLocationHandler,
   InspectEntityHandler,
 } from './event-log-panel.js';
+
+// Inspector panel
+export {
+  InspectorPanel,
+  createInspectorPanelLayout,
+} from './inspector-panel.js';
+export type {
+  InspectableEntityType,
+  HistoryEntry,
+  InspectorMode,
+  InspectorSection,
+} from './inspector-panel.js';
+
+// Sub-inspectors
+export { CharacterInspector } from './character-inspector.js';
+export { LocationInspector } from './location-inspector.js';
+export { FactionInspector } from './faction-inspector.js';
+export { ArtifactInspector } from './artifact-inspector.js';

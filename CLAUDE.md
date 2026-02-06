@@ -66,6 +66,7 @@ Phase 4: Narrative & Rendering (in progress)
 - [x] 4.1 — Terminal UI Framework (types, BasePanel, theme, layout manager, Application class)
 - [x] 4.2 — World Map Renderer (viewport, tile-renderer, 6 overlays, minimap, MapPanel)
 - [x] 4.3 — Dual Event Log (EventFormatter, EventLogPanel with filters, search, bookmarks, cascade)
+- [x] 4.4 — Entity Inspector (InspectorPanel, CharacterInspector, LocationInspector, FactionInspector, ArtifactInspector)
 
 ### Phase 3 Tasks — COMPLETE
 Simulation systems: Character AI, Memory/Reputation, Faction/Political (with Treaties),
@@ -159,6 +160,11 @@ Deterministic from seed. 9 configurable parameters with named presets.
   Filter supports category, significance threshold, entity, and location.
   Cascade chain visualized as indented tree. Live EventBus subscription with
   flash highlights (>80) and terminal bell (>95). 1669 tests passing.
+- 2025: 4 inspector types: Character (8 sections), Location (8 sections),
+  Faction (8 sections), Artifact (8 sections). Entity type auto-detected from
+  components (Attribute→character, Position+Population→location, Territory→faction,
+  CreationHistory/OwnershipChain→artifact). Inspect history enables back/forward
+  navigation. Sections collapsible with number keys. 1770 tests passing.
 
 ## Known Issues
 - EventCategory.Exploratory has no system producing events (by design — no exploration
