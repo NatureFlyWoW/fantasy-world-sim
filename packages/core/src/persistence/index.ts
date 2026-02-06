@@ -1,5 +1,5 @@
 /**
- * Persistence module — snapshot & branching for "What If" timelines.
+ * Persistence module — snapshot, branching, save/load, and export.
  */
 
 // Snapshot
@@ -29,3 +29,25 @@ export type {
   BranchResult,
   EngineFactory,
 } from './branch-runner.js';
+
+// Save manager
+export {
+  SaveManager,
+  serializeValue,
+  deserializeValue,
+  resetSaveIdCounter,
+} from './save-manager.js';
+export type {
+  SaveMetadata,
+  SaveFile,
+  SaveStorage,
+} from './save-manager.js';
+
+// Export manager
+export {
+  ExportManager,
+} from './export-manager.js';
+export type {
+  ExportFormat,
+  ExportOptions,
+} from './export-manager.js';

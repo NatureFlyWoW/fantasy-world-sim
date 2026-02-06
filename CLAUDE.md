@@ -75,6 +75,7 @@ identity signature: domain balance, civilization palette, historical sparklines,
 and complexity score derived from cascade chains.
 - [x] 7.1 — World DNA Fingerprint (WorldFingerprintCalculator with 6 domains, civ palette, sparklines, complexity score; FingerprintPanel with hex chart, colored faction bar, sparklines, progress bar; 49 tests)
 - [x] 7.2 — "What If" Timeline Branching (WorldSnapshotManager with deep-clone snapshot/restore, BranchRunner with 5 divergence actions and MAX_BRANCHES=3, BranchComparisonPanel with 3 views and divergence counter; 50 tests)
+- [x] 7.3 — Save/Load & Export (SaveManager with full/incremental saves, gzip compression, auto-save rotation; ExportManager with 5 export types in 3 formats; SaveLoadController with Ctrl+S/F5/F6 keybindings; 58 tests)
 
 ### Phase 6 Tasks — COMPLETE
 Player interaction: simulation controls (auto-slowdown on significant events),
@@ -313,6 +314,18 @@ Deterministic from seed. 9 configurable parameters with named presets.
   pure function diffs entities, events, territory ownership. 3 views: entities (e),
   events (v), territory (t). World.getRegisteredComponentTypes() added to support
   snapshot enumeration. 50 new tests (18 snapshot + 16 runner + 16 panel), 2412 total.
+- 2026: Phase 7.3 Save/Load & Export. SaveManager in packages/core/src/persistence/
+  save-manager.ts provides full saves (complete world state) and incremental saves
+  (dirty entity deltas + event log deltas). Custom serializeValue/deserializeValue
+  handles Maps/Sets via __t:'M'/__t:'S' tagged JSON. gzip compression (Node.js zlib)
+  achieves >50% size reduction. Auto-save every 10 years, keeps last 5 rotated.
+  ExportManager provides 5 export types (encyclopedia, chronicle, timeline, genealogy,
+  faction history) in 3 formats (txt, md, json). Genealogy renders ASCII family tree
+  with ┌──┴──┐ branching. SaveLoadController in packages/cli/src/controls/save-load-ui.ts
+  with NodeSaveStorage for fs I/O. Keybindings: Ctrl+S (quick save), F5 (load menu),
+  F6 (export menu). SaveStorage interface enables in-memory testing. All saves go to
+  ~/.aeternum/saves/, exports to ~/.aeternum/exports/. 58 new tests (27 save + 31
+  export), 2470 total.
 
 ## Known Issues
 - EventCategory.Exploratory has no system producing events (by design — no exploration

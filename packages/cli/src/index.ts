@@ -53,6 +53,7 @@ import {
   BookmarkManager,
   NotificationManager,
   SimulationSpeed,
+  SaveLoadController,
 } from './controls/index.js';
 
 // Renderer imports
@@ -631,6 +632,28 @@ function launchTerminalUI(
       const entityId = state.selectedEntity.id as unknown as EntityId;
       bookmarkManager.toggle(entityId, 'entity', state.selectedEntity.name);
     }
+  });
+
+  // =========================================================================
+  // Phase 7.3: Save/Load/Export controls
+  // =========================================================================
+
+  const saveLoadController = new SaveLoadController();
+  saveLoadController.setSeed(context.clock?.currentTick ?? 0);
+
+  // Ctrl+S: Quick save
+  screen.key('C-s', () => {
+    saveLoadController.quickSave(context.world, context.clock, context.eventLog);
+  });
+
+  // F5: Load game menu
+  screen.key('f5', () => {
+    saveLoadController.openLoadMenu();
+  });
+
+  // F6: Export menu
+  screen.key('f6', () => {
+    saveLoadController.openExportMenu();
   });
 
   // Start the application (sets up screen, key bindings, render loop - but NOT simulation)
