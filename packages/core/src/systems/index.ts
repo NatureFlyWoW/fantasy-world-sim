@@ -493,3 +493,14 @@ export {
   BASE_REGENERATION_RATE,
   TICKS_PER_YEAR,
 } from './influence-system.js';
+
+// World fingerprint
+export {
+  WorldFingerprintCalculator,
+  ALL_DOMAINS as FINGERPRINT_DOMAINS,
+} from './world-fingerprint.js';
+export type {
+  FingerprintDomain,
+  CivPaletteEntry,
+  WorldFingerprint,
+} from './world-fingerprint.js';

@@ -50,6 +50,7 @@ ASCII-aesthetic terminal interface with dual event streams: raw logs + narrative
 - Test every system in isolation with Vitest
 - Systems communicate ONLY through event queue and shared component state
 - Never reference other systems directly
+- Always use Context7 MCP when in need of library/API documentation, code generation, setup or configuration steps
 
 ## Commands
 ```bash
@@ -66,7 +67,13 @@ pnpm run start -- --ticks 100        # Run specific tick count (headless mode)
 ```
 
 ## Current Phase
-Phase 6: Player Interaction — COMPLETE
+Phase 7: World Identity & Polish
+
+### Phase 7 Tasks
+World DNA fingerprint captures each world's unique character as a composite
+identity signature: domain balance, civilization palette, historical sparklines,
+and complexity score derived from cascade chains.
+- [x] 7.1 — World DNA Fingerprint (WorldFingerprintCalculator with 6 domains, civ palette, sparklines, complexity score; FingerprintPanel with hex chart, colored faction bar, sparklines, progress bar; 49 tests)
 
 ### Phase 6 Tasks — COMPLETE
 Player interaction: simulation controls (auto-slowdown on significant events),
@@ -279,6 +286,17 @@ Deterministic from seed. 9 configurable parameters with named presets.
   with 7-state flow (category→action→target→params→confirm→result). Events map to existing
   categories (Personal, Religious, Disaster, Economic, Cultural, Scientific). 69 new tests,
   2313 total. Phase 6 complete.
+- 2026: Phase 7.1 World DNA Fingerprint. WorldFingerprintCalculator in
+  packages/core/src/systems/world-fingerprint.ts computes composite world identity:
+  6 domain balance (Warfare/Magic/Religion/Commerce/Scholarship/Diplomacy from event
+  category distribution), civilization palette (faction proportions from event
+  participation), per-century sparklines (volatility, magic, population), complexity
+  score (cascade chains depth>3 + cross-domain arcs, normalized 0-100). FingerprintPanel
+  in packages/renderer/src/panels/fingerprint-panel.ts renders ASCII hex radar chart,
+  colored faction bar, sparkline characters (▁▂▃▅▆█), progress bar. Panel cached by
+  event count, key 7 activates, R refreshes. Core exports ALL_DOMAINS as
+  FINGERPRINT_DOMAINS to avoid collision with religion system's ALL_DOMAINS.
+  49 new tests (22 calculator + 27 panel), 2362 total.
 
 ## Known Issues
 - EventCategory.Exploratory has no system producing events (by design — no exploration

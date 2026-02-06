@@ -71,6 +71,8 @@ import {
   createTimelinePanelLayout,
   StatisticsPanel,
   createStatsPanelLayout,
+  FingerprintPanel,
+  createFingerprintPanelLayout,
   LayoutManager,
 } from '@fws/renderer';
 import type { RenderContext, PanelLayout } from '@fws/renderer';
@@ -519,6 +521,8 @@ function launchTerminalUI(
 
   const statsPanel = new StatisticsPanel(screen, getLayout(PanelId.Statistics), boxFactory);
 
+  const fingerprintPanel = new FingerprintPanel(screen, getLayout(PanelId.Fingerprint), boxFactory);
+
   // Create the application with screen and box factory injection
   const app = createApp(context, { targetFps: 30 });
 
@@ -535,6 +539,7 @@ function launchTerminalUI(
   app.registerPanel(relationshipsPanel, PanelId.RelationshipGraph);
   app.registerPanel(timelinePanel, PanelId.Timeline);
   app.registerPanel(statsPanel, PanelId.Statistics);
+  app.registerPanel(fingerprintPanel, PanelId.Fingerprint);
 
   // =========================================================================
   // Phase 6.1: Create and wire simulation controls

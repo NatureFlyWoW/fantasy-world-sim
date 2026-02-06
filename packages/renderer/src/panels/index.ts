@@ -112,3 +112,15 @@ export type {
   TimeSeries,
   WorldStats,
 } from './stats.js';
+
+// Fingerprint panel
+export {
+  FingerprintPanel,
+  createFingerprintPanelLayout,
+  renderSparkline,
+  renderProgressBar,
+  renderHexChart,
+  renderCivPalette,
+  renderCivPalettePlain,
+  SPARKLINE_CHARS,
+} from './fingerprint-panel.js';
