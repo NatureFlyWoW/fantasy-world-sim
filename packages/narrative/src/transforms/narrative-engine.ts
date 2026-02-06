@@ -1,0 +1,487 @@
+/**
+ * NarrativeEngine transforms WorldEvents into prose.
+ * Uses templates, applies tone-specific vocabulary, and adds literary devices.
+ */
+
+import type { WorldEvent } from '@fws/core';
+import type {
+  NarrativeTemplate,
+  NarrativeOutput,
+  NarrativeEngineConfig,
+  TemplateContext,
+  EntityResolver,
+  ResolvedEntity,
+  Gender,
+} from '../templates/types.js';
+import { NarrativeTone, DEFAULT_ENGINE_CONFIG } from '../templates/types.js';
+import {
+  TemplateParser,
+  createDefaultResolver,
+} from './template-parser.js';
+import type { EvaluationContext } from './template-parser.js';
+import { TONE_CONFIGS, applySubstitutions, getRandomPhrase } from '../styles/tones.js';
+
+/**
+ * Template registry organized by category and subtype.
+ */
+interface TemplateRegistry {
+  /** Templates indexed by category -> subtype -> tone -> significance */
+  readonly byCategory: Map<string, Map<string, NarrativeTemplate[]>>;
+  /** Default fallback templates by category */
+  readonly defaults: Map<string, NarrativeTemplate[]>;
+  /** Global fallback template */
+  readonly globalFallback: NarrativeTemplate;
+}
+
+/**
+ * Result of template selection.
+ */
+interface TemplateMatch {
+  readonly template: NarrativeTemplate;
+  readonly matchQuality: 'exact' | 'category' | 'fallback';
+}
+
+/**
+ * NarrativeEngine generates prose from events.
+ */
+export class NarrativeEngine {
+  private readonly registry: TemplateRegistry;
+  private readonly parser: TemplateParser;
+  private readonly config: NarrativeEngineConfig;
+  private readonly resolver: EntityResolver;
+
+  /** Track first mentions for epithet insertion */
+  private mentionedEntities: Set<string> = new Set();
+
+  constructor(
+    templates: readonly NarrativeTemplate[],
+    config: Partial<NarrativeEngineConfig> = {},
+    resolver?: EntityResolver
+  ) {
+    this.config = { ...DEFAULT_ENGINE_CONFIG, ...config };
+    this.parser = new TemplateParser();
+    this.resolver = resolver ?? createDefaultResolver();
+    this.registry = this.buildRegistry(templates);
+  }
+
+  /**
+   * Build the template registry from a list of templates.
+   */
+  private buildRegistry(templates: readonly NarrativeTemplate[]): TemplateRegistry {
+    const byCategory = new Map<string, Map<string, NarrativeTemplate[]>>();
+    const defaults = new Map<string, NarrativeTemplate[]>();
+
+    for (const template of templates) {
+      // Index by category
+      let categoryMap = byCategory.get(template.category);
+      if (categoryMap === undefined) {
+        categoryMap = new Map();
+        byCategory.set(template.category, categoryMap);
+      }
+
+      // Index by subtype within category
+      let subtypeTemplates = categoryMap.get(template.subtype);
+      if (subtypeTemplates === undefined) {
+        subtypeTemplates = [];
+        categoryMap.set(template.subtype, subtypeTemplates);
+      }
+      subtypeTemplates.push(template);
+
+      // Track default templates (subtype = 'default')
+      if (template.subtype === 'default') {
+        let categoryDefaults = defaults.get(template.category);
+        if (categoryDefaults === undefined) {
+          categoryDefaults = [];
+          defaults.set(template.category, categoryDefaults);
+        }
+        categoryDefaults.push(template);
+      }
+    }
+
+    // Create global fallback template
+    const globalFallback: NarrativeTemplate = {
+      id: '__global_fallback__',
+      category: 'Personal' as unknown as import('@fws/core').EventCategory,
+      subtype: 'default',
+      tone: NarrativeTone.EpicHistorical,
+      significanceRange: { min: 0, max: 100 },
+      template: 'An event occurred: {event.data.description}',
+      requiredContext: [],
+    };
+
+    return { byCategory, defaults, globalFallback };
+  }
+
+  /**
+   * Find the best matching template for an event.
+   */
+  private findTemplate(
+    event: WorldEvent,
+    tone: NarrativeTone
+  ): TemplateMatch {
+    const categoryMap = this.registry.byCategory.get(event.category);
+
+    // Try exact match (category + subtype)
+    if (categoryMap !== undefined) {
+      const subtypeTemplates = categoryMap.get(event.subtype);
+      if (subtypeTemplates !== undefined) {
+        const match = this.selectBestTemplate(subtypeTemplates, tone, event.significance);
+        if (match !== undefined) {
+          return { template: match, matchQuality: 'exact' };
+        }
+      }
+    }
+
+    // Try category default
+    const categoryDefaults = this.registry.defaults.get(event.category);
+    if (categoryDefaults !== undefined) {
+      const match = this.selectBestTemplate(categoryDefaults, tone, event.significance);
+      if (match !== undefined) {
+        return { template: match, matchQuality: 'category' };
+      }
+    }
+
+    // Use global fallback
+    return { template: this.registry.globalFallback, matchQuality: 'fallback' };
+  }
+
+  /**
+   * Select the best template from a list based on tone and significance.
+   */
+  private selectBestTemplate(
+    templates: readonly NarrativeTemplate[],
+    tone: NarrativeTone,
+    significance: number
+  ): NarrativeTemplate | undefined {
+    // Filter by significance range
+    const inRange = templates.filter(
+      (t) => significance >= t.significanceRange.min && significance <= t.significanceRange.max
+    );
+
+    if (inRange.length === 0) {
+      // If nothing in range, use any template as fallback
+      if (templates.length === 0) return undefined;
+      return templates[0];
+    }
+
+    // Prefer exact tone match
+    const toneMatch = inRange.filter((t) => t.tone === tone);
+    if (toneMatch.length > 0) {
+      // Return a random one from matching templates
+      return toneMatch[Math.floor(Math.random() * toneMatch.length)];
+    }
+
+    // Fall back to any template in range
+    return inRange[Math.floor(Math.random() * inRange.length)];
+  }
+
+  /**
+   * Generate narrative for an event.
+   */
+  generateNarrative(context: TemplateContext, tone?: NarrativeTone): NarrativeOutput {
+    const activeTone = tone ?? this.config.defaultTone;
+
+    // Reset mention tracking for this narrative
+    this.mentionedEntities.clear();
+
+    // Find matching template
+    const { template } = this.findTemplate(context.event, activeTone);
+
+    // Build evaluation context
+    const evalContext = this.buildEvaluationContext(context);
+
+    // Render the template
+    let body = this.parser.render(template.template, evalContext);
+
+    // Apply tone substitutions
+    body = applySubstitutions(body, activeTone);
+
+    // Apply literary devices if enabled
+    if (this.config.applyLiteraryDevices) {
+      body = this.applyLiteraryDevices(body, context, activeTone);
+    }
+
+    // Generate title
+    const title = this.generateTitle(context, activeTone);
+
+    return {
+      title,
+      body,
+      tone: activeTone,
+      templateId: template.id,
+    };
+  }
+
+  /**
+   * Build evaluation context for template rendering.
+   */
+  private buildEvaluationContext(context: TemplateContext): EvaluationContext {
+    const entities = new Map<string, ResolvedEntity>();
+
+    // Resolve participants
+    for (let i = 0; i < context.event.participants.length; i++) {
+      const participantId = context.event.participants[i];
+      if (participantId === undefined) continue;
+
+      const idNum = participantId as unknown as number;
+
+      // Try to resolve as character first, then faction, site, etc.
+      let resolved = this.resolver.resolveCharacter(idNum);
+      if (resolved !== undefined) {
+        entities.set(`character${i}`, resolved);
+      } else {
+        resolved = this.resolver.resolveFaction(idNum);
+        if (resolved !== undefined) {
+          entities.set(`faction${i}`, resolved);
+        } else {
+          resolved = this.resolver.resolveSite(idNum);
+          if (resolved !== undefined) {
+            entities.set(`site${i}`, resolved);
+          }
+        }
+      }
+    }
+
+    // Resolve location
+    if (context.event.location !== undefined) {
+      const siteId = context.event.location as unknown as number;
+      const site = this.resolver.resolveSite(siteId);
+      if (site !== undefined) {
+        entities.set('site0', site);
+      }
+    }
+
+    return {
+      entities,
+      currentGender: 'neutral' as Gender,
+      eventData: context.event.data,
+      eventSignificance: context.event.significance,
+      ...(context.narrativeArc !== undefined ? { arcPhase: context.narrativeArc.phase } : {}),
+      resolver: this.resolver,
+      participants: context.event.participants.map((p) => p as unknown as number),
+    };
+  }
+
+  /**
+   * Generate a title for the narrative.
+   */
+  private generateTitle(context: TemplateContext, _tone: NarrativeTone): string {
+    const { event } = context;
+
+    // Use description from event data if available
+    const description = event.data['description'];
+    if (typeof description === 'string' && description.length > 0) {
+      // Truncate long descriptions
+      if (description.length <= 50) {
+        return description;
+      }
+      return description.slice(0, 47) + '...';
+    }
+
+    // Generate from subtype
+    const parts = event.subtype.split('.');
+    const action = parts[parts.length - 1] ?? 'event';
+
+    // Capitalize and format
+    const formatted = action
+      .replace(/_/g, ' ')
+      .replace(/\b\w/g, (c) => c.toUpperCase());
+
+    // Add significance indicator for high-significance events
+    if (event.significance >= 80) {
+      return `The Great ${formatted}`;
+    }
+
+    return formatted;
+  }
+
+  /**
+   * Apply literary devices to the narrative body.
+   */
+  private applyLiteraryDevices(
+    body: string,
+    context: TemplateContext,
+    tone: NarrativeTone
+  ): string {
+    let result = body;
+
+    // Apply epithet insertion on first character mentions
+    result = this.applyEpithetInsertion(result, context);
+
+    // Apply foreshadowing if in rising action
+    if (context.narrativeArc !== undefined) {
+      result = this.applyArcAwareness(result, context, tone);
+    }
+
+    // Apply retrospective if event resolves a cascade
+    if (this.config.includeRetrospectives && context.event.causes.length > 2) {
+      result = this.applyRetrospective(result, context, tone);
+    }
+
+    // Apply dramatic irony for secrets
+    if (this.config.includeDramaticIrony) {
+      result = this.applyDramaticIrony(result, context, tone);
+    }
+
+    return result;
+  }
+
+  /**
+   * Insert epithets on first mention of important characters.
+   */
+  private applyEpithetInsertion(body: string, context: TemplateContext): string {
+    let result = body;
+
+    for (const participantId of context.event.participants) {
+      const idNum = participantId as unknown as number;
+      const character = this.resolver.resolveCharacter(idNum);
+
+      if (character?.epithet !== undefined && !this.mentionedEntities.has(`char_${idNum}`)) {
+        // Find first mention of the character's name
+        const nameIndex = result.indexOf(character.name);
+        if (nameIndex >= 0) {
+          // Insert epithet after name on first mention
+          const nameEnd = nameIndex + character.name.length;
+          const before = result.slice(0, nameEnd);
+          const after = result.slice(nameEnd);
+
+          result = `${before} ${character.epithet}${after}`;
+          this.mentionedEntities.add(`char_${idNum}`);
+        }
+      }
+    }
+
+    return result;
+  }
+
+  /**
+   * Apply arc-aware foreshadowing or climax emphasis.
+   */
+  private applyArcAwareness(
+    body: string,
+    context: TemplateContext,
+    tone: NarrativeTone
+  ): string {
+    const arc = context.narrativeArc;
+    if (arc === undefined) return body;
+
+    const phase = arc.phase;
+
+    // Add foreshadowing for setup and rising action
+    if (phase === 'Setup' || phase === 'RisingAction') {
+      const foreshadowPhrase = getRandomPhrase(tone, 'foreshadowing');
+      if (foreshadowPhrase.length > 0) {
+        return `${body} ${foreshadowPhrase}`;
+      }
+    }
+
+    // Add emphasis for climax
+    if (phase === 'Climax') {
+      const config = TONE_CONFIGS[tone];
+      if (config.characteristics.emotionalLanguage) {
+        return body.replace(/\.\s*$/, '!');
+      }
+    }
+
+    return body;
+  }
+
+  /**
+   * Add retrospective reference for cascade resolutions.
+   */
+  private applyRetrospective(
+    body: string,
+    _context: TemplateContext,
+    tone: NarrativeTone
+  ): string {
+    const retroPhrase = getRandomPhrase(tone, 'retrospectives');
+    if (retroPhrase.length > 0) {
+      return `${retroPhrase} ${body}`;
+    }
+    return body;
+  }
+
+  /**
+   * Add dramatic irony asides for events involving secrets.
+   */
+  private applyDramaticIrony(
+    body: string,
+    context: TemplateContext,
+    tone: NarrativeTone
+  ): string {
+    // Check if event data indicates a secret is involved
+    const hasSecret = context.event.data['secretInvolved'] === true ||
+      context.event.subtype.includes('secret') ||
+      context.event.subtype.includes('revelation');
+
+    if (!hasSecret) return body;
+
+    // Add a dramatic irony aside based on tone
+    let aside: string;
+    switch (tone) {
+      case NarrativeTone.EpicHistorical:
+        aside = '(Though the truth would remain hidden for a time.)';
+        break;
+      case NarrativeTone.PersonalCharacterFocus:
+        aside = '(If only they had known...)';
+        break;
+      case NarrativeTone.Mythological:
+        aside = '(The gods alone knew the truth of it.)';
+        break;
+      case NarrativeTone.PoliticalIntrigue:
+        aside = '(The full picture would only emerge later.)';
+        break;
+      case NarrativeTone.Scholarly:
+        aside = '(Contemporary sources were unaware of this development.)';
+        break;
+    }
+
+    return `${body} ${aside}`;
+  }
+
+  /**
+   * Get statistics about the template registry.
+   */
+  getStats(): {
+    totalTemplates: number;
+    byCategory: Record<string, number>;
+    byTone: Record<string, number>;
+  } {
+    let totalTemplates = 0;
+    const byCategory: Record<string, number> = {};
+    const byTone: Record<string, number> = {};
+
+    for (const [category, subtypeMap] of this.registry.byCategory) {
+      let categoryCount = 0;
+      for (const templates of subtypeMap.values()) {
+        categoryCount += templates.length;
+        for (const template of templates) {
+          const toneName = template.tone;
+          byTone[toneName] = (byTone[toneName] ?? 0) + 1;
+        }
+      }
+      byCategory[category] = categoryCount;
+      totalTemplates += categoryCount;
+    }
+
+    return { totalTemplates, byCategory, byTone };
+  }
+
+  /**
+   * Reset mention tracking (call between narratives if needed).
+   */
+  resetMentions(): void {
+    this.mentionedEntities.clear();
+  }
+}
+
+/**
+ * Create a narrative engine with the provided templates.
+ */
+export function createNarrativeEngine(
+  templates: readonly NarrativeTemplate[],
+  config?: Partial<NarrativeEngineConfig>,
+  resolver?: EntityResolver
+): NarrativeEngine {
+  return new NarrativeEngine(templates, config, resolver);
+}

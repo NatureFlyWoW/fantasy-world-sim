@@ -7,7 +7,9 @@
     "baseUrl": ".",
     "paths": {
       "@fws/narrative": ["./src/index.ts"],
-      "@fws/narrative/*": ["./src/*"]
+      "@fws/narrative/*": ["./src/*"],
+      "@fws/core": ["../core/src/index.ts"],
+      "@fws/core/*": ["../core/src/*"]
     }
   },
   "include": ["src/**/*"],

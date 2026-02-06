@@ -62,7 +62,10 @@ pnpm run start -- --ticks 100        # Run specific tick count (headless mode)
 ```
 
 ## Current Phase
-Phase 5: Narrative Engine (pending)
+Phase 5: Narrative Engine (in progress)
+
+### Phase 5 Tasks
+- [x] 5.1 — Template Engine & Tones (NarrativeTemplate, TemplateParser, NarrativeEngine, 5 tones, 215 templates across 10 categories, literary devices)
 
 ### Phase 4 Tasks — COMPLETE
 Renderer package complete with 7 panel types: Map, EventLog, Inspector, Relationships,
@@ -185,6 +188,14 @@ Deterministic from seed. 9 configurable parameters with named presets.
   5 views (Overview, Population, Territory, Technology, Conflict) with ASCII bar
   charts and sparklines. CLI supports --headless and --ticks flags for CI/testing.
   Phase 4 complete: world → simulation → renderer pipeline fully wired. 1941 tests.
+- 2025: Narrative engine uses template-based prose generation with 5 tones
+  (EpicHistorical, PersonalCharacterFocus, Mythological, PoliticalIntrigue, Scholarly).
+  Templates organized by event category (10 files, 215 templates). TemplateParser
+  handles entity references ({character.name}), pronouns ({pronoun.subject}),
+  conditionals ({#if}/{#else}/{/if}). Literary devices applied post-template:
+  epithet insertion, foreshadowing (rising arcs), retrospective (cascade chains),
+  dramatic irony (secrets). Fallback chain: specific template → category default →
+  global fallback. Tone substitutions transform vocabulary (kingdom→realm). 2029 tests.
 
 ## Known Issues
 - EventCategory.Exploratory has no system producing events (by design — no exploration
