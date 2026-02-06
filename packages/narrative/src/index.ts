@@ -76,6 +76,53 @@ export type {
   TonePhrases,
 } from './styles/tones.js';
 
+// Chronicler system
+export {
+  ChroniclerIdeology,
+  WritingStyle,
+  BiasStrength,
+  BiasType,
+  ChroniclerRegistry,
+  createChronicler,
+  ChroniclerBiasFilter,
+  LossReason,
+  PreservationQuality,
+  ChronicleFeature,
+  LostHistoryTracker,
+} from './chronicler/index.js';
+
+export type {
+  Chronicler,
+  ChroniclerKnowledge,
+  FactionRelation,
+  ChroniclerInterest,
+  ChroniclerAvoidance,
+  ChroniclerOutput,
+  AppliedBias,
+  BiasFilterContext,
+  Chronicle,
+  LossRecord,
+  LossEvent,
+} from './chronicler/index.js';
+
+// Vignette system
+export {
+  EmotionalContent,
+  VignetteArchetype,
+  TriggerConditionType,
+  VignetteMood,
+  VignetteTrigger,
+  VignetteGenerator,
+} from './vignettes/index.js';
+
+export type {
+  TriggerCondition,
+  VignetteTriggerResult,
+  VignetteTriggerContext,
+  Vignette,
+  VignetteGeneratorContext,
+} from './vignettes/index.js';
+
 import { ALL_TEMPLATES } from './templates/index.js';
 import { NarrativeEngine } from './transforms/narrative-engine.js';
 import type { NarrativeEngineConfig, EntityResolver } from './templates/types.js';

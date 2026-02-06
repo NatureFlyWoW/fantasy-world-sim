@@ -62,10 +62,14 @@ pnpm run start -- --ticks 100        # Run specific tick count (headless mode)
 ```
 
 ## Current Phase
-Phase 5: Narrative Engine (in progress)
+Phase 6: Polish & Integration (pending)
 
-### Phase 5 Tasks
+### Phase 5 Tasks — COMPLETE
+Narrative engine complete. Chronicler system applies faction and ideological bias.
+Lost History mechanic tracks preservation. Vignette system triggers 200-500 word
+prose for high-significance events with 15 archetypes.
 - [x] 5.1 — Template Engine & Tones (NarrativeTemplate, TemplateParser, NarrativeEngine, 5 tones, 215 templates across 10 categories, literary devices)
+- [x] 5.2 — Chronicler System & Vignettes (Chronicler with 8 ideologies, ChroniclerBiasFilter with 8 bias types, LostHistoryTracker with preservation/loss simulation, VignetteTrigger with 12 emotions and 15 archetypes, VignetteGenerator producing 200-500 word prose)
 
 ### Phase 4 Tasks — COMPLETE
 Renderer package complete with 7 panel types: Map, EventLog, Inspector, Relationships,
