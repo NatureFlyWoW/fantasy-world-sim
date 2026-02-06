@@ -13,6 +13,8 @@ import { PanelId, SimulationSpeed, getSpeedDisplayName, formatWorldTime } from '
 import { LayoutManager } from './layout-manager.js';
 import type { BasePanel } from './panel.js';
 import { THEME } from './theme.js';
+import { MenuBar } from './menu-bar.js';
+import type { MenuBarItemProvider } from './menu-bar.js';
 
 /**
  * Panel index mapping for number key shortcuts.
@@ -90,6 +92,7 @@ export class Application {
   private screen: blessed.Widgets.Screen | null = null;
   private statusBar: blessed.Widgets.BoxElement | null = null;
   private helpOverlay: blessed.Widgets.BoxElement | null = null;
+  private menuBar: MenuBar | null = null;
   private panels: Map<PanelId, BasePanel> = new Map();
 
   private state: AppState;
@@ -146,6 +149,7 @@ export class Application {
     this.running = true;
     this.simulationStarted = false;
     this.createScreen();
+    this.createMenuBar();
     this.createStatusBar();
     this.setupKeyBindings();
     this.subscribeToEvents();
@@ -207,6 +211,11 @@ export class Application {
     if (this.eventSubscription !== null) {
       this.eventSubscription();
       this.eventSubscription = null;
+    }
+
+    if (this.menuBar !== null) {
+      this.menuBar.destroy();
+      this.menuBar = null;
     }
 
     for (const panel of this.panels.values()) {
@@ -289,6 +298,7 @@ export class Application {
     }
 
     this.state = { ...this.state, focusedPanel: panelId };
+    this.menuBar?.updateForPanel(panelId);
   }
 
   /**
@@ -459,6 +469,27 @@ export class Application {
         this.applyLayout();
       }
     });
+  }
+
+  /**
+   * Create the top menu bar.
+   */
+  private createMenuBar(): void {
+    if (this.screen === null) return;
+
+    const itemProvider: MenuBarItemProvider = (_panelId: PanelId) => {
+      return [
+        { label: 'Map', key: '1', action: () => this.focusPanel(PanelId.Map) },
+        { label: 'Events', key: '2', action: () => this.focusPanel(PanelId.EventLog) },
+        { label: 'Inspector', key: '3', action: () => this.focusPanel(PanelId.Inspector) },
+        { label: 'Relations', key: '4', action: () => this.focusPanel(PanelId.RelationshipGraph) },
+        { label: 'Timeline', key: '5', action: () => this.focusPanel(PanelId.Timeline) },
+        { label: 'Stats', key: '6', action: () => this.focusPanel(PanelId.Statistics) },
+        { label: 'Fingerprint', key: '7', action: () => this.focusPanel(PanelId.Fingerprint) },
+      ];
+    };
+
+    this.menuBar = new MenuBar(this.screen, this.boxFactory, itemProvider);
   }
 
   /**

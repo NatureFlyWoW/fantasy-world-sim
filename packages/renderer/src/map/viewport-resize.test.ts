@@ -196,10 +196,10 @@ describe('Full init flow: Application -> MapPanel viewport sync', () => {
     const initialWidth = viewportBefore.screenWidth;
     const initialHeight = viewportBefore.screenHeight;
 
-    // The default layout for a 120x40 screen gives Map 60% width = 72, full height = 39
-    // Inner dims: 72-2 = 70, 39-2 = 37
+    // The default layout for a 120x40 screen gives Map 60% width = 72, full height = 38 (40 - 1 status - 1 menu)
+    // Inner dims: 72-2 = 70, 38-2 = 36
     expect(initialWidth).toBe(70);
-    expect(initialHeight).toBe(37);
+    expect(initialHeight).toBe(36);
 
     // 4. Register panel and inject factories
     app.registerPanel(panel as any, PanelId.Map);
@@ -214,11 +214,11 @@ describe('Full init flow: Application -> MapPanel viewport sync', () => {
     app.renderInitialFrame();
 
     // After start + renderInitialFrame, the viewport should match the new screen dims
-    // For a 200x60 screen, default layout gives Map 60% width = 120, full height (60-1) = 59
-    // Inner dims: 120-2 = 118, 59-2 = 57
+    // For a 200x60 screen, default layout gives Map 60% width = 120, full height (60-1-1) = 58
+    // Inner dims: 120-2 = 118, 58-2 = 56
     const viewportAfter = panel.getViewport();
     expect(viewportAfter.screenWidth).toBe(118);
-    expect(viewportAfter.screenHeight).toBe(57);
+    expect(viewportAfter.screenHeight).toBe(56);
 
     // Verify they changed from the initial values
     expect(viewportAfter.screenWidth).not.toBe(initialWidth);
@@ -269,11 +269,11 @@ describe('Full init flow: Application -> MapPanel viewport sync', () => {
     app.start();
     app.renderInitialFrame();
 
-    // For a 160x50 screen, default layout gives Map 60% width = 96, height = 50-1 = 49
-    // Inner dims: 96-2 = 94, 49-2 = 47
+    // For a 160x50 screen, default layout gives Map 60% width = 96, height = 50-1-1 = 48
+    // Inner dims: 96-2 = 94, 48-2 = 46
     const viewport = panel.getViewport();
     expect(viewport.screenWidth).toBe(94);
-    expect(viewport.screenHeight).toBe(47);
+    expect(viewport.screenHeight).toBe(46);
 
     // Clean up
     app.stop();
@@ -309,17 +309,17 @@ describe('Full init flow: Application -> MapPanel viewport sync', () => {
     app.start();
     app.renderInitialFrame();
 
-    // For a 180x45 screen, default layout: Map 60% width = 108, height = 45-1 = 44
-    // Inner dims: 108-2 = 106, 44-2 = 42
+    // For a 180x45 screen, default layout: Map 60% width = 108, height = 45-1-1 = 43
+    // Inner dims: 108-2 = 106, 43-2 = 41
     const viewport = panel.getViewport();
     expect(viewport.screenWidth).toBe(106);
-    expect(viewport.screenHeight).toBe(42);
+    expect(viewport.screenHeight).toBe(41);
 
     // Render content should have correct line count
     const box = panel.getBox();
     const content = box.getContent();
     const lines = content.split('\n');
-    expect(lines.length).toBe(42);
+    expect(lines.length).toBe(41);
 
     app.stop();
   });

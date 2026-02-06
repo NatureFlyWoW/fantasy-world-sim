@@ -15,9 +15,10 @@ describe('LayoutManager', () => {
   const testScreen: ScreenDimensions = { width: 120, height: 40 };
 
   describe('calculateDefaultLayout', () => {
-    it('creates layout with status bar', () => {
+    it('creates layout with status bar and menu bar', () => {
       const layout = calculateDefaultLayout(testScreen);
       expect(layout.statusBarHeight).toBe(1);
+      expect(layout.menuBarHeight).toBe(1);
     });
 
     it('creates map panel at 60% width', () => {
@@ -26,9 +27,9 @@ describe('LayoutManager', () => {
 
       expect(mapPanel).toBeDefined();
       expect(mapPanel?.x).toBe(0);
-      expect(mapPanel?.y).toBe(0);
+      expect(mapPanel?.y).toBe(1); // Below menu bar
       expect(mapPanel?.width).toBe(72); // 60% of 120
-      expect(mapPanel?.height).toBe(39); // 40 - 1 for status bar
+      expect(mapPanel?.height).toBe(38); // 40 - 1 status bar - 1 menu bar
     });
 
     it('creates event log panel on right top', () => {
@@ -37,7 +38,7 @@ describe('LayoutManager', () => {
 
       expect(logPanel).toBeDefined();
       expect(logPanel?.x).toBe(72); // After map
-      expect(logPanel?.y).toBe(0);
+      expect(logPanel?.y).toBe(1); // Below menu bar
       expect(logPanel?.width).toBe(48); // 40% of 120
     });
 
@@ -47,6 +48,7 @@ describe('LayoutManager', () => {
 
       expect(inspectorPanel).toBeDefined();
       expect(inspectorPanel?.x).toBe(72); // After map
+      expect(inspectorPanel?.y).toBe(20); // 1 (menu bar) + 19 (rightTopHeight)
       expect(inspectorPanel?.width).toBe(48);
     });
 
@@ -77,9 +79,9 @@ describe('LayoutManager', () => {
       const mapPanel = layout.panels.get(PanelId.Map);
 
       expect(mapPanel?.x).toBe(0);
-      expect(mapPanel?.y).toBe(0);
+      expect(mapPanel?.y).toBe(1); // Below menu bar
       expect(mapPanel?.width).toBe(120); // Full width
-      expect(mapPanel?.height).toBe(33); // 85% of 39 usable
+      expect(mapPanel?.height).toBe(32); // floor(38 * 0.85) = 32
     });
 
     it('creates event log strip at bottom', () => {
@@ -88,7 +90,12 @@ describe('LayoutManager', () => {
 
       expect(logPanel?.x).toBe(0);
       expect(logPanel?.width).toBe(120); // Full width
-      expect(logPanel?.y).toBe(33); // Below map
+      expect(logPanel?.y).toBe(33); // 1 (menu bar) + 32 (map height)
+    });
+
+    it('has menuBarHeight in layout', () => {
+      const layout = calculateMapFocusLayout(testScreen);
+      expect(layout.menuBarHeight).toBe(1);
     });
 
     it('hides inspector panel', () => {
@@ -106,7 +113,7 @@ describe('LayoutManager', () => {
       const logPanel = layout.panels.get(PanelId.EventLog);
 
       expect(logPanel?.x).toBe(0);
-      expect(logPanel?.y).toBe(0);
+      expect(logPanel?.y).toBe(1); // Below menu bar
       expect(logPanel?.width).toBe(72); // 60% of 120
       expect(logPanel?.focused).toBe(true);
     });
@@ -116,7 +123,13 @@ describe('LayoutManager', () => {
       const mapPanel = layout.panels.get(PanelId.Map);
 
       expect(mapPanel?.x).toBe(72);
+      expect(mapPanel?.y).toBe(1); // Below menu bar
       expect(mapPanel?.width).toBe(48); // 40% of 120
+    });
+
+    it('has menuBarHeight in layout', () => {
+      const layout = calculateLogFocusLayout(testScreen);
+      expect(layout.menuBarHeight).toBe(1);
     });
   });
 
@@ -126,9 +139,9 @@ describe('LayoutManager', () => {
       const mapPanel = layout.panels.get(PanelId.Map);
 
       expect(mapPanel?.x).toBe(0);
-      expect(mapPanel?.y).toBe(0);
+      expect(mapPanel?.y).toBe(1); // Below menu bar
       expect(mapPanel?.width).toBe(120); // Full width
-      expect(mapPanel?.height).toBe(19); // 50% of 39 usable
+      expect(mapPanel?.height).toBe(19); // floor(38 * 0.5) = 19
     });
 
     it('creates event log panel at bottom 50%', () => {
@@ -136,8 +149,13 @@ describe('LayoutManager', () => {
       const logPanel = layout.panels.get(PanelId.EventLog);
 
       expect(logPanel?.x).toBe(0);
-      expect(logPanel?.y).toBe(19); // Below map
+      expect(logPanel?.y).toBe(20); // 1 (menu bar) + 19 (top height)
       expect(logPanel?.width).toBe(120); // Full width
+    });
+
+    it('has menuBarHeight in layout', () => {
+      const layout = calculateSplitLayout(testScreen);
+      expect(layout.menuBarHeight).toBe(1);
     });
   });
 
@@ -147,9 +165,9 @@ describe('LayoutManager', () => {
       const mapPanel = layout.panels.get(PanelId.Map);
 
       expect(mapPanel?.x).toBe(0);
-      expect(mapPanel?.y).toBe(0);
+      expect(mapPanel?.y).toBe(1); // Below menu bar
       expect(mapPanel?.width).toBe(120);
-      expect(mapPanel?.height).toBe(39); // Full usable height
+      expect(mapPanel?.height).toBe(38); // Full usable height (40 - 1 - 1)
       expect(mapPanel?.focused).toBe(true);
     });
 
@@ -169,7 +187,12 @@ describe('LayoutManager', () => {
       const logPanel = layout.panels.get(PanelId.EventLog);
 
       expect(logPanel?.width).toBe(120);
-      expect(logPanel?.height).toBe(39);
+      expect(logPanel?.height).toBe(38); // 40 - 1 - 1
+    });
+
+    it('has menuBarHeight in layout', () => {
+      const layout = calculateMaximizedLayout(testScreen, PanelId.Map);
+      expect(layout.menuBarHeight).toBe(1);
     });
   });
 
@@ -237,7 +260,7 @@ describe('LayoutManager', () => {
 
       const mapPanel = manager.getPanelLayout(PanelId.Map);
       expect(mapPanel?.width).toBe(120);
-      expect(mapPanel?.height).toBe(39);
+      expect(mapPanel?.height).toBe(38); // 40 - 1 - 1
     });
 
     it('can restore layout after maximizing', () => {
@@ -269,7 +292,7 @@ describe('LayoutManager', () => {
 
       const mapPanel = manager.getPanelLayout(PanelId.Map);
       expect(mapPanel?.width).toBe(120); // 60% of 200
-      expect(mapPanel?.height).toBe(59); // 60 - 1 status bar
+      expect(mapPanel?.height).toBe(58); // 60 - 1 status bar - 1 menu bar
     });
 
     it('preserves maximized state on resize', () => {
@@ -281,7 +304,7 @@ describe('LayoutManager', () => {
       expect(manager.isMaximized()).toBe(true);
       const mapPanel = manager.getPanelLayout(PanelId.Map);
       expect(mapPanel?.width).toBe(200);
-      expect(mapPanel?.height).toBe(59);
+      expect(mapPanel?.height).toBe(58); // 60 - 1 - 1
     });
 
     it('detects overlapping panels', () => {
@@ -317,7 +340,7 @@ describe('LayoutManager', () => {
       const layout = calculateSplitLayout(testScreen);
       const mapPanel = layout.panels.get(PanelId.Map)!;
       const logPanel = layout.panels.get(PanelId.EventLog)!;
-      const usableHeight = testScreen.height - layout.statusBarHeight;
+      const usableHeight = testScreen.height - layout.statusBarHeight - layout.menuBarHeight;
 
       expect(mapPanel.height + logPanel.height).toBe(usableHeight);
     });

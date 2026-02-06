@@ -20,12 +20,18 @@ export interface ScreenDimensions {
 export interface LayoutConfiguration {
   readonly panels: Map<PanelId, PanelLayout>;
   readonly statusBarHeight: number;
+  readonly menuBarHeight: number;
 }
 
 /**
  * Default status bar height.
  */
 const STATUS_BAR_HEIGHT = 1;
+
+/**
+ * Default menu bar height.
+ */
+const MENU_BAR_HEIGHT = 1;
 
 /**
  * Calculate the default layout.
@@ -37,7 +43,7 @@ const STATUS_BAR_HEIGHT = 1;
 export function calculateDefaultLayout(screen: ScreenDimensions): LayoutConfiguration {
   const panels = new Map<PanelId, PanelLayout>();
 
-  const usableHeight = screen.height - STATUS_BAR_HEIGHT;
+  const usableHeight = screen.height - STATUS_BAR_HEIGHT - MENU_BAR_HEIGHT;
   const leftWidth = Math.floor(screen.width * 0.6);
   const rightWidth = screen.width - leftWidth;
   const rightTopHeight = Math.floor(usableHeight * 0.5);
@@ -46,7 +52,7 @@ export function calculateDefaultLayout(screen: ScreenDimensions): LayoutConfigur
   panels.set(PanelId.Map, {
     id: PanelId.Map,
     x: 0,
-    y: 0,
+    y: MENU_BAR_HEIGHT,
     width: leftWidth,
     height: usableHeight,
     focused: true,
@@ -55,7 +61,7 @@ export function calculateDefaultLayout(screen: ScreenDimensions): LayoutConfigur
   panels.set(PanelId.EventLog, {
     id: PanelId.EventLog,
     x: leftWidth,
-    y: 0,
+    y: MENU_BAR_HEIGHT,
     width: rightWidth,
     height: rightTopHeight,
     focused: false,
@@ -64,7 +70,7 @@ export function calculateDefaultLayout(screen: ScreenDimensions): LayoutConfigur
   panels.set(PanelId.Inspector, {
     id: PanelId.Inspector,
     x: leftWidth,
-    y: rightTopHeight,
+    y: MENU_BAR_HEIGHT + rightTopHeight,
     width: rightWidth,
     height: rightBottomHeight,
     focused: false,
@@ -110,6 +116,7 @@ export function calculateDefaultLayout(screen: ScreenDimensions): LayoutConfigur
   return {
     panels,
     statusBarHeight: STATUS_BAR_HEIGHT,
+    menuBarHeight: MENU_BAR_HEIGHT,
   };
 }
 
@@ -120,14 +127,14 @@ export function calculateDefaultLayout(screen: ScreenDimensions): LayoutConfigur
 export function calculateMapFocusLayout(screen: ScreenDimensions): LayoutConfiguration {
   const panels = new Map<PanelId, PanelLayout>();
 
-  const usableHeight = screen.height - STATUS_BAR_HEIGHT;
+  const usableHeight = screen.height - STATUS_BAR_HEIGHT - MENU_BAR_HEIGHT;
   const mapHeight = Math.floor(usableHeight * 0.85);
   const logHeight = usableHeight - mapHeight;
 
   panels.set(PanelId.Map, {
     id: PanelId.Map,
     x: 0,
-    y: 0,
+    y: MENU_BAR_HEIGHT,
     width: screen.width,
     height: mapHeight,
     focused: true,
@@ -136,7 +143,7 @@ export function calculateMapFocusLayout(screen: ScreenDimensions): LayoutConfigu
   panels.set(PanelId.EventLog, {
     id: PanelId.EventLog,
     x: 0,
-    y: mapHeight,
+    y: MENU_BAR_HEIGHT + mapHeight,
     width: screen.width,
     height: logHeight,
     focused: false,
@@ -191,6 +198,7 @@ export function calculateMapFocusLayout(screen: ScreenDimensions): LayoutConfigu
   return {
     panels,
     statusBarHeight: STATUS_BAR_HEIGHT,
+    menuBarHeight: MENU_BAR_HEIGHT,
   };
 }
 
@@ -201,14 +209,14 @@ export function calculateMapFocusLayout(screen: ScreenDimensions): LayoutConfigu
 export function calculateLogFocusLayout(screen: ScreenDimensions): LayoutConfiguration {
   const panels = new Map<PanelId, PanelLayout>();
 
-  const usableHeight = screen.height - STATUS_BAR_HEIGHT;
+  const usableHeight = screen.height - STATUS_BAR_HEIGHT - MENU_BAR_HEIGHT;
   const logWidth = Math.floor(screen.width * 0.6);
   const mapWidth = screen.width - logWidth;
 
   panels.set(PanelId.EventLog, {
     id: PanelId.EventLog,
     x: 0,
-    y: 0,
+    y: MENU_BAR_HEIGHT,
     width: logWidth,
     height: usableHeight,
     focused: true,
@@ -217,7 +225,7 @@ export function calculateLogFocusLayout(screen: ScreenDimensions): LayoutConfigu
   panels.set(PanelId.Map, {
     id: PanelId.Map,
     x: logWidth,
-    y: 0,
+    y: MENU_BAR_HEIGHT,
     width: mapWidth,
     height: usableHeight,
     focused: false,
@@ -272,6 +280,7 @@ export function calculateLogFocusLayout(screen: ScreenDimensions): LayoutConfigu
   return {
     panels,
     statusBarHeight: STATUS_BAR_HEIGHT,
+    menuBarHeight: MENU_BAR_HEIGHT,
   };
 }
 
@@ -282,14 +291,14 @@ export function calculateLogFocusLayout(screen: ScreenDimensions): LayoutConfigu
 export function calculateSplitLayout(screen: ScreenDimensions): LayoutConfiguration {
   const panels = new Map<PanelId, PanelLayout>();
 
-  const usableHeight = screen.height - STATUS_BAR_HEIGHT;
+  const usableHeight = screen.height - STATUS_BAR_HEIGHT - MENU_BAR_HEIGHT;
   const topHeight = Math.floor(usableHeight * 0.5);
   const bottomHeight = usableHeight - topHeight;
 
   panels.set(PanelId.Map, {
     id: PanelId.Map,
     x: 0,
-    y: 0,
+    y: MENU_BAR_HEIGHT,
     width: screen.width,
     height: topHeight,
     focused: true,
@@ -298,7 +307,7 @@ export function calculateSplitLayout(screen: ScreenDimensions): LayoutConfigurat
   panels.set(PanelId.EventLog, {
     id: PanelId.EventLog,
     x: 0,
-    y: topHeight,
+    y: MENU_BAR_HEIGHT + topHeight,
     width: screen.width,
     height: bottomHeight,
     focused: false,
@@ -353,6 +362,7 @@ export function calculateSplitLayout(screen: ScreenDimensions): LayoutConfigurat
   return {
     panels,
     statusBarHeight: STATUS_BAR_HEIGHT,
+    menuBarHeight: MENU_BAR_HEIGHT,
   };
 }
 
@@ -364,7 +374,7 @@ export function calculateMaximizedLayout(
   maximizedPanel: PanelId
 ): LayoutConfiguration {
   const panels = new Map<PanelId, PanelLayout>();
-  const usableHeight = screen.height - STATUS_BAR_HEIGHT;
+  const usableHeight = screen.height - STATUS_BAR_HEIGHT - MENU_BAR_HEIGHT;
 
   // All panels start hidden
   for (const id of Object.values(PanelId)) {
@@ -382,7 +392,7 @@ export function calculateMaximizedLayout(
   panels.set(maximizedPanel, {
     id: maximizedPanel,
     x: 0,
-    y: 0,
+    y: MENU_BAR_HEIGHT,
     width: screen.width,
     height: usableHeight,
     focused: true,
@@ -391,6 +401,7 @@ export function calculateMaximizedLayout(
   return {
     panels,
     statusBarHeight: STATUS_BAR_HEIGHT,
+    menuBarHeight: MENU_BAR_HEIGHT,
   };
 }
 
@@ -591,6 +602,7 @@ export class LayoutManager {
     return {
       panels: newPanels,
       statusBarHeight: layout.statusBarHeight,
+      menuBarHeight: layout.menuBarHeight,
     };
   }
 }

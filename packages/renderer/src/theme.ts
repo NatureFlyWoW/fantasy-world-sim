@@ -21,6 +21,10 @@ export const UI_COLORS = {
   textBright: '#ffffff',
   selection: '#335588',
   cursor: '#ffcc00',
+  menuBar: '#1a1a3a',
+  menuItemActive: '#4488FF',
+  menuItemText: '#888899',
+  menuItemSeparator: '#333355',
 } as const;
 
 /**

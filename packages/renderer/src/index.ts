@@ -78,6 +78,10 @@ export {
 } from './app.js';
 export type { AppConfig } from './app.js';
 
+// Menu bar
+export { MenuBar } from './menu-bar.js';
+export type { MenuBarItem, MenuBarItemProvider } from './menu-bar.js';
+
 // Map module
 export * from './map/index.js';
 
