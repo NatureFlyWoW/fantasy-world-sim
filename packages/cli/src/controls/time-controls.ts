@@ -18,7 +18,7 @@ export { SimulationSpeed };
  */
 export type SpeedChangeCallback = (
   newSpeed: SimulationSpeed,
-  reason: 'manual' | 'auto-slowdown'
+  reason: 'manual' | 'auto-slowdown' | 'auto-pause-legendary'
 ) => void;
 
 /**
@@ -33,6 +33,8 @@ export interface AutoSlowdownConfig {
   readonly eventCountThreshold: number;
   /** Window size in ticks to count events. Default: 30 */
   readonly windowTicks: number;
+  /** Significance threshold for auto-pausing on legendary events. Default: 95 */
+  readonly legendaryPauseThreshold: number;
 }
 
 /**
@@ -43,6 +45,7 @@ const DEFAULT_AUTO_SLOWDOWN: AutoSlowdownConfig = {
   significanceThreshold: 90,
   eventCountThreshold: 3,
   windowTicks: 30,
+  legendaryPauseThreshold: 95,
 };
 
 /**
@@ -73,6 +76,8 @@ export class SimulationTimeControls {
   /** Ring buffer of recent high-significance event ticks */
   private recentSignificantEvents: number[] = [];
   private currentTick = 0;
+  /** Last legendary event that caused auto-pause */
+  private lastLegendaryEvent: WorldEvent | null = null;
 
   constructor(
     eventBus: EventBus,
@@ -215,6 +220,13 @@ export class SimulationTimeControls {
   }
 
   /**
+   * Get the last legendary event that triggered auto-pause (if any).
+   */
+  getLastLegendaryEvent(): WorldEvent | null {
+    return this.lastLegendaryEvent;
+  }
+
+  /**
    * Update the current tick (call from simulation loop).
    */
   setCurrentTick(tick: number): void {
@@ -256,10 +268,21 @@ export class SimulationTimeControls {
   }
 
   /**
-   * Handle incoming event for auto-slowdown check.
+   * Handle incoming event for auto-slowdown and auto-pause checks.
    */
   private handleEvent(event: WorldEvent): void {
     if (!this.autoSlowdownConfig.enabled) return;
+
+    // Legendary event auto-pause: immediate pause for sig 95+
+    if (event.significance >= this.autoSlowdownConfig.legendaryPauseThreshold) {
+      if (this.controller.speed !== SimulationSpeed.Paused) {
+        this.controller.pause();
+        this.notifySpeedChange(SimulationSpeed.Paused, 'auto-pause-legendary');
+        this.lastLegendaryEvent = event;
+      }
+      return;
+    }
+
     if (event.significance < this.autoSlowdownConfig.significanceThreshold) return;
 
     // Record this high-significance event
@@ -299,7 +322,7 @@ export class SimulationTimeControls {
   /**
    * Notify all registered callbacks of a speed change.
    */
-  private notifySpeedChange(speed: SimulationSpeed, reason: 'manual' | 'auto-slowdown'): void {
+  private notifySpeedChange(speed: SimulationSpeed, reason: 'manual' | 'auto-slowdown' | 'auto-pause-legendary'): void {
     for (const callback of this.speedChangeCallbacks) {
       callback(speed, reason);
     }

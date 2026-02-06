@@ -251,6 +251,103 @@ describe('MenuBar', () => {
     });
   });
 
+  describe('handleClick', () => {
+    it('activates first item when clicked within its bounds', () => {
+      const action1 = vi.fn();
+      const action2 = vi.fn();
+      const provider: MenuBarItemProvider = () => [
+        { label: 'Map', action: action1 },
+        { label: 'Events', action: action2 },
+      ];
+
+      const { menuBar } = createTestMenuBar(provider);
+
+      // ' Map ' = 5 chars (0-4), '|' = 1 char (5), ' Events ' = 8 chars (6-13)
+      const result = menuBar.handleClick(2); // Inside ' Map '
+
+      expect(result).toBe(true);
+      expect(action1).toHaveBeenCalledTimes(1);
+      expect(action2).not.toHaveBeenCalled();
+      expect(menuBar.getSelectedIndex()).toBe(0);
+    });
+
+    it('activates second item when clicked within its bounds', () => {
+      const action1 = vi.fn();
+      const action2 = vi.fn();
+      const provider: MenuBarItemProvider = () => [
+        { label: 'Map', action: action1 },
+        { label: 'Events', action: action2 },
+      ];
+
+      const { menuBar } = createTestMenuBar(provider);
+
+      // ' Map ' = 5 chars (0-4), '|' = 1 char (5), ' Events ' starts at 6
+      const result = menuBar.handleClick(8); // Inside ' Events '
+
+      expect(result).toBe(true);
+      expect(action1).not.toHaveBeenCalled();
+      expect(action2).toHaveBeenCalledTimes(1);
+      expect(menuBar.getSelectedIndex()).toBe(1);
+    });
+
+    it('returns false when clicking on separator', () => {
+      const action1 = vi.fn();
+      const action2 = vi.fn();
+      const provider: MenuBarItemProvider = () => [
+        { label: 'Map', action: action1 },
+        { label: 'Events', action: action2 },
+      ];
+
+      const { menuBar } = createTestMenuBar(provider);
+
+      // Separator '|' at x=5
+      const result = menuBar.handleClick(5);
+
+      expect(result).toBe(false);
+      expect(action1).not.toHaveBeenCalled();
+      expect(action2).not.toHaveBeenCalled();
+    });
+
+    it('returns false when clicking beyond last item', () => {
+      const action1 = vi.fn();
+      const provider: MenuBarItemProvider = () => [
+        { label: 'Map', action: action1 },
+      ];
+
+      const { menuBar } = createTestMenuBar(provider);
+
+      // ' Map ' = 5 chars (0-4), clicking at 10 is beyond
+      const result = menuBar.handleClick(10);
+
+      expect(result).toBe(false);
+      expect(action1).not.toHaveBeenCalled();
+    });
+
+    it('returns false with empty items', () => {
+      const provider: MenuBarItemProvider = () => [];
+      const { menuBar } = createTestMenuBar(provider);
+
+      const result = menuBar.handleClick(0);
+
+      expect(result).toBe(false);
+    });
+
+    it('updates selectedIndex on click', () => {
+      const provider: MenuBarItemProvider = () => [
+        { label: 'Map', action: vi.fn() },
+        { label: 'Events', action: vi.fn() },
+        { label: 'Inspector', action: vi.fn() },
+      ];
+
+      const { menuBar } = createTestMenuBar(provider);
+
+      // Click third item: ' Map '(5) + '|'(1) + ' Events '(8) + '|'(1) = offset 15
+      menuBar.handleClick(16); // Inside ' Inspector '
+
+      expect(menuBar.getSelectedIndex()).toBe(2);
+    });
+  });
+
   describe('navigation cycling', () => {
     it('cycles forward through all items', () => {
       const { menuBar } = createTestMenuBar();

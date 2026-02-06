@@ -600,17 +600,10 @@ export class Application {
     const dateStr = formatWorldTime(time.year, time.month, time.day);
     const speedStr = `Speed: ${getSpeedDisplayName(this.state.speed)}`;
 
-    const entityStr =
-      this.state.selectedEntity !== null
-        ? `Selected: ${this.state.selectedEntity.name} [${this.state.selectedEntity.type} #${this.state.selectedEntity.id}]`
-        : 'No selection';
+    // Context-sensitive hints for the focused panel
+    const hints = getContextHints(this.state.focusedPanel);
 
-    const focusStr =
-      this.state.focusLocation !== null
-        ? `Focus: (${this.state.focusLocation.x}, ${this.state.focusLocation.y})`
-        : '';
-
-    const parts = [dateStr, speedStr, entityStr, focusStr].filter((s) => s.length > 0);
+    const parts = [dateStr, speedStr, hints].filter((s) => s.length > 0);
     this.statusBar.setContent(` ${parts.join('  |  ')} `);
   }
 
@@ -704,6 +697,12 @@ export class Application {
     emitter.on('click', (...args: unknown[]) => {
       const mouse = args[1] as { x: number; y: number } | undefined;
       if (mouse === undefined) return;
+
+      // Menu bar click (y=0)
+      if (mouse.y === 0 && this.menuBar !== null) {
+        this.menuBar.handleClick(mouse.x);
+        return;
+      }
 
       const layout = this.layoutManager.getCurrentLayout();
 
@@ -1122,6 +1121,30 @@ interface BlessedColors {
   match: (r1: number | string | number[], g1?: number, b1?: number) => number;
   hexToRGB: (hex: string) => number[];
   vcolors: number[][];
+}
+
+/**
+ * Get context-sensitive keyboard hints for the currently focused panel.
+ */
+export function getContextHints(panelId: PanelId): string {
+  switch (panelId) {
+    case PanelId.Map:
+      return '[WASD] Pan  [Z/X] Zoom  [Enter] Inspect';
+    case PanelId.EventLog:
+      return '[j/k] Browse  [t] Tone  [h] Chronicler  [/] Search';
+    case PanelId.Inspector:
+      return '[1-9] Sections  [o/r/t/d] Mode  [Bksp] Back';
+    case PanelId.RelationshipGraph:
+      return '[1-3] Depth  [Tab] Filter  [Enter] Inspect';
+    case PanelId.Timeline:
+      return '[Z/X] Zoom  [</>] Scroll  [c] Category';
+    case PanelId.Statistics:
+      return '[1-5] View  [j/k] Scroll';
+    case PanelId.Fingerprint:
+      return '[R] Refresh  [Space] Pause/Play';
+    default:
+      return '';
+  }
 }
 
 /**

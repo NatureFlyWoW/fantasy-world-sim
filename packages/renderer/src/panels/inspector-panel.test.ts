@@ -1,10 +1,11 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { InspectorPanel, createInspectorPanelLayout } from './inspector-panel.js';
+import type { WelcomeData } from './inspector-panel.js';
 import { MockScreen, createMockBoxFactory } from '../panel.js';
 import type { RenderContext } from '../types.js';
 import { PanelId } from '../types.js';
-import { EventLog, EventBus, toEntityId } from '@fws/core';
-import type { World, WorldClock, SpatialIndex, EntityId } from '@fws/core';
+import { EventLog, EventBus, EventCategory, toEntityId, toEventId } from '@fws/core';
+import type { World, WorldEvent, WorldClock, SpatialIndex, EntityId } from '@fws/core';
 
 // Create mock world helper
 interface MockWorldOverrides {
@@ -517,6 +518,125 @@ describe('InspectorPanel', () => {
       expect(layout.width).toBe(50);
       expect(layout.height).toBe(30);
       expect(layout.focused).toBe(false);
+    });
+  });
+
+  describe('world dashboard', () => {
+    it('renders without error when no entity selected and events exist', () => {
+      // Add some events to the event log
+      const event: WorldEvent = {
+        id: toEventId(toEntityId(100)),
+        category: EventCategory.Political,
+        subtype: 'faction.treaty_signed',
+        timestamp: 0,
+        participants: [toEntityId(1)],
+        causes: [],
+        consequences: [],
+        data: { description: 'A treaty was signed' },
+        significance: 70,
+        consequencePotential: [],
+      } as WorldEvent;
+      context.eventLog.append(event);
+
+      expect(() => panel.render(context)).not.toThrow();
+    });
+
+    it('renders without error with multiple events in log', () => {
+      for (let i = 1; i <= 5; i++) {
+        const event: WorldEvent = {
+          id: toEventId(toEntityId(100 + i)),
+          category: i % 2 === 0 ? EventCategory.Military : EventCategory.Political,
+          subtype: i % 2 === 0 ? 'battle.resolved' : 'faction.treaty_signed',
+          timestamp: i * 10,
+          participants: [toEntityId(i)],
+          causes: [],
+          consequences: [],
+          data: { description: `Event ${i}` },
+          significance: 50 + i * 5,
+          consequencePotential: [],
+        } as WorldEvent;
+        context.eventLog.append(event);
+      }
+
+      expect(() => panel.render(context)).not.toThrow();
+    });
+  });
+
+  describe('welcome screen', () => {
+    const welcomeData: WelcomeData = {
+      seed: 42,
+      factionCount: 5,
+      characterCount: 12,
+      settlementCount: 8,
+      tensions: ['Border dispute between Ironhaven and Jade Covenant', 'Succession crisis in Free Cities'],
+      worldSize: 'Medium',
+    };
+
+    it('stores welcome data without error', () => {
+      expect(() => panel.setWelcomeData(welcomeData)).not.toThrow();
+    });
+
+    it('renders welcome screen when no entity and no events', () => {
+      panel.setWelcomeData(welcomeData);
+
+      // No events in log, no entity selected
+      expect(() => panel.render(context)).not.toThrow();
+    });
+
+    it('renders dashboard instead of welcome when events exist', () => {
+      panel.setWelcomeData(welcomeData);
+
+      // Add an event to switch from welcome to dashboard
+      const event: WorldEvent = {
+        id: toEventId(toEntityId(200)),
+        category: EventCategory.Personal,
+        subtype: 'character.befriend',
+        timestamp: 0,
+        participants: [toEntityId(1)],
+        causes: [],
+        consequences: [],
+        data: {},
+        significance: 30,
+        consequencePotential: [],
+      } as WorldEvent;
+      context.eventLog.append(event);
+
+      // Should render dashboard, not welcome screen
+      expect(() => panel.render(context)).not.toThrow();
+    });
+  });
+
+  describe('dashboard scrolling', () => {
+    it('scrolls down when no entity selected', () => {
+      const result1 = panel.handleInput('down');
+      expect(result1).toBe(true);
+
+      const result2 = panel.handleInput('j');
+      expect(result2).toBe(true);
+    });
+
+    it('does not scroll above 0', () => {
+      // At offset 0, scrolling up should fail
+      const result = panel.handleInput('up');
+      expect(result).toBe(false);
+    });
+
+    it('scrolls down then back up', () => {
+      panel.handleInput('down'); // offset 1
+      panel.handleInput('down'); // offset 2
+
+      const result = panel.handleInput('up');
+      expect(result).toBe(true); // offset 1
+    });
+
+    it('handles wheelup and wheeldown', () => {
+      panel.handleInput('wheeldown'); // offset 1
+      const upResult = panel.handleInput('wheelup');
+      expect(upResult).toBe(true); // offset 0
+
+      // Now at 0, wheelup should fail
+      const failResult = panel.handleInput('wheelup');
+      expect(failResult).toBe(false);
     });
   });
 });

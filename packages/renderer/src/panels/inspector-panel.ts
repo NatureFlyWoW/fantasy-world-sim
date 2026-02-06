@@ -7,11 +7,13 @@ import type * as blessed from 'blessed';
 import { BasePanel } from '../panel.js';
 import type { PanelLayout, RenderContext } from '../types.js';
 import { PanelId } from '../types.js';
-import type { EntityId } from '@fws/core';
+import { EventCategory, WorldFingerprintCalculator, FINGERPRINT_DOMAINS } from '@fws/core';
+import type { EntityId, WorldEvent } from '@fws/core';
 import { CharacterInspector } from './character-inspector.js';
 import { LocationInspector } from './location-inspector.js';
 import { FactionInspector } from './faction-inspector.js';
 import { ArtifactInspector } from './artifact-inspector.js';
+import { CATEGORY_ICONS } from './event-formatter.js';
 
 /**
  * Entity types that can be inspected.
@@ -31,6 +33,18 @@ export interface HistoryEntry {
  * Inspector mode.
  */
 export type InspectorMode = 'overview' | 'relationships' | 'timeline' | 'details';
+
+/**
+ * Data for the pre-simulation welcome screen.
+ */
+export interface WelcomeData {
+  readonly seed: number;
+  readonly factionCount: number;
+  readonly characterCount: number;
+  readonly settlementCount: number;
+  readonly tensions: readonly string[];
+  readonly worldSize: string;
+}
 
 /**
  * Section within an inspector.
@@ -58,6 +72,13 @@ export class InspectorPanel extends BasePanel {
   private readonly locationInspector: LocationInspector;
   private readonly factionInspector: FactionInspector;
   private readonly artifactInspector: ArtifactInspector;
+
+  // World dashboard
+  private readonly fingerprintCalculator = new WorldFingerprintCalculator();
+  private dashboardScrollOffset = 0;
+
+  // Welcome screen data (pre-simulation)
+  private welcomeData: WelcomeData | null = null;
 
   // Event handlers
   private inspectHandler: ((entityId: EntityId) => void) | null = null;
@@ -294,6 +315,13 @@ export class InspectorPanel extends BasePanel {
   }
 
   /**
+   * Set welcome data for the pre-simulation welcome screen.
+   */
+  setWelcomeData(data: WelcomeData): void {
+    this.welcomeData = data;
+  }
+
+  /**
    * Set handler for navigating to locations.
    */
   setGoToLocationHandler(handler: (x: number, y: number) => void): void {
@@ -304,6 +332,22 @@ export class InspectorPanel extends BasePanel {
    * Handle keyboard input.
    */
   handleInput(key: string): boolean {
+    // Dashboard scroll when no entity selected
+    if (this.currentEntityId === null) {
+      if (key === 'up' || key === 'k' || key === 'wheelup') {
+        if (this.dashboardScrollOffset > 0) {
+          this.dashboardScrollOffset--;
+          return true;
+        }
+        return false;
+      }
+      if (key === 'down' || key === 'j' || key === 'wheeldown') {
+        this.dashboardScrollOffset++;
+        return true;
+      }
+      return false;
+    }
+
     switch (key) {
       case 'backspace':
       case 'left':
@@ -391,7 +435,7 @@ export class InspectorPanel extends BasePanel {
     this.clearArea();
 
     if (this.currentEntityId === null) {
-      this.renderEmptyState();
+      this.renderWorldDashboard(context);
       return;
     }
 
@@ -426,30 +470,231 @@ export class InspectorPanel extends BasePanel {
   }
 
   /**
-   * Render empty state when no entity selected.
+   * Render world dashboard when no entity is selected.
+   * Before simulation: shows "Story So Far" welcome.
+   * During simulation: shows World Pulse, Top Factions, Active Tensions, Recent Notable Events.
    */
-  private renderEmptyState(): void {
-    const lines = [
-      '',
-      '  No entity selected',
-      '',
-      '  Select an entity from:',
-      '    - Map panel (click/enter)',
-      '    - Event log (enter on event)',
-      '',
-      '  Navigation:',
-      '    ← / Backspace - Back',
-      '    → - Forward',
-      '    ↑/↓ - Scroll',
-      '',
-      '  Modes:',
-      '    o - Overview',
-      '    r - Relationships',
-      '    t - Timeline',
-      '    d - Details',
-    ];
+  private renderWorldDashboard(context: RenderContext): void {
+    const lines: string[] = [];
+    const { width } = this.getInnerDimensions();
+    const barWidth = Math.max(10, Math.min(20, width - 20));
 
-    this.setContent(lines.join('\n'));
+    // Pre-simulation welcome screen
+    const hasEvents = context.eventLog.getAll().length > 0;
+    if (!hasEvents && this.welcomeData !== null) {
+      this.renderWelcomeScreen(lines, width);
+      const { height } = this.getInnerDimensions();
+      const visibleLines = lines.slice(this.dashboardScrollOffset, this.dashboardScrollOffset + height);
+      this.setContent(visibleLines.join('\n'));
+      return;
+    }
+
+    // ── WORLD PULSE ─────────────────────
+    lines.push(`{bold} \u2500\u2500\u2500 WORLD PULSE ${'─'.repeat(Math.max(0, width - 18))} {/bold}`);
+
+    try {
+      const fingerprint = this.fingerprintCalculator.calculateFingerprint(context.world, context.eventLog);
+      for (const domain of FINGERPRINT_DOMAINS) {
+        const value = fingerprint.domainBalance.get(domain) ?? 0;
+        const pct = Math.round(value * 100);
+        const filled = Math.round((pct / 100) * barWidth);
+        const empty = barWidth - filled;
+        const bar = '\u2588'.repeat(filled) + '\u2591'.repeat(empty);
+        const domainLabel = domain.padEnd(12);
+        lines.push(`  ${domainLabel} ${bar} ${pct}`);
+      }
+    } catch {
+      lines.push('  (No event data yet)');
+    }
+
+    lines.push('');
+
+    // ── TOP FACTIONS ─────────────────────
+    lines.push(`{bold} \u2500\u2500\u2500 TOP FACTIONS ${'─'.repeat(Math.max(0, width - 19))} {/bold}`);
+
+    const factionEntries = this.getTopFactions(context, 5);
+    if (factionEntries.length === 0) {
+      lines.push('  (No factions yet)');
+    } else {
+      for (const entry of factionEntries) {
+        const popStr = entry.population > 0 ? `pop: ${entry.population.toLocaleString()}` : '';
+        lines.push(`  \u269C ${entry.name.padEnd(Math.max(1, width - 20))} ${popStr}`);
+      }
+    }
+
+    lines.push('');
+
+    // ── ACTIVE TENSIONS ──────────────────
+    lines.push(`{bold} \u2500\u2500\u2500 ACTIVE TENSIONS ${'─'.repeat(Math.max(0, width - 22))} {/bold}`);
+
+    const tensions = this.getActiveTensions(context, 5);
+    if (tensions.length === 0) {
+      lines.push('  (No active tensions)');
+    } else {
+      for (const tension of tensions) {
+        const icon = CATEGORY_ICONS[tension.category];
+        const desc = tension.description.slice(0, Math.max(1, width - 6));
+        lines.push(`  ${icon} ${desc}`);
+      }
+    }
+
+    lines.push('');
+
+    // ── RECENT NOTABLE EVENTS ────────────
+    lines.push(`{bold} \u2500\u2500\u2500 RECENT NOTABLE ${'─'.repeat(Math.max(0, width - 20))} {/bold}`);
+
+    const notable = this.getRecentNotableEvents(context, 8);
+    if (notable.length === 0) {
+      lines.push('  (No notable events yet)');
+    } else {
+      for (const event of notable) {
+        const sigChar = event.significance >= 90 ? '\u2605' : event.significance >= 70 ? '\u25CF' : '\u25CB';
+        const desc = this.getEventShortDescription(event).slice(0, Math.max(1, width - 14));
+        lines.push(`  ${sigChar} ${desc.padEnd(Math.max(1, width - 14))} [sig ${event.significance}]`);
+      }
+    }
+
+    lines.push('');
+    lines.push('{#888888-fg}  Click any item to inspect  |  Select entity to view details{/}');
+
+    // Apply dashboard scroll
+    const { height } = this.getInnerDimensions();
+    const visibleLines = lines.slice(this.dashboardScrollOffset, this.dashboardScrollOffset + height);
+    this.setContent(visibleLines.join('\n'));
+  }
+
+  /**
+   * Render the pre-simulation welcome screen.
+   */
+  private renderWelcomeScreen(lines: string[], width: number): void {
+    if (this.welcomeData === null) return;
+    const w = this.welcomeData;
+    const sep = '\u2550'.repeat(Math.max(0, width - 4));
+
+    lines.push('');
+    lines.push(`  {bold}\u2552${sep}\u2555{/bold}`);
+    lines.push(`  {bold}     \u00C6TERNUM — THE STORY SO FAR{/bold}`);
+    lines.push(`  {bold}\u2558${sep}\u255B{/bold}`);
+    lines.push('');
+    lines.push(`  Seed: ${w.seed}  |  World Size: ${w.worldSize}`);
+    lines.push('');
+    lines.push(`  {bold}Civilizations:{/bold}`);
+    lines.push(`    ${w.factionCount} factions  |  ${w.settlementCount} settlements  |  ${w.characterCount} characters`);
+    lines.push('');
+
+    if (w.tensions.length > 0) {
+      lines.push(`  {bold}Initial Tensions:{/bold}`);
+      for (const tension of w.tensions) {
+        lines.push(`    \u2022 ${tension}`);
+      }
+      lines.push('');
+    }
+
+    lines.push('  The world has been shaped by millennia of pre-history.');
+    lines.push('  Ancient ruins dot the landscape, and old grudges simmer');
+    lines.push('  beneath the surface of fragile alliances.');
+    lines.push('');
+    lines.push(`  {bold}Press Space to watch history unfold.{/bold}`);
+    lines.push('');
+  }
+
+  /**
+   * Get top factions by population (from Territory components).
+   */
+  private getTopFactions(context: RenderContext, limit: number): Array<{ name: string; population: number; entityId: EntityId }> {
+    const factions: Array<{ name: string; population: number; entityId: EntityId }> = [];
+
+    if (!context.world.hasStore('Territory')) return factions;
+
+    for (const [entityId] of context.world.getStore('Territory').getAll()) {
+      let name = `Faction #${entityId}`;
+      let population = 0;
+
+      // Try to get name from Status component
+      if (context.world.hasStore('Status')) {
+        const status = context.world.getComponent(entityId, 'Status');
+        if (status !== undefined) {
+          const titles = (status as { titles?: string[] }).titles;
+          if (titles !== undefined && titles.length > 0 && titles[0] !== undefined) {
+            name = titles[0];
+          }
+        }
+      }
+
+      // Try to get population from Territory
+      const territory = context.world.getComponent(entityId, 'Territory');
+      if (territory !== undefined) {
+        population = (territory as { totalPopulation?: number }).totalPopulation ?? 0;
+      }
+
+      factions.push({ name, population, entityId });
+    }
+
+    factions.sort((a, b) => b.population - a.population);
+    return factions.slice(0, limit);
+  }
+
+  /**
+   * Get active tensions from recent high-significance Political/Military events.
+   */
+  private getActiveTensions(context: RenderContext, limit: number): Array<{ description: string; category: EventCategory }> {
+    const tensions: Array<{ description: string; category: EventCategory }> = [];
+    const all = context.eventLog.getAll();
+
+    // Look at last 500 events for tension-related events
+    const recentEvents = all.slice(Math.max(0, all.length - 500));
+
+    for (const event of recentEvents) {
+      if (event.significance < 60) continue;
+      if (event.category !== EventCategory.Political && event.category !== EventCategory.Military) continue;
+
+      const data = event.data as Record<string, unknown>;
+      const desc = typeof data['description'] === 'string'
+        ? data['description']
+        : event.subtype.split('.').slice(1).join(' ').replace(/_/g, ' ');
+
+      tensions.push({ description: desc, category: event.category });
+    }
+
+    // Deduplicate by description and return most recent
+    const seen = new Set<string>();
+    const unique: Array<{ description: string; category: EventCategory }> = [];
+    for (let i = tensions.length - 1; i >= 0 && unique.length < limit; i--) {
+      const t = tensions[i];
+      if (t !== undefined && !seen.has(t.description)) {
+        seen.add(t.description);
+        unique.push(t);
+      }
+    }
+    return unique;
+  }
+
+  /**
+   * Get recent notable events (sorted by significance).
+   */
+  private getRecentNotableEvents(context: RenderContext, limit: number): WorldEvent[] {
+    const all = context.eventLog.getAll();
+    const recent = all.slice(Math.max(0, all.length - 200));
+
+    // Sort by significance descending
+    const sorted = [...recent].sort((a, b) => b.significance - a.significance);
+    return sorted.slice(0, limit);
+  }
+
+  /**
+   * Get a short description for an event (for dashboard display).
+   */
+  private getEventShortDescription(event: WorldEvent): string {
+    const data = event.data as Record<string, unknown>;
+    if (typeof data['description'] === 'string') {
+      return data['description'];
+    }
+    const parts = event.subtype.split('.');
+    if (parts.length >= 2) {
+      const action = parts.slice(1).join(' ').replace(/_/g, ' ');
+      return action.charAt(0).toUpperCase() + action.slice(1);
+    }
+    return event.subtype.replace(/_/g, ' ');
   }
 
   /**

@@ -128,6 +128,32 @@ export class MenuBar {
   }
 
   /**
+   * Handle a click at the given x coordinate.
+   * Maps x position to the menu item at that position and activates it.
+   * Returns true if a menu item was clicked.
+   */
+  handleClick(x: number): boolean {
+    let offset = 0;
+    for (let i = 0; i < this.items.length; i++) {
+      const item = this.items[i]!;
+      // Each item renders as " Label " (label.length + 2)
+      const itemWidth = item.label.length + 2;
+      if (x >= offset && x < offset + itemWidth) {
+        this.selectedIndex = i;
+        this.render();
+        item.action();
+        return true;
+      }
+      offset += itemWidth;
+      // Separator "|" takes 1 char
+      if (i < this.items.length - 1) {
+        offset += 1;
+      }
+    }
+    return false;
+  }
+
+  /**
    * Clean up resources.
    */
   destroy(): void {

@@ -7,6 +7,7 @@
 export {
   EventFormatter,
   CATEGORY_ICONS,
+  ENTITY_NAME_COLOR,
   defaultFormatter,
 } from './event-formatter.js';
 

@@ -449,7 +449,8 @@ function launchTerminalUI(
   context: RenderContext,
   worldMapWidth: number,
   worldMapHeight: number,
-  entityResolver: EntityResolver
+  entityResolver: EntityResolver,
+  welcomeData: { seed: number; factionCount: number; characterCount: number; settlementCount: number; tensions: string[]; worldSize: string }
 ): void {
   console.log('\n');
   printBox([
@@ -587,6 +588,9 @@ function launchTerminalUI(
   eventLogPanel.subscribeToEvents(context);
 
   const inspectorPanel = new InspectorPanel(screen, getLayout(PanelId.Inspector), boxFactory);
+
+  // Set welcome data for pre-simulation welcome screen
+  inspectorPanel.setWelcomeData(welcomeData);
 
   const relationshipsPanel = new RelationshipsPanel(screen, getLayout(PanelId.RelationshipGraph), boxFactory);
 
@@ -837,12 +841,23 @@ async function main(): Promise<void> {
     // Build entity resolver for narrative generation
     const entityResolver = buildEntityResolver(generatedData, populationResult);
 
+    // Build welcome data for pre-simulation screen
+    const welcomeData = {
+      seed,
+      factionCount: generatedData.factions.length,
+      characterCount: generatedData.rulers.length + generatedData.notables.length,
+      settlementCount: generatedData.settlements.length,
+      tensions: generatedData.tensions.slice(0, 5).map(t => t.description),
+      worldSize: generatedData.config.worldSize,
+    };
+
     // Launch the terminal UI (simulation starts paused, player presses Space to begin)
     launchTerminalUI(
       context,
       generatedData.worldMap.getWidth(),
       generatedData.worldMap.getHeight(),
-      entityResolver
+      entityResolver,
+      welcomeData
     );
   }
 }

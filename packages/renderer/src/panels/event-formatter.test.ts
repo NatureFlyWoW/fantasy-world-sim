@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { EventFormatter, CATEGORY_ICONS, defaultFormatter } from './event-formatter.js';
+import { EventFormatter, CATEGORY_ICONS, defaultFormatter, ENTITY_NAME_COLOR } from './event-formatter.js';
 import { EventCategory, toEntityId, toSiteId } from '@fws/core';
 import type { WorldEvent, World, WorldClock, EntityId } from '@fws/core';
+import type { EntityResolver } from '@fws/narrative';
 
 // Mock WorldClock
 const mockClock = {
@@ -32,6 +33,31 @@ function createMockWorld(): World {
     hasStore: () => false,
     getComponent: () => undefined,
   } as unknown as World;
+}
+
+// Mock EntityResolver
+function createMockResolver(): EntityResolver {
+  return {
+    resolveCharacter: (id: number) => {
+      if (id === 1) return { name: 'Aldric' };
+      if (id === 2) return { name: 'Mira' };
+      return undefined;
+    },
+    resolveFaction: (id: number) => {
+      if (id === 3) return { name: 'Ironhaven' };
+      if (id === 4) return { name: 'Jade Covenant' };
+      return undefined;
+    },
+    resolveSite: (id: number) => {
+      if (id === 10) return { name: 'Ashenmoor' };
+      return undefined;
+    },
+    resolveArtifact: (id: number) => {
+      if (id === 20) return { name: 'Starfire Blade' };
+      return undefined;
+    },
+    resolveDeity: () => undefined,
+  };
 }
 
 describe('EventFormatter', () => {
@@ -331,6 +357,201 @@ describe('EventFormatter', () => {
   describe('defaultFormatter', () => {
     it('is an EventFormatter instance', () => {
       expect(defaultFormatter).toBeInstanceOf(EventFormatter);
+    });
+  });
+
+  describe('EntityResolver integration', () => {
+    it('sets and gets entity resolver', () => {
+      const resolver = createMockResolver();
+      formatter.setEntityResolver(resolver);
+
+      expect(formatter.getEntityResolver()).toBe(resolver);
+    });
+
+    it('resolves character name when resolver is set', () => {
+      const resolver = createMockResolver();
+      formatter.setEntityResolver(resolver);
+
+      const result = formatter.resolveEntityIdToName(1);
+
+      expect(result).toBe('Aldric');
+    });
+
+    it('resolves faction name when resolver is set', () => {
+      const resolver = createMockResolver();
+      formatter.setEntityResolver(resolver);
+
+      const result = formatter.resolveEntityIdToName(3);
+
+      expect(result).toBe('Ironhaven');
+    });
+
+    it('resolves site name when resolver is set', () => {
+      const resolver = createMockResolver();
+      formatter.setEntityResolver(resolver);
+
+      const result = formatter.resolveEntityIdToName(10);
+
+      expect(result).toBe('Ashenmoor');
+    });
+
+    it('resolves artifact name when resolver is set', () => {
+      const resolver = createMockResolver();
+      formatter.setEntityResolver(resolver);
+
+      const result = formatter.resolveEntityIdToName(20);
+
+      expect(result).toBe('Starfire Blade');
+    });
+
+    it('returns null when no resolver is set', () => {
+      const result = formatter.resolveEntityIdToName(1);
+
+      expect(result).toBeNull();
+    });
+
+    it('returns null when resolver does not find entity', () => {
+      const resolver = createMockResolver();
+      formatter.setEntityResolver(resolver);
+
+      const result = formatter.resolveEntityIdToName(999);
+
+      expect(result).toBeNull();
+    });
+  });
+
+  describe('verb pattern descriptions', () => {
+    it('formats character.befriend with two participants using names', () => {
+      const resolver = createMockResolver();
+      formatter.setEntityResolver(resolver);
+
+      const event = createMockEvent({
+        subtype: 'character.befriend',
+        participants: [toEntityId(1), toEntityId(2)],
+      });
+
+      const result = formatter.getEventDescription(event);
+
+      expect(result).toBe('Aldric befriended Mira');
+    });
+
+    it('formats character.befriend with single participant', () => {
+      const resolver = createMockResolver();
+      formatter.setEntityResolver(resolver);
+
+      const event = createMockEvent({
+        subtype: 'character.befriend',
+        participants: [toEntityId(1)],
+      });
+
+      const result = formatter.getEventDescription(event);
+
+      expect(result).toBe('Aldric befriended');
+    });
+
+    it('formats faction.war_declared with two participants', () => {
+      const resolver = createMockResolver();
+      formatter.setEntityResolver(resolver);
+
+      const event = createMockEvent({
+        subtype: 'faction.war_declared',
+        participants: [toEntityId(3), toEntityId(4)],
+      });
+
+      const result = formatter.getEventDescription(event);
+
+      expect(result).toBe('Ironhaven declared war on Jade Covenant');
+    });
+
+    it('falls back to domain:action for unknown subtype', () => {
+      const resolver = createMockResolver();
+      formatter.setEntityResolver(resolver);
+
+      const event = createMockEvent({
+        subtype: 'unknown.test_action',
+        participants: [toEntityId(1), toEntityId(2)],
+      });
+
+      const result = formatter.getEventDescription(event);
+
+      expect(result).toBe('Unknown: test action');
+    });
+
+    it('falls back to domain:action when no resolver is set', () => {
+      const event = createMockEvent({
+        subtype: 'character.befriend',
+        participants: [toEntityId(1), toEntityId(2)],
+      });
+
+      const result = formatter.getEventDescription(event);
+
+      expect(result).toBe('Character: befriend');
+    });
+  });
+
+  describe('enhanced descriptions', () => {
+    it('prepends participant name when resolver is set and has description', () => {
+      const resolver = createMockResolver();
+      formatter.setEntityResolver(resolver);
+
+      const event = createMockEvent({
+        subtype: 'character.action',
+        participants: [toEntityId(1)],
+        data: { description: 'The kingdom fell into chaos' },
+      });
+
+      const result = formatter.getEventDescription(event);
+
+      expect(result).toBe('Aldric: The kingdom fell into chaos');
+    });
+
+    it('returns raw description when no resolver is set', () => {
+      const event = createMockEvent({
+        subtype: 'character.action',
+        participants: [toEntityId(1)],
+        data: { description: 'The kingdom fell into chaos' },
+      });
+
+      const result = formatter.getEventDescription(event);
+
+      expect(result).toBe('The kingdom fell into chaos');
+    });
+
+    it('does not duplicate name if description already starts with it', () => {
+      const resolver = createMockResolver();
+      formatter.setEntityResolver(resolver);
+
+      const event = createMockEvent({
+        subtype: 'character.action',
+        participants: [toEntityId(1)],
+        data: { description: 'Aldric conquered the realm' },
+      });
+
+      const result = formatter.getEventDescription(event);
+
+      expect(result).toBe('Aldric conquered the realm');
+      expect(result.match(/Aldric/g)?.length).toBe(1);
+    });
+
+    it('returns description without participant name when no participants', () => {
+      const resolver = createMockResolver();
+      formatter.setEntityResolver(resolver);
+
+      const event = createMockEvent({
+        subtype: 'faction.action',
+        participants: [],
+        data: { description: 'The treaty was signed' },
+      });
+
+      const result = formatter.getEventDescription(event);
+
+      expect(result).toBe('The treaty was signed');
+    });
+  });
+
+  describe('ENTITY_NAME_COLOR', () => {
+    it('is #88AAFF', () => {
+      expect(ENTITY_NAME_COLOR).toBe('#88AAFF');
     });
   });
 });

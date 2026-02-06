@@ -221,6 +221,7 @@ export class EventLogPanel extends BasePanel {
    */
   setEntityResolver(resolver: EntityResolver): void {
     this.narrativeEngine = createDefaultNarrativeEngine({ defaultTone: this.currentTone }, resolver);
+    this.formatter.setEntityResolver(resolver);
   }
 
   /**
@@ -939,6 +940,30 @@ export class EventLogPanel extends BasePanel {
       return `\u2551 {bold}${paddedText}{/} \u2551`; // ║ text ║
     }
     return `\u2551 ${paddedText} \u2551`;
+  }
+
+  /**
+   * Handle mouse click at panel-relative coordinates.
+   * Left pane click selects the event at that row.
+   */
+  override handleClick(x: number, y: number): boolean {
+    if (this.mode !== 'normal') return false;
+
+    const innerDims = this.getInnerDimensions();
+    const leftWidth = Math.floor(innerDims.width * 0.55);
+
+    // Click in left pane (raw event list)
+    if (x < leftWidth) {
+      const eventIndex = this.scrollOffset + y;
+      if (eventIndex >= 0 && eventIndex < this.filteredEvents.length) {
+        this.selectedIndex = eventIndex;
+        this.autoScroll = false;
+        this.updateSelectedEvent();
+        return true;
+      }
+    }
+
+    return false;
   }
 
   /**

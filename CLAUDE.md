@@ -83,7 +83,24 @@ small to warrant delegation.
 
 
 ## Current Phase
-Phase 8: (Next)
+Phase 8: UX Overhaul (In Progress — Tier 1-2 complete, Tier 3-4 remaining)
+
+### Phase 8 Tasks — IN PROGRESS
+UX overhaul: "Names Not Numbers" entity resolution in event log, world dashboard
+replacing empty inspector, click handling for menu bar and event log, context-sensitive
+status bar hints, auto-pause on legendary events (sig 95+), pre-simulation welcome screen.
+Tier 3-4 remaining: Chronicle narrative-primary view, event aggregation, story threads,
+interactive entity names in prose, tone-affects-layout.
+- [x] 8.1 — Names Not Numbers (EventFormatter wired to EntityResolver, SUBTYPE_VERB_MAP with ~50 verb patterns, resolves entity IDs to character/faction/site/artifact names, ENTITY_NAME_COLOR for clickable names; 17 new tests)
+- [x] 8.2 — World Dashboard (Inspector empty state replaced with live dashboard: World Pulse domain balance bars via WorldFingerprintCalculator, Top Factions from Territory components, Active Tensions from sig 60+ Political/Military events, Recent Notable Events; dashboard scrolling; 12 new tests)
+- [x] 8.3 — Click Handling (MenuBar.handleClick(x) coordinate-to-item mapping, EventLogPanel.handleClick(x,y) click-to-select events, Application menu bar click routing at y=0; 6 new tests)
+- [x] 8.4 — Context-Sensitive Status Bar (getContextHints(panelId) returns panel-specific shortcut hints replacing static entity/focus info; 9 new tests)
+- [x] 8.5 — Auto-Pause on Legendary Events (SimulationTimeControls legendaryPauseThreshold=95, immediate pause with 'auto-pause-legendary' reason, getLastLegendaryEvent() accessor; 9 new tests)
+- [x] 8.6 — Story So Far Welcome Screen (WelcomeData interface, renderWelcomeScreen with seed/factions/settlements/tensions, shown before simulation starts; CLI builds welcomeData from generatedData; 3 new tests)
+- [ ] 8.7 — Chronicle Narrative-Primary View (full-width prose as default, temporal grouping with period headers, significance-tiered display, chronicler identity header)
+- [ ] 8.8 — Event Aggregation (time-window batching of sub-threshold events, expand-on-demand, two-threshold system)
+- [ ] 8.9 — Story Threads (inline cascade connectors, arc progress headers, thread color-coding)
+- [ ] 8.10 — Interactive Entity Names & Polish (clickable entity names in prose, tone affects layout, progressive tips)
 
 ### Phase 7 Tasks — COMPLETE
 Extended systems: World DNA Fingerprint (6-domain radial chart), Timeline Branching
@@ -403,6 +420,22 @@ Deterministic from seed. 9 configurable parameters with named presets.
   For saturated inputs (>10%), prefers colored entry unless >4x worse than grey.
   Result cached by RGB hash. Called in createScreen() before widget creation.
   (5) Help overlay updated with mouse click and scroll entries.
+- 2026: Phase 8 UX Overhaul Tier 1-2. "Names Not Numbers": EventFormatter wired to
+  EntityResolver (from @fws/narrative) with SUBTYPE_VERB_MAP (~50 subtype-to-verb
+  patterns). resolveEntityIdToName() tries character→faction→site→artifact. Verb
+  patterns use {0}/{1}/{loc} placeholders with graceful cleanup of unresolved refs.
+  enhanceDescription() prepends first participant name. ENTITY_NAME_COLOR=#88AAFF.
+  World Dashboard: Inspector empty state replaced with renderWorldDashboard() showing
+  World Pulse (WorldFingerprintCalculator.calculateFingerprint domain bars), Top Factions
+  (Territory component iteration via getAll()), Active Tensions (sig 60+ Political/Military
+  events), Recent Notable Events (top 8 by significance from last 200). Welcome screen
+  (renderWelcomeScreen) shows seed/world size/factions/tensions before simulation starts.
+  Click Handling: MenuBar.handleClick(x) maps x-coordinate to items (label.length+2 per
+  item, 1 char separator). EventLogPanel.handleClick(x,y) selects events in left pane.
+  Application routes y=0 clicks to menu bar. Context-sensitive status bar: getContextHints()
+  returns panel-specific shortcut hints. Auto-pause: legendaryPauseThreshold (default 95)
+  in AutoSlowdownConfig, checked before regular auto-slowdown. Existing auto-slowdown
+  tests updated to use sig 90-94 (below legendary threshold). 164 new tests, 2776 total.
 
 ## Known Issues
 - EventCategory.Exploratory has no system producing events (by design — no exploration

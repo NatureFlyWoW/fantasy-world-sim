@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { Application } from './app.js';
+import { Application, getContextHints } from './app.js';
 import { MockScreen, createMockBoxFactory } from './panel.js';
 import type { MockKeyEvent } from './panel.js';
 import type { RenderContext } from './types.js';
@@ -357,5 +357,71 @@ describe('Application key delegation', () => {
 
       expect(mapPanel.inputLog).toEqual(['p']);
     });
+  });
+});
+
+describe('getContextHints', () => {
+  it('returns non-empty hints for all standard panels', () => {
+    const panels = [
+      PanelId.Map,
+      PanelId.EventLog,
+      PanelId.Inspector,
+      PanelId.RelationshipGraph,
+      PanelId.Timeline,
+      PanelId.Statistics,
+      PanelId.Fingerprint,
+    ];
+
+    for (const panelId of panels) {
+      const hints = getContextHints(panelId);
+      expect(hints.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('returns Map hints with WASD and Zoom', () => {
+    const hints = getContextHints(PanelId.Map);
+    expect(hints).toContain('WASD');
+    expect(hints).toContain('Zoom');
+  });
+
+  it('returns EventLog hints with Browse and Tone', () => {
+    const hints = getContextHints(PanelId.EventLog);
+    expect(hints).toContain('Browse');
+    expect(hints).toContain('Tone');
+    expect(hints).toContain('Chronicler');
+  });
+
+  it('returns Inspector hints with Sections and Mode', () => {
+    const hints = getContextHints(PanelId.Inspector);
+    expect(hints).toContain('Sections');
+    expect(hints).toContain('Mode');
+  });
+
+  it('returns RelationshipGraph hints with Depth and Filter', () => {
+    const hints = getContextHints(PanelId.RelationshipGraph);
+    expect(hints).toContain('Depth');
+    expect(hints).toContain('Filter');
+  });
+
+  it('returns Timeline hints with Zoom and Scroll', () => {
+    const hints = getContextHints(PanelId.Timeline);
+    expect(hints).toContain('Zoom');
+    expect(hints).toContain('Scroll');
+  });
+
+  it('returns Statistics hints with View and Scroll', () => {
+    const hints = getContextHints(PanelId.Statistics);
+    expect(hints).toContain('View');
+    expect(hints).toContain('Scroll');
+  });
+
+  it('returns Fingerprint hints with Refresh', () => {
+    const hints = getContextHints(PanelId.Fingerprint);
+    expect(hints).toContain('Refresh');
+  });
+
+  it('returns empty string for unknown panel id', () => {
+    const hints = getContextHints('nonexistent' as PanelId);
+    expect(hints).toBe('');
   });
 });

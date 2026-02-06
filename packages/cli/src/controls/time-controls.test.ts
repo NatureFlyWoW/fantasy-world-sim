@@ -147,8 +147,8 @@ describe('SimulationTimeControls', () => {
 
       controls.setCurrentTick(0);
 
-      // Emit 3 high-significance events
-      eventBus.emit(createEvent(95, 0));
+      // Emit 3 high-significance events (90-94 range: above slowdown threshold, below legendary 95)
+      eventBus.emit(createEvent(94, 0));
       eventBus.emit(createEvent(92, 5));
       eventBus.emit(createEvent(91, 10));
 
@@ -176,9 +176,9 @@ describe('SimulationTimeControls', () => {
     it('does not trigger if events are outside window', () => {
       controls.setSpeed(SimulationSpeed.Fast30);
 
-      // First two events at tick 0
+      // First two events at tick 0 (90-94 range: above slowdown, below legendary)
       controls.setCurrentTick(0);
-      eventBus.emit(createEvent(95, 0));
+      eventBus.emit(createEvent(94, 0));
       eventBus.emit(createEvent(92, 0));
 
       // Move forward beyond window (30 ticks), third event
@@ -197,7 +197,8 @@ describe('SimulationTimeControls', () => {
 
       controls.setCurrentTick(0);
 
-      eventBus.emit(createEvent(95, 0));
+      // Use 90-94 range to test slowdown (not legendary pause)
+      eventBus.emit(createEvent(94, 0));
       eventBus.emit(createEvent(92, 0));
       eventBus.emit(createEvent(91, 0));
 
@@ -240,6 +241,109 @@ describe('SimulationTimeControls', () => {
 
       expect(disabledControls.currentSpeed).toBe(SimulationSpeed.Fast30);
       disabledControls.destroy();
+    });
+  });
+
+  describe('auto-pause on legendary events', () => {
+    it('auto-pauses on sig 95+ event when running at Fast speed', () => {
+      controls.setSpeed(SimulationSpeed.Fast30);
+
+      controls.setCurrentTick(0);
+      eventBus.emit(createEvent(96, 0));
+
+      expect(controls.isPaused()).toBe(true);
+    });
+
+    it('notifies with auto-pause-legendary reason', () => {
+      const callback = vi.fn();
+      controls.onSpeedChange(callback);
+      controls.setSpeed(SimulationSpeed.Fast30);
+      callback.mockClear();
+
+      controls.setCurrentTick(0);
+      eventBus.emit(createEvent(96, 0));
+
+      expect(callback).toHaveBeenCalledWith(SimulationSpeed.Paused, 'auto-pause-legendary');
+    });
+
+    it('stores the legendary event', () => {
+      controls.setSpeed(SimulationSpeed.Normal);
+
+      const legendaryEvent = createEvent(97, 10);
+      controls.setCurrentTick(10);
+      eventBus.emit(legendaryEvent);
+
+      expect(controls.getLastLegendaryEvent()).toBe(legendaryEvent);
+    });
+
+    it('does not auto-pause if already paused', () => {
+      const callback = vi.fn();
+      controls.onSpeedChange(callback);
+      // Already paused by default
+
+      controls.setCurrentTick(0);
+      eventBus.emit(createEvent(96, 0));
+
+      // Should not have notified (was already paused)
+      expect(callback).not.toHaveBeenCalled();
+    });
+
+    it('does not trigger legendary pause on sig 94', () => {
+      const callback = vi.fn();
+      controls.onSpeedChange(callback);
+      controls.setSpeed(SimulationSpeed.Fast30);
+      callback.mockClear();
+
+      controls.setCurrentTick(0);
+      eventBus.emit(createEvent(94, 0));
+
+      // Sig 94 is below legendary threshold (95) but above auto-slowdown threshold (90)
+      // With only 1 event, auto-slowdown won't trigger either (needs 3)
+      expect(controls.currentSpeed).toBe(SimulationSpeed.Fast30);
+      expect(callback).not.toHaveBeenCalled();
+    });
+
+    it('triggers legendary pause at exactly sig 95', () => {
+      controls.setSpeed(SimulationSpeed.Normal);
+
+      controls.setCurrentTick(0);
+      eventBus.emit(createEvent(95, 0));
+
+      expect(controls.isPaused()).toBe(true);
+    });
+
+    it('supports custom legendaryPauseThreshold', () => {
+      const customControls = new SimulationTimeControls(eventBus, {
+        legendaryPauseThreshold: 98,
+      });
+      customControls.setSpeed(SimulationSpeed.Fast30);
+
+      customControls.setCurrentTick(0);
+      eventBus.emit(createEvent(97, 0)); // Below custom threshold
+
+      expect(customControls.currentSpeed).toBe(SimulationSpeed.Fast30);
+
+      eventBus.emit(createEvent(98, 0)); // At custom threshold
+
+      expect(customControls.isPaused()).toBe(true);
+      customControls.destroy();
+    });
+
+    it('does not auto-pause when disabled', () => {
+      const disabledControls = new SimulationTimeControls(eventBus, {
+        enabled: false,
+      });
+      disabledControls.setSpeed(SimulationSpeed.Fast30);
+
+      disabledControls.setCurrentTick(0);
+      eventBus.emit(createEvent(99, 0));
+
+      expect(disabledControls.currentSpeed).toBe(SimulationSpeed.Fast30);
+      disabledControls.destroy();
+    });
+
+    it('returns null for getLastLegendaryEvent before any legendary event', () => {
+      expect(controls.getLastLegendaryEvent()).toBeNull();
     });
   });
 
