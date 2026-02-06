@@ -218,10 +218,26 @@ export abstract class BasePanel {
  * Mock screen for testing purposes.
  * Provides a minimal implementation that doesn't require a real terminal.
  */
+/**
+ * Keypress event info matching blessed's key event structure.
+ */
+export interface MockKeyEvent {
+  readonly name?: string;
+  readonly full?: string;
+  readonly ctrl?: boolean;
+  readonly shift?: boolean;
+}
+
 export class MockScreen {
   private elements: MockBox[] = [];
   private keyHandlers: Map<string, Array<() => void>> = new Map();
+  private eventHandlers: Map<string, Array<(...args: unknown[]) => void>> = new Map();
   private rendered = false;
+
+  /** Width of mock screen (for layout manager). */
+  width = 120;
+  /** Height of mock screen (for layout manager). */
+  height = 40;
 
   append(element: MockBox): void {
     this.elements.push(element);
@@ -240,6 +256,16 @@ export class MockScreen {
     }
   }
 
+  on(event: string, handler: (...args: unknown[]) => void): void {
+    const handlers = this.eventHandlers.get(event) ?? [];
+    handlers.push(handler);
+    this.eventHandlers.set(event, handlers);
+  }
+
+  /**
+   * Simulate a specific key registered via screen.key().
+   * Also fires keypress handlers for backward compatibility.
+   */
   simulateKey(key: string): void {
     const handlers = this.keyHandlers.get(key);
     if (handlers !== undefined) {
@@ -249,9 +275,23 @@ export class MockScreen {
     }
   }
 
+  /**
+   * Simulate a keypress event that fires the generic 'keypress' handlers.
+   * This is how blessed delivers key events to screen.on('keypress', ...).
+   */
+  simulateKeypress(ch: string | undefined, keyEvent?: MockKeyEvent): void {
+    const handlers = this.eventHandlers.get('keypress');
+    if (handlers !== undefined) {
+      for (const h of handlers) {
+        h(ch, keyEvent);
+      }
+    }
+  }
+
   destroy(): void {
     this.elements = [];
     this.keyHandlers.clear();
+    this.eventHandlers.clear();
   }
 
   isRendered(): boolean {
@@ -314,6 +354,14 @@ export class MockBox {
   }
 
   scroll(_lines: number): void {
+    // No-op for mock
+  }
+
+  show(): void {
+    // No-op for mock
+  }
+
+  hide(): void {
     // No-op for mock
   }
 

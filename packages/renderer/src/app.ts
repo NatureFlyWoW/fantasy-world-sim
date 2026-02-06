@@ -161,6 +161,14 @@ export class Application {
    * This also starts the render loop after the initial frame is painted.
    */
   renderInitialFrame(): void {
+    // Re-apply layout to guarantee every panel's dimensions (and viewport for
+    // MapPanel) match the actual screen size.  This eliminates the race
+    // condition where panels were constructed with dimensions from a separate
+    // LayoutManager in the CLI — the Application's LayoutManager now has the
+    // real screen size (set in createScreen()) and applyLayout() propagates it
+    // to each panel via resize(), which MapPanel overrides to sync its viewport.
+    this.applyLayout();
+
     // Render each registered panel with its initial content
     for (const [id, panel] of this.panels) {
       const layout = this.layoutManager.getCurrentLayout().panels.get(id);
@@ -571,9 +579,16 @@ export class Application {
     // Tab: cycle focus
     this.screen.key('tab', () => this.cycleFocus());
 
-    // Number keys: switch to panel
+    // Number keys: switch to panel (context-aware for Inspector section toggles)
     for (let i = 1; i <= 7; i++) {
       this.screen.key(String(i), () => {
+        if (this.state.focusedPanel === PanelId.Inspector) {
+          const panel = this.panels.get(PanelId.Inspector);
+          if (panel !== undefined) {
+            panel.handleInput(String(i));
+            return;
+          }
+        }
         const panelId = PANEL_INDEX[i - 1];
         if (panelId !== undefined) {
           this.focusPanel(panelId);
@@ -600,35 +615,26 @@ export class Application {
     // L: cycle layout
     this.screen.key('l', () => this.cycleLayout());
 
-    // Arrow keys and WASD for navigation (delegated to focused panel)
-    this.screen.key(['up', 'down', 'left', 'right', 'w', 'a', 's', 'd'], (ch, key) => {
-      const panel = this.panels.get(this.state.focusedPanel);
-      if (panel !== undefined) {
-        panel.handleInput(key.name ?? ch ?? '');
-      }
-    });
+    // Catch-all: delegate all other keys to the focused panel.
+    // Global keys are handled above via screen.key(); everything else
+    // goes to the currently focused panel's handleInput().
+    this.screen.on('keypress', (ch: string | undefined, key: { name?: string; full?: string; ctrl?: boolean; shift?: boolean } | undefined) => {
+      const globalKeys = new Set([
+        'q', 'tab', 'space', 'escape', 'f1', 'm', 'l',
+        '1', '2', '3', '4', '5', '6', '7',
+        '+', '=', '-', '_',
+      ]);
+      const keyName = key?.name ?? ch ?? '';
+      const keyFull = key?.full ?? '';
 
-    // Vim-style navigation keys (delegated to focused panel)
-    this.screen.key(['h', 'j', 'k'], (ch) => {
-      const panel = this.panels.get(this.state.focusedPanel);
-      if (panel !== undefined) {
-        panel.handleInput(ch ?? '');
-      }
-    });
+      if (globalKeys.has(keyName) || globalKeys.has(keyFull)) return;
+      if (key?.ctrl === true) return;
+      if (keyName === '' && (ch === undefined || ch === '')) return;
 
-    // Panel-specific action keys (delegated to focused panel)
-    this.screen.key(['f', 'z', 't', 'c', '[', ']', 'home', 'end'], (ch, key) => {
       const panel = this.panels.get(this.state.focusedPanel);
       if (panel !== undefined) {
-        panel.handleInput(key.name ?? ch ?? '');
-      }
-    });
-
-    // Enter/Return: inspect (delegated to focused panel)
-    this.screen.key(['enter', 'return'], () => {
-      const panel = this.panels.get(this.state.focusedPanel);
-      if (panel !== undefined) {
-        panel.handleInput('enter');
+        const inputKey = keyName !== '' ? keyName : (ch ?? '');
+        panel.handleInput(inputKey);
       }
     });
   }
