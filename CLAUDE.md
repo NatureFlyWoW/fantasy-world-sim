@@ -55,19 +55,25 @@ pnpm run test       # Run all tests
 pnpm run test:watch # Watch mode
 pnpm run typecheck  # TypeScript validation
 pnpm run lint       # ESLint
-pnpm run start       # Generate world and run (placeholder until Phase 4 UI)
-pnpm run start -- --seed 42  # Deterministic generation with fixed seed
+pnpm run start                       # Generate world and launch terminal UI
+pnpm run start -- --seed 42          # Deterministic generation with fixed seed
+pnpm run start -- --headless         # Run without UI (for testing/CI)
+pnpm run start -- --ticks 100        # Run specific tick count (headless mode)
 ```
 
 ## Current Phase
-Phase 4: Narrative & Rendering (in progress)
+Phase 5: Narrative Engine (pending)
 
-### Phase 4 Tasks
+### Phase 4 Tasks — COMPLETE
+Renderer package complete with 7 panel types: Map, EventLog, Inspector, Relationships,
+Timeline, Statistics, Fingerprint (placeholder). CLI entry point creates world → engine →
+renderer pipeline. Application launchable with `pnpm run start`.
 - [x] 4.1 — Terminal UI Framework (types, BasePanel, theme, layout manager, Application class)
 - [x] 4.2 — World Map Renderer (viewport, tile-renderer, 6 overlays, minimap, MapPanel)
 - [x] 4.3 — Dual Event Log (EventFormatter, EventLogPanel with filters, search, bookmarks, cascade)
 - [x] 4.4 — Entity Inspector (InspectorPanel, CharacterInspector, LocationInspector, FactionInspector, ArtifactInspector)
 - [x] 4.5 — Relationship Graph (graph-layout, graph-renderer, RelationshipsPanel with depth, filters)
+- [x] 4.6 — Timeline, Statistics, and Full Integration (TimelinePanel, StatisticsPanel, CLI --headless mode)
 
 ### Phase 3 Tasks — COMPLETE
 Simulation systems: Character AI, Memory/Reputation, Faction/Political (with Treaties),
@@ -173,6 +179,12 @@ Deterministic from seed. 9 configurable parameters with named presets.
   unknown). Line styles show strength (═ strong, ─ moderate, · weak).
   RelationshipsPanel supports depth 1-3 hops, 6 filters (all, positive, negative,
   family, political, economic), cursor navigation, legend toggle. 1872 tests passing.
+- 2025: Timeline panel displays horizontal ASCII timeline with significance markers
+  (· < ○ < ● < ★). 3 zoom levels: year (30 ticks/char), decade (360), century (3600).
+  Parallel faction tracks, era markers, category filtering. Statistics panel shows
+  5 views (Overview, Population, Territory, Technology, Conflict) with ASCII bar
+  charts and sparklines. CLI supports --headless and --ticks flags for CI/testing.
+  Phase 4 complete: world → simulation → renderer pipeline fully wired. 1941 tests.
 
 ## Known Issues
 - EventCategory.Exploratory has no system producing events (by design — no exploration

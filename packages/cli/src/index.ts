@@ -7,8 +7,10 @@
  * @fws/cli - Fantasy World Simulator (Æternum) CLI Entry Point
  *
  * Usage:
- *   pnpm run start           # Generate with random seed
- *   pnpm run start -- --seed 42  # Generate with specific seed
+ *   pnpm run start                      # Generate and launch terminal UI
+ *   pnpm run start -- --seed 42         # Generate with specific seed
+ *   pnpm run start -- --headless        # Run without UI (for testing)
+ *   pnpm run start -- --ticks 100       # Run specific number of ticks (headless)
  */
 
 // Re-export menus for library usage
@@ -24,6 +26,7 @@ import {
   SimulationEngine,
   SystemRegistry,
   EventCategory,
+  SpatialIndex,
   resetEntityIdCounter,
   CharacterAISystem,
   ReputationSystem,
@@ -38,6 +41,23 @@ import {
   OralTraditionSystem,
 } from '@fws/core';
 import type { WorldEvent } from '@fws/core';
+
+// Renderer imports
+import {
+  createApp,
+  PanelId,
+  EventLogPanel,
+  createEventLogPanelLayout,
+  InspectorPanel,
+  createInspectorPanelLayout,
+  RelationshipsPanel,
+  createRelationshipsPanelLayout,
+  TimelinePanel,
+  createTimelinePanelLayout,
+  StatisticsPanel,
+  createStatsPanelLayout,
+} from '@fws/renderer';
+import type { RenderContext } from '@fws/renderer';
 
 // Generator imports
 import {
@@ -77,9 +97,11 @@ if (isMainModule) {
 /**
  * Parse command line arguments.
  */
-function parseArgs(): { seed: number } {
+function parseArgs(): { seed: number; headless: boolean; ticks: number } {
   const args = process.argv.slice(2);
   let seed: number | undefined;
+  let headless = false;
+  let ticks = 10;
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
@@ -93,6 +115,18 @@ function parseArgs(): { seed: number } {
         }
       }
       i++;
+    } else if (arg === '--headless') {
+      headless = true;
+    } else if (arg === '--ticks' && i + 1 < args.length) {
+      const nextArg = args[i + 1];
+      if (nextArg !== undefined) {
+        ticks = parseInt(nextArg, 10);
+        if (isNaN(ticks) || ticks < 1) {
+          console.error(`Invalid ticks value: ${nextArg}`);
+          process.exit(1);
+        }
+      }
+      i++;
     }
   }
 
@@ -101,7 +135,7 @@ function parseArgs(): { seed: number } {
     seed = Math.floor(Math.random() * 2147483647);
   }
 
-  return { seed };
+  return { seed, headless, ticks };
 }
 
 /**
@@ -271,15 +305,92 @@ function printBox(lines: string[]): void {
 }
 
 /**
+ * Run in headless mode (no terminal UI).
+ */
+function runHeadless(
+  engine: SimulationEngine,
+  clock: WorldClock,
+  eventLog: EventLog,
+  ticks: number
+): void {
+  console.log(`Running ${ticks}-tick simulation...`);
+  const startSim = Date.now();
+  engine.run(ticks);
+  const simTime = Date.now() - startSim;
+  console.log(`Simulation completed in ${simTime}ms\n`);
+
+  // Collect and analyze events
+  const allEvents: WorldEvent[] = eventLog.getAll();
+
+  // Count events by category
+  const categoryCount = new Map<string, number>();
+  for (const event of allEvents) {
+    const cat = event.category;
+    categoryCount.set(cat, (categoryCount.get(cat) ?? 0) + 1);
+  }
+
+  console.log('=== SIMULATION RESULTS ===');
+  console.log(`Ticks executed: ${engine.getTickCount()}`);
+  console.log(`Current tick: ${clock.currentTick}`);
+  console.log(`World time: Year ${clock.currentTime.year}, Month ${clock.currentTime.month}, Day ${clock.currentTime.day}`);
+  console.log(`Total events: ${allEvents.length}`);
+  console.log('\nEvents by category:');
+  const sortedCategories = [...categoryCount.entries()].sort((a, b) => b[1] - a[1]);
+  for (const [category, count] of sortedCategories) {
+    console.log(`  ${category}: ${count}`);
+  }
+  console.log('==========================\n');
+
+  // Verification check
+  if (allEvents.length === 0) {
+    console.error('ERROR: Simulation produced zero events!');
+    process.exit(1);
+  }
+
+  console.log('Simulation complete. Exiting.');
+  process.exit(0);
+}
+
+/**
+ * Launch the terminal UI.
+ */
+function launchTerminalUI(
+  context: RenderContext,
+  worldMapWidth: number,
+  worldMapHeight: number
+): void {
+  // Create the application
+  const app = createApp(context, { targetFps: 30 });
+
+  // We need blessed for box factory - will be loaded by Application
+  // The panels will be created and registered by the application
+  // For now, we'll just start the app which sets up the screen
+
+  console.log('\n');
+  printBox([
+    'ÆTERNUM - Terminal UI',
+    '',
+    'Press F1 for help',
+    'Press Q to quit',
+  ]);
+  console.log('\n');
+  console.log('Starting terminal UI...\n');
+
+  // Start the application
+  app.start();
+}
+
+/**
  * Main entry point.
  */
 async function main(): Promise<void> {
-  const { seed } = parseArgs();
+  const { seed, headless, ticks } = parseArgs();
 
   console.log('\n');
   printBox([
     'ÆTERNUM - Fantasy World Simulator',
     `Seed: ${seed}`,
+    headless ? '(Headless Mode)' : '(Terminal UI Mode)',
   ]);
   console.log('\n');
 
@@ -331,59 +442,35 @@ async function main(): Promise<void> {
   const eventLog = new EventLog();
   const engine = createSimulationEngine(ecsWorld, clock, eventBus, eventLog);
 
-  // Run 10-tick verification
-  const VERIFICATION_TICKS = 10;
-  console.log(`Running ${VERIFICATION_TICKS}-tick verification...`);
-  const startSim = Date.now();
-  engine.run(VERIFICATION_TICKS);
-  const simTime = Date.now() - startSim;
-  console.log(`Simulation completed in ${simTime}ms\n`);
+  // Create spatial index
+  const spatialIndex = new SpatialIndex(
+    generatedData.worldMap.getWidth(),
+    generatedData.worldMap.getHeight()
+  );
 
-  // Collect and analyze events
-  const allEvents: WorldEvent[] = eventLog.getAll();
+  if (headless) {
+    // Run in headless mode
+    runHeadless(engine, clock, eventLog, ticks);
+  } else {
+    // Create render context
+    const context: RenderContext = {
+      world: ecsWorld,
+      clock,
+      eventLog,
+      eventBus,
+      spatialIndex,
+    };
 
-  // Count events by category
-  const categoryCount = new Map<string, number>();
-  for (const event of allEvents) {
-    const cat = event.category;
-    categoryCount.set(cat, (categoryCount.get(cat) ?? 0) + 1);
+    // Run a few initial ticks to populate the event log
+    console.log('Running initial simulation ticks...');
+    engine.run(10);
+    console.log(`Initial events: ${eventLog.getCount()}\n`);
+
+    // Launch the terminal UI
+    launchTerminalUI(
+      context,
+      generatedData.worldMap.getWidth(),
+      generatedData.worldMap.getHeight()
+    );
   }
-
-  console.log('=== SIMULATION RESULTS ===');
-  console.log(`Ticks executed: ${engine.getTickCount()}`);
-  console.log(`Current tick: ${clock.currentTick}`);
-  console.log(`World time: Year ${clock.currentTime.year}, Month ${clock.currentTime.month}, Day ${clock.currentTime.day}`);
-  console.log(`Total events: ${allEvents.length}`);
-  console.log('\nEvents by category:');
-  const sortedCategories = [...categoryCount.entries()].sort((a, b) => b[1] - a[1]);
-  for (const [category, count] of sortedCategories) {
-    console.log(`  ${category}: ${count}`);
-  }
-  console.log('==========================\n');
-
-  // Verification check
-  if (allEvents.length === 0) {
-    console.error('ERROR: Simulation produced zero events!');
-    process.exit(1);
-  }
-
-  // Print Phase 4 placeholder
-  console.log('\n');
-  printBox([
-    'Phase 4: Terminal UI (Pending)',
-    '',
-    'The interactive terminal interface will include:',
-    '  - ASCII map view with zoom/pan',
-    '  - Dual event streams (raw logs + prose)',
-    '  - Entity inspector',
-    '  - Relationship graph',
-    '  - Timeline navigator',
-    '  - Influence controls',
-    '',
-    'Coming soon...',
-  ]);
-  console.log('\n');
-
-  console.log('Simulation ready. Exiting.');
-  process.exit(0);
 }

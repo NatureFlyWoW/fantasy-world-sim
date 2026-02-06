@@ -544,7 +544,7 @@ export class Application {
     // L: cycle layout
     this.screen.key('l', () => this.cycleLayout());
 
-    // Arrow keys and WASD for map panning (delegated to focused panel)
+    // Arrow keys and WASD for navigation (delegated to focused panel)
     this.screen.key(['up', 'down', 'left', 'right', 'w', 'a', 's', 'd'], (ch, key) => {
       const panel = this.panels.get(this.state.focusedPanel);
       if (panel !== undefined) {
@@ -552,8 +552,24 @@ export class Application {
       }
     });
 
-    // Enter: inspect (delegated to focused panel)
-    this.screen.key('enter', () => {
+    // Vim-style navigation keys (delegated to focused panel)
+    this.screen.key(['h', 'j', 'k'], (ch) => {
+      const panel = this.panels.get(this.state.focusedPanel);
+      if (panel !== undefined) {
+        panel.handleInput(ch ?? '');
+      }
+    });
+
+    // Panel-specific action keys (delegated to focused panel)
+    this.screen.key(['f', 'z', 't', 'c', '[', ']', 'home', 'end'], (ch, key) => {
+      const panel = this.panels.get(this.state.focusedPanel);
+      if (panel !== undefined) {
+        panel.handleInput(key.name ?? ch ?? '');
+      }
+    });
+
+    // Enter/Return: inspect (delegated to focused panel)
+    this.screen.key(['enter', 'return'], () => {
       const panel = this.panels.get(this.state.focusedPanel);
       if (panel !== undefined) {
         panel.handleInput('enter');

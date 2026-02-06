@@ -15,10 +15,17 @@
   "scripts": {
     "dev": "tsc --watch",
     "build": "tsc",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "spike": "npx tsx src/spike-test.ts",
+    "spike:check": "npx tsx src/spike-check.ts"
   },
   "dependencies": {
-    "@fws/core": "workspace:*"
+    "@fws/core": "workspace:*",
+    "blessed": "^0.1.81",
+    "blessed-contrib": "^4.11.0"
+  },
+  "devDependencies": {
+    "@types/blessed": "^0.1.27"
   },
   "files": [
     "dist"

@@ -81,3 +81,34 @@ export {
   createRelationshipsPanelLayout,
 } from './relationships-panel.js';
 export type { RelationshipFilter } from './relationships-panel.js';
+
+// Timeline panel
+export {
+  TimelinePanel,
+  createTimelinePanelLayout,
+  ZOOM_SCALES,
+  SIGNIFICANCE_MARKERS,
+  CATEGORY_COLORS as TIMELINE_CATEGORY_COLORS,
+} from './timeline.js';
+export type {
+  TimelineZoomLevel,
+  TimelineTrack,
+  EraMarker,
+} from './timeline.js';
+
+// Statistics panel
+export {
+  StatisticsPanel,
+  createStatsPanelLayout,
+  CHART_BARS,
+  FILL_CHARS,
+  renderBarChart,
+  renderVerticalBars,
+  renderLineChart,
+} from './stats.js';
+export type {
+  StatsView,
+  DataPoint,
+  TimeSeries,
+  WorldStats,
+} from './stats.js';
