@@ -124,3 +124,16 @@ export {
   renderCivPalettePlain,
   SPARKLINE_CHARS,
 } from './fingerprint-panel.js';
+
+// Branch comparison panel
+export {
+  BranchComparisonPanel,
+  createBranchComparisonPanelLayout,
+  compareBranches,
+} from './branch-view.js';
+export type {
+  BranchRef,
+  UniqueEntity,
+  TerritoryDifference,
+  BranchComparison,
+} from './branch-view.js';

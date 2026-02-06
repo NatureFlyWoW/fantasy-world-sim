@@ -50,7 +50,7 @@ ASCII-aesthetic terminal interface with dual event streams: raw logs + narrative
 - Test every system in isolation with Vitest
 - Systems communicate ONLY through event queue and shared component state
 - Never reference other systems directly
-- Always use Context7 MCP when in need of library/API documentation, code generation, setup or configuration steps
+- Always use Context7 when in need of library/API documentation, code generation, setup or configuration steps
 
 ## Commands
 ```bash
@@ -74,6 +74,7 @@ World DNA fingerprint captures each world's unique character as a composite
 identity signature: domain balance, civilization palette, historical sparklines,
 and complexity score derived from cascade chains.
 - [x] 7.1 — World DNA Fingerprint (WorldFingerprintCalculator with 6 domains, civ palette, sparklines, complexity score; FingerprintPanel with hex chart, colored faction bar, sparklines, progress bar; 49 tests)
+- [x] 7.2 — "What If" Timeline Branching (WorldSnapshotManager with deep-clone snapshot/restore, BranchRunner with 5 divergence actions and MAX_BRANCHES=3, BranchComparisonPanel with 3 views and divergence counter; 50 tests)
 
 ### Phase 6 Tasks — COMPLETE
 Player interaction: simulation controls (auto-slowdown on significant events),
@@ -297,6 +298,21 @@ Deterministic from seed. 9 configurable parameters with named presets.
   event count, key 7 activates, R refreshes. Core exports ALL_DOMAINS as
   FINGERPRINT_DOMAINS to avoid collision with religion system's ALL_DOMAINS.
   49 new tests (22 calculator + 27 panel), 2362 total.
+- 2026: Phase 7.2 "What If" Timeline Branching. WorldSnapshotManager in
+  packages/core/src/persistence/world-snapshot.ts deep-clones World/Clock/EventLog
+  using custom deepCloneValue (structuredClone can't handle Component.serialize()
+  functions). Snapshot captures aliveEntities, maxEntityId, componentData (Map of
+  Maps), events. Restore recreates entities 0..maxId then destroys dead ones.
+  BranchRunner in packages/core/src/persistence/branch-runner.ts manages up to
+  MAX_BRANCHES=3 alternate timelines. 5 DivergenceAction types: ReverseOutcome
+  (appends reversal event with new ID via createEvent), RemoveCharacter (destroys
+  entity), ChangeDecision (patches component), AddEvent (injects event), DifferentSeed.
+  EngineFactory callback lets caller wire SimulationEngine for branch execution.
+  BranchComparisonPanel in packages/renderer/src/panels/branch-view.ts uses local
+  BranchRef interface (avoids cross-package declaration rebuild). compareBranches()
+  pure function diffs entities, events, territory ownership. 3 views: entities (e),
+  events (v), territory (t). World.getRegisteredComponentTypes() added to support
+  snapshot enumeration. 50 new tests (18 snapshot + 16 runner + 16 panel), 2412 total.
 
 ## Known Issues
 - EventCategory.Exploratory has no system producing events (by design — no exploration

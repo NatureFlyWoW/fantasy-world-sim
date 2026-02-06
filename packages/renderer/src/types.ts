@@ -21,6 +21,7 @@ export enum PanelId {
   Timeline = 'Timeline',
   Statistics = 'Statistics',
   Fingerprint = 'Fingerprint',
+  BranchComparison = 'BranchComparison',
 }
 
 /**

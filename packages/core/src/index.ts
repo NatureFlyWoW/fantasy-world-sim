@@ -19,3 +19,6 @@ export * from './spatial/index.js';
 
 // Systems module
 export * from './systems/index.js';
+
+// Persistence module
+export * from './persistence/index.js';

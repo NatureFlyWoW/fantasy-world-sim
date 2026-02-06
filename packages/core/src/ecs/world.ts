@@ -45,6 +45,13 @@ export class World {
   }
 
   /**
+   * Get all registered component types.
+   */
+  getRegisteredComponentTypes(): ComponentType[] {
+    return Array.from(this.stores.keys());
+  }
+
+  /**
    * Create a new entity.
    */
   createEntity(): EntityId {
