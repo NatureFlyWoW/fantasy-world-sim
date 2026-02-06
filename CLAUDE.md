@@ -66,13 +66,16 @@ pnpm run start -- --ticks 100        # Run specific tick count (headless mode)
 ```
 
 ## Current Phase
-Phase 6: Player Interaction (in progress)
+Phase 6: Player Interaction — COMPLETE
 
-### Phase 6 Tasks — IN PROGRESS
+### Phase 6 Tasks — COMPLETE
 Player interaction: simulation controls (auto-slowdown on significant events),
-focus system (LoD follows focused entity), bookmark/notification system.
+focus system (LoD follows focused entity), bookmark/notification system,
+and influence system (17 influence actions across 3 categories, with
+believability and resistance checks). IP regenerates at 1/year with
+narrative momentum penalty for old worlds.
 - [x] 6.1 — Simulation Controls (time controls, focus, bookmarks, notifications)
-- [ ] 6.2 — Influence System (18 actions, believability, resistance, IP economy)
+- [x] 6.2 — Influence System (17 actions in Divine/Environmental/Cultural categories, believability checks, resistance from personality traits, IP economy with distance cost modifier)
 
 ### Phase 5 Tasks — COMPLETE
 Narrative engine complete. Chronicler system applies faction and ideological bias.
@@ -266,6 +269,16 @@ Deterministic from seed. 9 configurable parameters with named presets.
   alerts by significance/category/bookmarked/focused). RenderContext extended with optional
   lodManager. CLI creates controls and wires to Application via callbacks. Keybindings:
   F (toggle focus on selected entity), B (toggle bookmark). 94 new tests, 2244 total.
+- 2026: Phase 6.2 Influence System complete. InfluenceSystem in packages/core/src/systems/
+  with 17 action types in 3 categories (Divine: 8, Environmental: 5, Cultural: 4).
+  IP starts at 50, max 100, regenerates 1/year. Believability checks: PersonalityNudge
+  limited to ±15 points, ArrangeMeeting requires characters within 50 tiles. Resistance
+  checks based on Paranoid/Cautious/Patient traits with formula 0.7 - (resistance/200).
+  Partial refund (50%) on resistance. Narrative momentum: worlds >5000 years slow regen.
+  Distance modifier: +1% cost per tile from focus. InfluenceMenu in packages/cli/src/controls/
+  with 7-state flow (category→action→target→params→confirm→result). Events map to existing
+  categories (Personal, Religious, Disaster, Economic, Cultural, Scientific). 69 new tests,
+  2313 total. Phase 6 complete.
 
 ## Known Issues
 - EventCategory.Exploratory has no system producing events (by design — no exploration

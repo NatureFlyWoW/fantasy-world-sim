@@ -439,3 +439,57 @@ export {
   type DiscoveryResult,
   type DiscoveryActionConfig,
 } from './discovery-actions.js';
+
+// Influence event mapping
+export {
+  InfluenceActionType,
+  INFLUENCE_ACTION_CONFIGS,
+  getInfluenceActionConfig,
+  getInfluenceActionsByCategory,
+  calculateInfluenceCost,
+  isOnCooldown,
+  getRemainingCooldown,
+  type InfluenceActionConfig,
+} from './influence-event-mapping.js';
+
+// Influence types
+export {
+  InfluenceCategory,
+  getInfluenceCategory,
+  getActionsInCategory,
+  INFLUENCE_ACTION_META,
+  getActionMeta,
+  type InfluenceAction,
+  type InfluenceActionKind,
+  type InfluenceResult,
+  type BelievabilityResult,
+  type ResistanceResult,
+  type InfluencePointState,
+  type InfluenceActionMeta,
+  type InspireIdeaAction,
+  type PropheticDreamAction,
+  type ArrangeMeetingAction,
+  type PersonalityNudgeAction,
+  type RevealSecretAction,
+  type LuckModifierAction,
+  type VisionOfFutureAction,
+  type EmpowerChampionAction,
+  type AdjustWeatherAction,
+  type MinorGeologyAction,
+  type AnimalMigrationAction,
+  type ResourceDiscoveryAction,
+  type TriggerNaturalEventAction,
+  type PromoteArtAction,
+  type EncourageResearchAction,
+  type StrengthenTraditionAction,
+  type IntroduceForeignConceptAction,
+} from './influence-types.js';
+
+// Influence system
+export {
+  InfluenceSystem,
+  STARTING_IP,
+  MAX_IP,
+  BASE_REGENERATION_RATE,
+  TICKS_PER_YEAR,
+} from './influence-system.js';

@@ -38,3 +38,14 @@ export {
   type NotificationConfig,
   type NotificationDisplayCallback,
 } from './notification.js';
+
+// Influence UI
+export {
+  InfluenceMenu,
+  type InfluenceMenuState,
+  type ActionBuilder,
+  type MenuItem,
+  type ActionExecutedCallback,
+  type MenuStateCallback,
+  type EntityResolver,
+} from './influence-ui.js';
