@@ -60,9 +60,9 @@ When delegating complex tasks to subagents, prefer:
 - Task organization, planning, priorities → `voltagent-meta:agent-organizer` or `fantasy-sim-story-worker`
 
 ## Current Phase
-**Phase 8: UX Overhaul** (Tier 1-4 complete, Tier 5 remaining)
+**Phase 8: UX Overhaul** ✅ **COMPLETE**
 
-**Complete:**
+**Delivered:**
 - 8.1-8.2: Entity name resolution, world dashboard, significance labels
 - 8.3-8.4: Click handling (menu bar, event log), context-sensitive status hints
 - 8.5-8.6: Auto-pause on legendary events (sig 95+), welcome screen with warmup
@@ -93,8 +93,13 @@ When delegating complex tasks to subagents, prefer:
   - Event-driven dirty tracking with per-layer refresh intervals
   - Multi-layer compositing with priority rules
 
-**Remaining:**
-- 8.12: Final Polish (progressive tips, tutorial hints, performance tuning)
+**Impact:**
+The UX overhaul transforms Æternum from a data-dump interface into an immersive narrative experience:
+- **From:** Raw event log → **To:** Prose-based Chronicle with emergent storytelling
+- **From:** Static entity display → **To:** Deep polymorphic inspectors with clickable navigation
+- **From:** Dead terrain map → **To:** Living world showing settlements, wars, territories
+- **Test coverage:** 531 → 2955 tests (457% increase), 94 test files, all passing
+- **Documentation:** 3 architecture docs (context-view-ux, layout-spec, map-overlay)
 
 **Previous Phases (Complete):**
 - Phase 1-2: ECS foundation, world generation pipeline
