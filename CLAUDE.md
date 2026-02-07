@@ -51,7 +51,7 @@ pnpm run start -- --ticks 100        # Run specific tick count (headless)
 ## Subagent Routing
 When delegating complex tasks to subagents, prefer:
 - Project-specific game design, player engagement systems, emergent narrative gameplay → `fantasy-gdesigner`
-- Game UI, graphics, sprite design → `ascii-ui-designer` 
+- Frontend, Game UI, graphics, sprite design → `hifi-ui-designer` or `procgen-pixel-artist` or `voltagent-domains:frontend-developer`
 - Simulation and narrative systems, simulated entities, storytelling, ECS → `aeternum-sim-dev` or `comp-sim-lead` or `fantasy-story-narrative`
 - General game logic, game design → `voltagent-domains:game-developer`
 - Backend architecture, APIs → `voltagent-domains:backend-developer` or `fullstack-developer`
@@ -165,4 +165,4 @@ The UX overhaul transforms Æternum from a data-dump interface into an immersive
 - `buildEntityResolver()` needs World param for runtime entity fallback (armies, institutions)
 
 ## Known Issues
-- EventCategory.Exploratory has no system producing events (by design — no exploration system implemented yet)
+- EventCategory.Exploratory has no system producing events
