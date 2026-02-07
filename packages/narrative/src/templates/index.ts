@@ -15,6 +15,7 @@ import { economicTemplates } from './economic.js';
 import { disasterTemplates } from './disaster.js';
 import { secretTemplates } from './secret.js';
 import { ecologicalTemplates } from './ecological.js';
+import { characterActionTemplates } from './character-actions.js';
 
 /**
  * All narrative templates combined.
@@ -30,6 +31,7 @@ export const ALL_TEMPLATES: readonly NarrativeTemplate[] = [
   ...disasterTemplates,
   ...secretTemplates,
   ...ecologicalTemplates,
+  ...characterActionTemplates,
 ];
 
 // Re-export individual template collections
@@ -44,6 +46,7 @@ export {
   disasterTemplates,
   secretTemplates,
   ecologicalTemplates,
+  characterActionTemplates,
 };
 
 /**

@@ -9,11 +9,77 @@ import type { PanelLayout, RenderContext } from '../types.js';
 import { PanelId } from '../types.js';
 import { EventCategory, WorldFingerprintCalculator, FINGERPRINT_DOMAINS } from '@fws/core';
 import type { EntityId, WorldEvent } from '@fws/core';
+import { getSignificanceColor } from '../theme.js';
 import { CharacterInspector } from './character-inspector.js';
 import { LocationInspector } from './location-inspector.js';
 import { FactionInspector } from './faction-inspector.js';
 import { ArtifactInspector } from './artifact-inspector.js';
-import { CATEGORY_ICONS } from './event-formatter.js';
+import { CATEGORY_ICONS, EventFormatter, defaultFormatter } from './event-formatter.js';
+
+/**
+ * Domain prose mapping — atmospheric text for world pulse domains.
+ * Thresholds: 0.0 (dormant), 0.1 (low), 0.3 (moderate), 0.5 (active), 0.7 (high)
+ */
+const DOMAIN_PROSE: Readonly<Record<string, readonly [number, string][]>> = {
+  Warfare: [
+    [0.7, 'Blood and fire rage across many fronts'],
+    [0.5, 'Skirmishes flare across frontiers'],
+    [0.3, 'Armies drill and borders are fortified'],
+    [0.1, 'Soldiers stand watch, but swords stay sheathed'],
+    [0.0, 'The realm knows an uneasy peace'],
+  ],
+  Magic: [
+    [0.7, 'Arcane power crackles through the very air'],
+    [0.5, 'Spellcasters reshape the world around them'],
+    [0.3, 'Magic stirs in tower and sanctum'],
+    [0.1, 'Faint enchantments linger in old places'],
+    [0.0, 'Magic sleeps in forgotten places'],
+  ],
+  Religion: [
+    [0.7, 'The gods intervene openly in mortal affairs'],
+    [0.5, 'Faith moves multitudes to action'],
+    [0.3, 'Prayers rise from temple and hearth'],
+    [0.1, 'The faithful worship quietly'],
+    [0.0, 'The heavens are silent'],
+  ],
+  Commerce: [
+    [0.7, 'Markets bustle with exotic goods from distant lands'],
+    [0.5, 'Trade caravans crisscross the realm'],
+    [0.3, 'Merchants ply steady routes'],
+    [0.1, 'Local markets trade in modest goods'],
+    [0.0, 'Commerce is sparse and provincial'],
+  ],
+  Scholarship: [
+    [0.7, 'A golden age of learning transforms society'],
+    [0.5, 'Scholars push the boundaries of knowledge'],
+    [0.3, 'Libraries grow and academies teach'],
+    [0.1, 'A few seekers pursue understanding'],
+    [0.0, 'Knowledge gathers dust in neglected halls'],
+  ],
+  Diplomacy: [
+    [0.7, 'Envoys reshape the political landscape daily'],
+    [0.5, 'Negotiations and alliances dominate the courts'],
+    [0.3, 'Diplomats maintain cautious relations'],
+    [0.1, 'Nations regard each other warily'],
+    [0.0, 'Each realm keeps its own counsel'],
+  ],
+};
+
+/**
+ * Get atmospheric prose for a domain at a given value (0.0 to 1.0).
+ */
+function getDomainProse(domain: string, value: number): string {
+  const thresholds = DOMAIN_PROSE[domain];
+  if (thresholds === undefined) {
+    return domain;
+  }
+  for (const [threshold, prose] of thresholds) {
+    if (value >= threshold) {
+      return prose;
+    }
+  }
+  return thresholds[thresholds.length - 1]?.[1] ?? domain;
+}
 
 /**
  * Entity types that can be inspected.
@@ -75,6 +141,7 @@ export class InspectorPanel extends BasePanel {
 
   // World dashboard
   private readonly fingerprintCalculator = new WorldFingerprintCalculator();
+  private readonly formatter: EventFormatter = defaultFormatter;
   private dashboardScrollOffset = 0;
 
   // Welcome screen data (pre-simulation)
@@ -491,45 +558,48 @@ export class InspectorPanel extends BasePanel {
 
     // ── WORLD PULSE ─────────────────────
     lines.push(`{bold} \u2500\u2500\u2500 WORLD PULSE ${'─'.repeat(Math.max(0, width - 18))} {/bold}`);
+    lines.push('');
 
     try {
       const fingerprint = this.fingerprintCalculator.calculateFingerprint(context.world, context.eventLog);
       for (const domain of FINGERPRINT_DOMAINS) {
         const value = fingerprint.domainBalance.get(domain) ?? 0;
-        const pct = Math.round(value * 100);
-        const filled = Math.round((pct / 100) * barWidth);
+        const prose = getDomainProse(domain, value);
+        const filled = Math.round((value * 100 / 100) * barWidth);
         const empty = barWidth - filled;
         const bar = '\u2588'.repeat(filled) + '\u2591'.repeat(empty);
-        const domainLabel = domain.padEnd(12);
-        lines.push(`  ${domainLabel} ${bar} ${pct}`);
+        lines.push(`  ${bar} ${prose}`);
       }
     } catch {
-      lines.push('  (No event data yet)');
+      lines.push('  {#888888-fg}The world awaits its first events...{/}');
     }
 
     lines.push('');
 
     // ── TOP FACTIONS ─────────────────────
-    lines.push(`{bold} \u2500\u2500\u2500 TOP FACTIONS ${'─'.repeat(Math.max(0, width - 19))} {/bold}`);
+    lines.push(`{bold} \u2500\u2500\u2500 GREAT POWERS ${'─'.repeat(Math.max(0, width - 19))} {/bold}`);
+    lines.push('');
 
     const factionEntries = this.getTopFactions(context, 5);
     if (factionEntries.length === 0) {
-      lines.push('  (No factions yet)');
+      lines.push('  {#888888-fg}The peoples of this land have yet to rally');
+      lines.push('  under great banners.{/}');
     } else {
       for (const entry of factionEntries) {
-        const popStr = entry.population > 0 ? `pop: ${entry.population.toLocaleString()}` : '';
-        lines.push(`  \u269C ${entry.name.padEnd(Math.max(1, width - 20))} ${popStr}`);
+        const popStr = entry.population > 0 ? ` \u2014 ${entry.population.toLocaleString()} souls` : '';
+        lines.push(`  \u269C {bold}${entry.name}{/bold}${popStr}`);
       }
     }
 
     lines.push('');
 
     // ── ACTIVE TENSIONS ──────────────────
-    lines.push(`{bold} \u2500\u2500\u2500 ACTIVE TENSIONS ${'─'.repeat(Math.max(0, width - 22))} {/bold}`);
+    lines.push(`{bold} \u2500\u2500\u2500 WINDS OF CONFLICT ${'─'.repeat(Math.max(0, width - 24))} {/bold}`);
+    lines.push('');
 
     const tensions = this.getActiveTensions(context, 5);
     if (tensions.length === 0) {
-      lines.push('  (No active tensions)');
+      lines.push('  {#888888-fg}An eerie calm settles over the realm.{/}');
     } else {
       for (const tension of tensions) {
         const icon = CATEGORY_ICONS[tension.category];
@@ -541,21 +611,31 @@ export class InspectorPanel extends BasePanel {
     lines.push('');
 
     // ── RECENT NOTABLE EVENTS ────────────
-    lines.push(`{bold} \u2500\u2500\u2500 RECENT NOTABLE ${'─'.repeat(Math.max(0, width - 20))} {/bold}`);
+    lines.push(`{bold} \u2500\u2500\u2500 RECENT TIDINGS ${'─'.repeat(Math.max(0, width - 21))} {/bold}`);
+    lines.push('');
 
     const notable = this.getRecentNotableEvents(context, 8);
     if (notable.length === 0) {
-      lines.push('  (No notable events yet)');
+      lines.push('  {#888888-fg}History holds its breath, waiting.{/}');
     } else {
-      for (const event of notable) {
-        const sigChar = event.significance >= 90 ? '\u2605' : event.significance >= 70 ? '\u25CF' : '\u25CB';
-        const desc = this.getEventShortDescription(event).slice(0, Math.max(1, width - 14));
-        lines.push(`  ${sigChar} ${desc.padEnd(Math.max(1, width - 14))} [sig ${event.significance}]`);
+      // Aggregate repeated subtypes
+      const aggregated = this.aggregateEvents(notable);
+      for (const item of aggregated) {
+        const sigChar = item.maxSignificance >= 90 ? '\u2605' : item.maxSignificance >= 70 ? '\u25CF' : '\u25CB';
+        const sigColor = getSignificanceColor(item.maxSignificance);
+        let desc: string;
+        if (item.count > 2) {
+          const baseNarrative = this.formatter.getShortNarrative(item.event);
+          desc = `${baseNarrative} (${item.count} recent)`;
+        } else {
+          desc = this.formatter.getShortNarrative(item.event);
+        }
+        lines.push(`  {${sigColor}-fg}${sigChar}{/} ${desc.slice(0, Math.max(1, width - 6))}`);
       }
     }
 
     lines.push('');
-    lines.push('{#888888-fg}  Click any item to inspect  |  Select entity to view details{/}');
+    lines.push('{#888888-fg}  Select an entity on the map to inspect{/}');
 
     // Apply dashboard scroll
     const { height } = this.getInnerDimensions();
@@ -682,19 +762,27 @@ export class InspectorPanel extends BasePanel {
   }
 
   /**
-   * Get a short description for an event (for dashboard display).
+   * Aggregate events by subtype for dashboard display.
+   * Groups events with the same subtype, showing count if > 2.
    */
-  private getEventShortDescription(event: WorldEvent): string {
-    const data = event.data as Record<string, unknown>;
-    if (typeof data['description'] === 'string') {
-      return data['description'];
+  private aggregateEvents(events: WorldEvent[]): Array<{ event: WorldEvent; count: number; maxSignificance: number }> {
+    const grouped = new Map<string, { event: WorldEvent; count: number; maxSignificance: number }>();
+
+    for (const event of events) {
+      const existing = grouped.get(event.subtype);
+      if (existing !== undefined) {
+        existing.count++;
+        if (event.significance > existing.maxSignificance) {
+          existing.maxSignificance = event.significance;
+          existing.event = event;
+        }
+      } else {
+        grouped.set(event.subtype, { event, count: 1, maxSignificance: event.significance });
+      }
     }
-    const parts = event.subtype.split('.');
-    if (parts.length >= 2) {
-      const action = parts.slice(1).join(' ').replace(/_/g, ' ');
-      return action.charAt(0).toUpperCase() + action.slice(1);
-    }
-    return event.subtype.replace(/_/g, ' ');
+
+    // Sort by max significance descending
+    return [...grouped.values()].sort((a, b) => b.maxSignificance - a.maxSignificance);
   }
 
   /**

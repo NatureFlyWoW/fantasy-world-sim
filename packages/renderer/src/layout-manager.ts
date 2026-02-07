@@ -113,6 +113,98 @@ export function calculateDefaultLayout(screen: ScreenDimensions): LayoutConfigur
     focused: false,
   });
 
+  panels.set(PanelId.RegionDetail, {
+    id: PanelId.RegionDetail,
+    x: 0,
+    y: 0,
+    width: 0,
+    height: 0,
+    focused: false,
+  });
+
+  return {
+    panels,
+    statusBarHeight: STATUS_BAR_HEIGHT,
+    menuBarHeight: MENU_BAR_HEIGHT,
+  };
+}
+
+/**
+ * Calculate the narrative layout.
+ * 4-quadrant split: Map + Region Detail on left, Event Log + Inspector on right.
+ * Map: upper-left (40% width, 55% height)
+ * RegionDetail: lower-left (40% width, 45% height)
+ * EventLog: upper-right (60% width, 50% height)
+ * Inspector: lower-right (60% width, 50% height)
+ */
+export function calculateNarrativeLayout(screen: ScreenDimensions): LayoutConfiguration {
+  const panels = new Map<PanelId, PanelLayout>();
+
+  const usableHeight = screen.height - STATUS_BAR_HEIGHT - MENU_BAR_HEIGHT;
+  const leftWidth = Math.floor(screen.width * 0.4);
+  const rightWidth = screen.width - leftWidth;
+  const leftTopHeight = Math.floor(usableHeight * 0.55);
+  const leftBottomHeight = usableHeight - leftTopHeight;
+  const rightTopHeight = Math.floor(usableHeight * 0.5);
+  const rightBottomHeight = usableHeight - rightTopHeight;
+
+  panels.set(PanelId.Map, {
+    id: PanelId.Map,
+    x: 0,
+    y: MENU_BAR_HEIGHT,
+    width: leftWidth,
+    height: leftTopHeight,
+    focused: true,
+  });
+
+  panels.set(PanelId.RegionDetail, {
+    id: PanelId.RegionDetail,
+    x: 0,
+    y: MENU_BAR_HEIGHT + leftTopHeight,
+    width: leftWidth,
+    height: leftBottomHeight,
+    focused: false,
+  });
+
+  panels.set(PanelId.EventLog, {
+    id: PanelId.EventLog,
+    x: leftWidth,
+    y: MENU_BAR_HEIGHT,
+    width: rightWidth,
+    height: rightTopHeight,
+    focused: false,
+  });
+
+  panels.set(PanelId.Inspector, {
+    id: PanelId.Inspector,
+    x: leftWidth,
+    y: MENU_BAR_HEIGHT + rightTopHeight,
+    width: rightWidth,
+    height: rightBottomHeight,
+    focused: false,
+  });
+
+  // Hidden panels
+  panels.set(PanelId.RelationshipGraph, {
+    id: PanelId.RelationshipGraph,
+    x: 0, y: 0, width: 0, height: 0, focused: false,
+  });
+
+  panels.set(PanelId.Timeline, {
+    id: PanelId.Timeline,
+    x: 0, y: 0, width: 0, height: 0, focused: false,
+  });
+
+  panels.set(PanelId.Statistics, {
+    id: PanelId.Statistics,
+    x: 0, y: 0, width: 0, height: 0, focused: false,
+  });
+
+  panels.set(PanelId.Fingerprint, {
+    id: PanelId.Fingerprint,
+    x: 0, y: 0, width: 0, height: 0, focused: false,
+  });
+
   return {
     panels,
     statusBarHeight: STATUS_BAR_HEIGHT,
@@ -188,6 +280,15 @@ export function calculateMapFocusLayout(screen: ScreenDimensions): LayoutConfigu
 
   panels.set(PanelId.Fingerprint, {
     id: PanelId.Fingerprint,
+    x: 0,
+    y: 0,
+    width: 0,
+    height: 0,
+    focused: false,
+  });
+
+  panels.set(PanelId.RegionDetail, {
+    id: PanelId.RegionDetail,
     x: 0,
     y: 0,
     width: 0,
@@ -277,6 +378,15 @@ export function calculateLogFocusLayout(screen: ScreenDimensions): LayoutConfigu
     focused: false,
   });
 
+  panels.set(PanelId.RegionDetail, {
+    id: PanelId.RegionDetail,
+    x: 0,
+    y: 0,
+    width: 0,
+    height: 0,
+    focused: false,
+  });
+
   return {
     panels,
     statusBarHeight: STATUS_BAR_HEIGHT,
@@ -359,6 +469,15 @@ export function calculateSplitLayout(screen: ScreenDimensions): LayoutConfigurat
     focused: false,
   });
 
+  panels.set(PanelId.RegionDetail, {
+    id: PanelId.RegionDetail,
+    x: 0,
+    y: 0,
+    width: 0,
+    height: 0,
+    focused: false,
+  });
+
   return {
     panels,
     statusBarHeight: STATUS_BAR_HEIGHT,
@@ -415,6 +534,8 @@ export function getLayoutForPreset(
   switch (preset) {
     case 'default':
       return calculateDefaultLayout(screen);
+    case 'narrative':
+      return calculateNarrativeLayout(screen);
     case 'map-focus':
       return calculateMapFocusLayout(screen);
     case 'log-focus':

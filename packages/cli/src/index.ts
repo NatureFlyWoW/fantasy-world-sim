@@ -67,6 +67,7 @@ import {
   TimelinePanel,
   StatisticsPanel,
   FingerprintPanel,
+  RegionDetailPanel,
 } from '@fws/renderer';
 import type { RenderContext, PanelLayout } from '@fws/renderer';
 import type * as blessed from 'blessed';
@@ -560,9 +561,11 @@ function launchTerminalUI(
   );
 
   // Use the Application's LayoutManager to get initial panel layouts.
+  // Set 'narrative' as the default layout (4-quadrant: Map + Region left, Events + Inspector right).
   // These will use the default 120x40 dimensions; app.start() will later
   // resize them to actual screen size via applyLayout().
   const appLayoutManager = app.getLayoutManager();
+  appLayoutManager.setLayout('narrative');
   const layout = appLayoutManager.getCurrentLayout();
 
   // Helper to get layout for a panel
@@ -600,6 +603,8 @@ function launchTerminalUI(
 
   const fingerprintPanel = new FingerprintPanel(screen, getLayout(PanelId.Fingerprint), boxFactory);
 
+  const regionDetailPanel = new RegionDetailPanel(screen, getLayout(PanelId.RegionDetail), boxFactory);
+
   // Register all panels
   app.registerPanel(mapPanel, PanelId.Map);
   app.registerPanel(eventLogPanel, PanelId.EventLog);
@@ -608,6 +613,23 @@ function launchTerminalUI(
   app.registerPanel(timelinePanel, PanelId.Timeline);
   app.registerPanel(statsPanel, PanelId.Statistics);
   app.registerPanel(fingerprintPanel, PanelId.Fingerprint);
+  app.registerPanel(regionDetailPanel, PanelId.RegionDetail);
+
+  // Wire map cursor movement to region detail panel
+  mapPanel.setSelectionHandler((entity, x, y) => {
+    // Update region detail with tile data at cursor position
+    const tile = context.tileLookup !== undefined ? context.tileLookup(x, y) : null;
+    regionDetailPanel.updateLocation(x, y, tile);
+
+    // Update entity selection for inspector
+    if (entity !== null && entity.name !== undefined) {
+      app.setSelectedEntity({
+        id: 0,
+        type: entity.type,
+        name: entity.name,
+      });
+    }
+  });
 
   // =========================================================================
   // Phase 6.1: Create and wire simulation controls

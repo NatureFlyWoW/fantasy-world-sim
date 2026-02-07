@@ -644,8 +644,8 @@ export class EventLogPanel extends BasePanel {
     if (row === 0) {
       return this.boxDrawTopBorder(width);
     } else if (row === 1) {
-      // Title line
-      const title = this.formatter.getEventDescription(event);
+      // Title line — use narrative title from short narrative map when available
+      const title = this.formatter.getShortNarrative(event);
       const truncatedTitle = title.slice(0, Math.max(0, width - 4));
       return this.boxDrawLine(truncatedTitle, width, true);
     } else if (row === 2) {
@@ -718,8 +718,9 @@ export class EventLogPanel extends BasePanel {
     lines.push(...wrappedBody);
     lines.push('');
 
-    // Significance bar (plain text version)
-    lines.push(`Significance: ${this.formatter.formatSignificanceBar(event.significance)}`);
+    // Significance word label (plain text — color applied by boxDrawLine caller)
+    const sigLabel = this.formatter.getSignificanceLabel(event.significance);
+    lines.push(`${sigLabel} event`);
 
     // Check for vignette trigger
     this.checkVignetteTrigger(event, context);

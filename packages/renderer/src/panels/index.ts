@@ -138,3 +138,14 @@ export type {
   TerritoryDifference,
   BranchComparison,
 } from './branch-view.js';
+
+// Region detail panel
+export {
+  RegionDetailPanel,
+  createRegionDetailPanelLayout,
+  BIOME_PROSE,
+  RESOURCE_PROSE,
+  describeElevation,
+  describeTemperature,
+  describeRainfall,
+} from './region-detail-panel.js';

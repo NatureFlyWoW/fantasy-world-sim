@@ -59,6 +59,7 @@ export type { BorderStyle } from './panel.js';
 export {
   LayoutManager,
   calculateDefaultLayout,
+  calculateNarrativeLayout,
   calculateMapFocusLayout,
   calculateLogFocusLayout,
   calculateSplitLayout,

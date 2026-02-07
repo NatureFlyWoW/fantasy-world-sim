@@ -28,6 +28,7 @@ const PANEL_INDEX: readonly PanelId[] = [
   PanelId.Timeline,
   PanelId.Statistics,
   PanelId.Fingerprint,
+  PanelId.RegionDetail,
 ];
 
 /**
@@ -35,7 +36,7 @@ const PANEL_INDEX: readonly PanelId[] = [
  */
 export const KEY_BINDINGS: readonly KeyBinding[] = [
   { key: 'tab', action: 'cycleFocus', description: 'Cycle focus between panels' },
-  { key: '1-7', action: 'switchPanel', description: 'Switch to panel by number' },
+  { key: '1-8', action: 'switchPanel', description: 'Switch to panel by number' },
   { key: 'space', action: 'togglePause', description: 'Toggle simulation pause/play' },
   { key: '+', action: 'speedUp', description: 'Increase simulation speed' },
   { key: '-', action: 'speedDown', description: 'Decrease simulation speed' },
@@ -66,7 +67,7 @@ const SPEED_ORDER: readonly SimulationSpeed[] = [
 /**
  * Layout preset order for cycling.
  */
-const LAYOUT_ORDER: readonly LayoutPreset[] = ['default', 'map-focus', 'log-focus', 'split'];
+const LAYOUT_ORDER: readonly LayoutPreset[] = ['narrative', 'default', 'map-focus', 'log-focus', 'split'];
 
 /**
  * Application configuration.
@@ -505,6 +506,7 @@ export class Application {
         { label: 'Timeline', key: '5', action: () => this.focusPanel(PanelId.Timeline) },
         { label: 'Stats', key: '6', action: () => this.focusPanel(PanelId.Statistics) },
         { label: 'Fingerprint', key: '7', action: () => this.focusPanel(PanelId.Fingerprint) },
+        { label: 'Region', key: '8', action: () => this.focusPanel(PanelId.RegionDetail) },
       ];
     };
 
@@ -623,7 +625,7 @@ export class Application {
     this.screen.key('tab', () => this.cycleFocus());
 
     // Number keys: switch to panel (context-aware for Inspector section toggles)
-    for (let i = 1; i <= 7; i++) {
+    for (let i = 1; i <= 8; i++) {
       this.screen.key(String(i), () => {
         if (this.state.focusedPanel === PanelId.Inspector) {
           const panel = this.panels.get(PanelId.Inspector);
@@ -664,7 +666,7 @@ export class Application {
     this.screen.on('keypress', (ch: string | undefined, key: { name?: string; full?: string; ctrl?: boolean; shift?: boolean } | undefined) => {
       const globalKeys = new Set([
         'q', 'tab', 'space', 'escape', 'f1', 'm', 'l',
-        '1', '2', '3', '4', '5', '6', '7',
+        '1', '2', '3', '4', '5', '6', '7', '8',
         '+', '=', '-', '_',
         'f', 'b',
       ]);
@@ -1142,6 +1144,8 @@ export function getContextHints(panelId: PanelId): string {
       return '[1-5] View  [j/k] Scroll';
     case PanelId.Fingerprint:
       return '[R] Refresh  [Space] Pause/Play';
+    case PanelId.RegionDetail:
+      return '[j/k] Scroll  [Space] Pause/Play';
     default:
       return '';
   }

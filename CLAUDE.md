@@ -32,7 +32,7 @@ ASCII-aesthetic terminal interface with dual event streams: raw logs + narrative
 - `@fws/core` — ECS, simulation loop, time, events, LoD, spatial index, persistence
 - `@fws/generator` — Terrain, ecology, cosmology, races, names, pre-history, init
 - `@fws/renderer` — Terminal ASCII UI (blessed): map, event log, inspector,
-  relationship graph, timeline, statistics
+  relationship graph, timeline, statistics, region detail
 - `@fws/narrative` — Template engine, 5 tones, literary devices, chronicler system,
   micro-narrative vignettes, chronicle export
 - `@fws/cli` — Entry point, simulation controls, influence system, refinement UI
@@ -83,13 +83,15 @@ small to warrant delegation.
 
 
 ## Current Phase
-Phase 8: UX Overhaul (In Progress — Tier 1-2 complete, Tier 3-4 remaining)
+Phase 8: UX Overhaul (In Progress — Tier 1-3 complete, Tier 4 remaining)
 
 ### Phase 8 Tasks — IN PROGRESS
 UX overhaul: "Names Not Numbers" entity resolution in event log, world dashboard
 replacing empty inspector, click handling for menu bar and event log, context-sensitive
-status bar hints, auto-pause on legendary events (sig 95+), pre-simulation welcome screen.
-Tier 3-4 remaining: Chronicle narrative-primary view, event aggregation, story threads,
+status bar hints, auto-pause on legendary events (sig 95+), pre-simulation welcome screen,
+narrative-first UI with character AI templates, prose event descriptions, significance
+word labels, narrative dashboard, region detail panel with biome prose.
+Tier 4 remaining: Chronicle narrative-primary view, event aggregation, story threads,
 interactive entity names in prose, tone-affects-layout.
 - [x] 8.1 — Names Not Numbers (EventFormatter wired to EntityResolver, SUBTYPE_VERB_MAP with ~50 verb patterns, resolves entity IDs to character/faction/site/artifact names, ENTITY_NAME_COLOR for clickable names; 17 new tests)
 - [x] 8.2 — World Dashboard (Inspector empty state replaced with live dashboard: World Pulse domain balance bars via WorldFingerprintCalculator, Top Factions from Territory components, Active Tensions from sig 60+ Political/Military events, Recent Notable Events; dashboard scrolling; 12 new tests)
@@ -97,10 +99,11 @@ interactive entity names in prose, tone-affects-layout.
 - [x] 8.4 — Context-Sensitive Status Bar (getContextHints(panelId) returns panel-specific shortcut hints replacing static entity/focus info; 9 new tests)
 - [x] 8.5 — Auto-Pause on Legendary Events (SimulationTimeControls legendaryPauseThreshold=95, immediate pause with 'auto-pause-legendary' reason, getLastLegendaryEvent() accessor; 9 new tests)
 - [x] 8.6 — Story So Far Welcome Screen (WelcomeData interface, renderWelcomeScreen with seed/factions/settlements/tensions, shown before simulation starts; CLI builds welcomeData from generatedData; 3 new tests)
-- [ ] 8.7 — Chronicle Narrative-Primary View (full-width prose as default, temporal grouping with period headers, significance-tiered display, chronicler identity header)
-- [ ] 8.8 — Event Aggregation (time-window batching of sub-threshold events, expand-on-demand, two-threshold system)
-- [ ] 8.9 — Story Threads (inline cascade connectors, arc progress headers, thread color-coding)
-- [ ] 8.10 — Interactive Entity Names & Polish (clickable entity names in prose, tone affects layout, progressive tips)
+- [x] 8.7 — Narrative-First UI Overhaul (66 Character AI templates for 22 subtypes x 3 significance tiers in character-actions.ts, 281 total templates; SHORT_NARRATIVE_MAP ~70 subtype-to-prose entries + getShortNarrative() + getSignificanceLabel() in EventFormatter; significance displayed as colored word labels not numbers; DOMAIN_PROSE 6 domains x 5 thresholds for narrative dashboard; event aggregation in dashboard; RegionDetailPanel with 17 biome prose descriptions, 8-tier elevation/temperature/7-tier rainfall descriptors, 13 resource descriptions; 'narrative' 4-quadrant layout preset as default; panel key 8 + menu bar Region item; MapPanel selection handler wires cursor to region detail)
+- [ ] 8.8 — Chronicle Narrative-Primary View (full-width prose as default, temporal grouping with period headers, significance-tiered display, chronicler identity header)
+- [ ] 8.9 — Event Aggregation (time-window batching of sub-threshold events, expand-on-demand, two-threshold system)
+- [ ] 8.10 — Story Threads (inline cascade connectors, arc progress headers, thread color-coding)
+- [ ] 8.11 — Interactive Entity Names & Polish (clickable entity names in prose, tone affects layout, progressive tips)
 
 ### Phase 7 Tasks — COMPLETE
 Extended systems: World DNA Fingerprint (6-domain radial chart), Timeline Branching
@@ -131,8 +134,8 @@ prose for high-significance events with 15 archetypes.
 - [x] 5.2 — Chronicler System & Vignettes (Chronicler with 8 ideologies, ChroniclerBiasFilter with 8 bias types, LostHistoryTracker with preservation/loss simulation, VignetteTrigger with 12 emotions and 15 archetypes, VignetteGenerator producing 200-500 word prose)
 
 ### Phase 4 Tasks — COMPLETE
-Renderer package complete with 7 panel types: Map, EventLog, Inspector, Relationships,
-Timeline, Statistics, Fingerprint (placeholder). CLI entry point creates world → engine →
+Renderer package complete with 8 panel types: Map, EventLog, Inspector, Relationships,
+Timeline, Statistics, Fingerprint, RegionDetail. CLI entry point creates world → engine →
 renderer pipeline. Application launchable with `pnpm run start`.
 - [x] 4.1 — Terminal UI Framework (types, BasePanel, theme, layout manager, Application class)
 - [x] 4.2 — World Map Renderer (viewport, tile-renderer, 6 overlays, minimap, MapPanel)
@@ -436,6 +439,35 @@ Deterministic from seed. 9 configurable parameters with named presets.
   returns panel-specific shortcut hints. Auto-pause: legendaryPauseThreshold (default 95)
   in AutoSlowdownConfig, checked before regular auto-slowdown. Existing auto-slowdown
   tests updated to use sig 90-94 (below legendary threshold). 164 new tests, 2776 total.
+
+- 2026: Narrative-First UI Overhaul (Phase 8 Tier 3). Two-phase approach: narrative
+  quality first, then layout changes. Phase A: (1) 66 Character AI narrative templates
+  (character-actions.ts) covering 22 subtypes (befriend, trade, craft_item, study_lore,
+  pray, journey, experiment, steal, proselytize, research_spell, enchant_item, forage,
+  flee, seek_healing, dream, betray, intimidate, show_mercy, negotiate_treaty,
+  forge_alliance, rally_troops, plan_campaign) x 3 significance tiers (low 0-40,
+  medium 41-70, high 71-100). Registered in template index, 281 total templates.
+  (2) SHORT_NARRATIVE_MAP (~70 subtype→prose mappings) + getShortNarrative() +
+  getSignificanceLabel() in EventFormatter. Right pane title now shows narrative prose
+  instead of raw getEventDescription(). (3) Numeric significance removed everywhere:
+  formatSignificanceBarColored() shows word labels (Trivial/Minor/Moderate/Major/
+  Critical/Legendary); inspector events show colored significance char + narrative;
+  event log detail shows word label not bar. (4) Dashboard narrative: DOMAIN_PROSE
+  (6 domains x 5 value thresholds → atmospheric text), narrative empty states ("The
+  realm knows an uneasy peace" vs "Warfare: 0"), event aggregation (groups repeated
+  subtypes, shows count if >2), section headers renamed (TOP FACTIONS→GREAT POWERS,
+  ACTIVE TENSIONS→WINDS OF CONFLICT, RECENT NOTABLE→RECENT TIDINGS).
+  Phase B: (5) 'narrative' layout preset (4-quadrant: Map 40%x55% upper-left,
+  RegionDetail 40%x45% lower-left, EventLog 60%x50% upper-right, Inspector 60%x50%
+  lower-right). PanelId.RegionDetail added to enum. RegionDetail hidden (0x0) in all
+  other presets. (6) RegionDetailPanel (region-detail-panel.ts): BIOME_PROSE 17 biome
+  atmospheric descriptions, describeElevation (8 tiers), describeTemperature (8 tiers),
+  describeRainfall (7 tiers), RESOURCE_PROSE (13 resources), 200ms cursor throttle,
+  scroll support, empty state atmospheric prompt. (7) Wiring: MapPanel.setSelectionHandler
+  feeds RegionDetailPanel.updateLocation with tile data from tileLookup. CLI sets
+  'narrative' as default layout. LAYOUT_ORDER updated to cycle narrative→default→
+  map-focus→log-focus→split. PANEL_INDEX extended to 8 panels. Menu bar includes
+  Region item. Context hints for RegionDetail panel. 2776 tests passing.
 
 ## Known Issues
 - EventCategory.Exploratory has no system producing events (by design — no exploration

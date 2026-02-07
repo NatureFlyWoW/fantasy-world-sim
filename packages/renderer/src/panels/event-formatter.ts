@@ -6,7 +6,7 @@
 import { EventCategory, ticksToWorldTime } from '@fws/core';
 import type { WorldEvent, World, WorldClock, EntityId } from '@fws/core';
 import type { EntityResolver } from '@fws/narrative';
-import { CATEGORY_COLORS, getSignificanceColor } from '../theme.js';
+import { CATEGORY_COLORS, getSignificanceColor, getSignificanceLevel } from '../theme.js';
 
 /**
  * Category icons for display.
@@ -133,6 +133,108 @@ const SUBTYPE_VERB_MAP: Readonly<Record<string, string>> = {
 export const ENTITY_NAME_COLOR = '#88AAFF';
 
 /**
+ * Short narrative one-liners for event subtypes.
+ * Used in dashboard and event list for atmospheric descriptions.
+ */
+const SHORT_NARRATIVE_MAP: Readonly<Record<string, string>> = {
+  // Character AI actions
+  'character.befriend': 'New bonds of friendship are forged',
+  'character.trade': 'Merchants exchange wares at the crossroads',
+  'character.craft_item': 'Skilled hands shape raw materials into something new',
+  'character.study_lore': 'Ancient texts reveal forgotten knowledge',
+  'character.pray': 'A soul seeks divine guidance',
+  'character.journey': 'A traveler sets forth into the unknown',
+  'character.experiment': 'Arcane forces are tested in secret',
+  'character.steal': 'Shadowed hands claim what is not theirs',
+  'character.proselytize': 'The faithful spread their creed',
+  'character.research_spell': 'Mysteries of the arcane unfold',
+  'character.enchant_item': 'Magic is bound into mortal craft',
+  'character.forage': 'The wilds yield their bounty',
+  'character.flee': 'Danger drives the desperate to flight',
+  'character.seek_healing': 'The wounded seek restoration',
+  'character.dream': 'Visions stir in restless slumber',
+  'character.betray': 'Trust shatters like glass',
+  'character.intimidate': 'Fear becomes a weapon',
+  'character.show_mercy': 'Compassion stays the hand of judgment',
+  'character.negotiate_treaty': 'Words forge what swords cannot',
+  'character.forge_alliance': 'Former strangers unite under common cause',
+  'character.rally_troops': 'A war cry echoes across the field',
+  'character.plan_campaign': 'Strategy takes shape in the war room',
+
+  // Faction / Political
+  'faction.treaty_expired': 'An old accord crumbles to dust',
+  'faction.coup_attempt': 'Ambition challenges the throne',
+  'faction.coup_success': 'Power changes hands in a single night',
+  'faction.coup_failed': 'A bid for power meets its end',
+  'faction.reform_movement': 'The people demand change',
+  'faction.war_declared': 'Drums of war sound across borders',
+
+  // Military
+  'battle.resolved': 'Steel clashes upon the field',
+  'war.declared': 'Nations gird for war',
+  'war.ended': 'The last sword is sheathed',
+  'siege.began': 'Walls are surrounded and tested',
+  'siege.ended': 'The siege reaches its conclusion',
+
+  // Cultural
+  'culture.technology_invented': 'Innovation reshapes the possible',
+  'culture.technology_spread': 'Knowledge crosses borders',
+  'culture.technology_suppressed': 'Progress is met with resistance',
+  'culture.masterwork_created': 'A work of surpassing beauty emerges',
+  'culture.artistic_movement_born': 'A new vision inspires the creative spirit',
+  'culture.movement_spread': 'Cultural currents flow to new shores',
+  'culture.movement_ended': 'An artistic era quietly fades',
+  'culture.philosophy_founded': 'A new way of thinking takes root',
+  'culture.philosophy_faded': 'Old wisdom passes from memory',
+  'culture.language_imposed': 'A tongue is forced upon the conquered',
+  'culture.loan_words_adopted': 'Languages mingle and evolve',
+  'culture.dialect_became_language': 'A dialect finds its own voice',
+  'culture.language_died': 'The last speaker falls silent',
+  'culture.tradition_recorded': 'Oral tradition is committed to the page',
+
+  // Magic
+  'magic.research_complete': 'Arcane secrets are unlocked',
+  'magic.institution_tension': 'Rivalries simmer among the learned',
+  'magic.schism': 'Wizards split over doctrine',
+  'magic.artifact_influence': 'An artifact exerts its will',
+  'magic.artifact_created': 'A new wonder enters the world',
+  'magic.catastrophe_ended': 'Magical chaos subsides at last',
+  'magic.catastrophe_contained': 'Desperate wards hold back disaster',
+  'magic.persecution_threat': 'Suspicion turns against the gifted',
+
+  // Religion
+  'religion.intervention': 'The divine hand reaches into mortal affairs',
+  'religion.schism': 'Faith fractures along doctrinal lines',
+  'religion.prophet_arose': 'A voice cries out with divine authority',
+  'religion.saint_recognized': 'Holiness is recognized and honored',
+  'religion.syncretism': 'Faiths blend into something new',
+
+  // Economy
+  'economy.trade_exclusivity_violated': 'A trade pact is broken',
+  'economy.market_crash': 'Fortune turns to ruin overnight',
+  'economy.trade_route_opened': 'Commerce finds new pathways',
+
+  // Ecology / Disaster
+  'ecology.resource_critical': 'Resources dwindle to alarming levels',
+  'ecology.resource_depleted': 'The land is stripped bare',
+  'ecology.event_recovered': 'Nature slowly reclaims its balance',
+  'ecology.territory_expanded': 'Wild creatures press into settled lands',
+  'ecology.invasive_spread': 'Foreign species overrun the native',
+};
+
+/**
+ * Significance word labels for display.
+ */
+export const SIGNIFICANCE_LABELS: Readonly<Record<string, string>> = {
+  trivial: 'Trivial',
+  minor: 'Minor',
+  moderate: 'Moderate',
+  major: 'Major',
+  critical: 'Critical',
+  legendary: 'Legendary',
+};
+
+/**
  * EventFormatter provides methods to format WorldEvents for display.
  */
 export class EventFormatter {
@@ -193,6 +295,7 @@ export class EventFormatter {
 
   /**
    * Format a significance bar with color codes for blessed.
+   * Shows colored bar + word label instead of numeric value.
    */
   formatSignificanceBarColored(significance: number): string {
     const clamped = Math.max(0, Math.min(100, significance));
@@ -202,8 +305,9 @@ export class EventFormatter {
     const color = getSignificanceColor(clamped);
     const filled = FILLED_BLOCK.repeat(filledCount);
     const empty = EMPTY_BLOCK.repeat(emptyCount);
+    const label = this.getSignificanceLabel(clamped);
 
-    return `{${color}-fg}${filled}{/}{#666666-fg}${empty}{/} ${Math.round(clamped)}`;
+    return `{${color}-fg}${filled}{/}{#666666-fg}${empty}{/} {${color}-fg}${label}{/}`;
   }
 
   /**
@@ -376,6 +480,51 @@ export class EventFormatter {
    */
   getSignificanceColor(event: WorldEvent): string {
     return getSignificanceColor(event.significance);
+  }
+
+  /**
+   * Get a short narrative one-liner for an event.
+   * Uses SHORT_NARRATIVE_MAP for atmospheric descriptions.
+   * Falls back to enhanced description or subtype parsing.
+   */
+  getShortNarrative(event: WorldEvent): string {
+    // Try short narrative map first
+    const narrative = SHORT_NARRATIVE_MAP[event.subtype];
+    if (narrative !== undefined) {
+      return narrative;
+    }
+
+    // Try resolver-based description
+    if (this.resolver !== null) {
+      const verbResult = this.formatWithVerbPattern(event);
+      if (verbResult !== null) {
+        return verbResult;
+      }
+    }
+
+    // Try event.data description
+    const data = event.data as Record<string, unknown>;
+    if (typeof data['description'] === 'string') {
+      return data['description'];
+    }
+
+    // Final fallback: humanize subtype
+    const parts = event.subtype.split('.');
+    if (parts.length >= 2) {
+      const action = parts.slice(1).join(' ').replace(/_/g, ' ');
+      return action.charAt(0).toUpperCase() + action.slice(1);
+    }
+
+    return event.subtype.replace(/_/g, ' ');
+  }
+
+  /**
+   * Get a word label for a significance value.
+   */
+  getSignificanceLabel(significance: number): string {
+    const level = getSignificanceLevel(significance);
+    const label = SIGNIFICANCE_LABELS[level];
+    return label ?? 'Unknown';
   }
 
   /**

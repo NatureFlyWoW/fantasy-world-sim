@@ -22,6 +22,7 @@ export enum PanelId {
   Statistics = 'Statistics',
   Fingerprint = 'Fingerprint',
   BranchComparison = 'BranchComparison',
+  RegionDetail = 'RegionDetail',
 }
 
 /**
@@ -157,4 +158,4 @@ export interface AppState {
 /**
  * Layout preset names.
  */
-export type LayoutPreset = 'default' | 'map-focus' | 'log-focus' | 'split';
+export type LayoutPreset = 'default' | 'narrative' | 'map-focus' | 'log-focus' | 'split';
