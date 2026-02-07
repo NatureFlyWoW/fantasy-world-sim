@@ -1,7 +1,16 @@
 /**
- * Dual-pane event log panel for displaying raw events and narrative prose.
- * LEFT (55%): Raw event log with scrolling and significance indicators
- * RIGHT (45%): Narrative prose panel with box-drawing borders
+ * Chronicle View panel: prose-based narrative event log.
+ *
+ * LEFT (55%): Prose chronicle with significance indicators,
+ *   category coloring, temporal headers, and event aggregation.
+ * RIGHT (45%): Narrative prose panel with box-drawing borders,
+ *   full narrative engine output, and chronicler perspectives.
+ *
+ * Four chronicle modes:
+ *   1. Prose Chronicle (default) -- full narrative prose, aggregated events
+ *   2. Compact Timeline          -- one-line per event with timestamps
+ *   3. Story Arcs                -- cascade chain tree view
+ *   4. Domain Focus              -- events grouped by domain
  */
 
 import type * as blessed from 'blessed';
@@ -10,7 +19,7 @@ import { PanelId } from '../types.js';
 import { BasePanel } from '../panel.js';
 import { THEME, getCategoryColor, getSignificanceColor } from '../theme.js';
 import { EventFormatter, CATEGORY_ICONS, defaultFormatter } from './event-formatter.js';
-import { EventCategory, PersonalityTrait } from '@fws/core';
+import { EventCategory, PersonalityTrait, ticksToWorldTime } from '@fws/core';
 import type { WorldEvent, EventId, EntityId, Unsubscribe, CharacterId } from '@fws/core';
 import {
   createDefaultNarrativeEngine,
@@ -32,6 +41,10 @@ import type {
   VignetteGeneratorContext,
   EntityResolver,
 } from '@fws/narrative';
+import { EventAggregator, addTemporalHeaders } from './event-aggregator.js';
+import type { ChronicleEntry, AggregatedEvent } from './event-aggregator.js';
+import { EventRegionFilter } from './event-filter.js';
+import type { SiteCoordinateLookup } from './event-filter.js';
 
 /**
  * Filter configuration for the event log.
@@ -90,6 +103,38 @@ export type InspectEventHandler = (eventId: EventId) => void;
  * Panel mode for UI state.
  */
 type PanelMode = 'normal' | 'filter' | 'search' | 'cascade' | 'vignette';
+
+/**
+ * Chronicle view modes for the left pane event rendering.
+ *   prose    -- Full narrative prose with aggregation and temporal headers
+ *   compact  -- One-line per event with timestamp and prose description
+ *   arcs     -- Story arc view: cascade chain trees for connected events
+ *   domain   -- Events grouped by domain (Warfare, Magic, Religion, etc.)
+ */
+export type ChronicleMode = 'prose' | 'compact' | 'arcs' | 'domain';
+
+/**
+ * Human-readable chronicle mode names.
+ */
+const CHRONICLE_MODE_NAMES: Readonly<Record<ChronicleMode, string>> = {
+  prose: 'Prose Chronicle',
+  compact: 'Compact Timeline',
+  arcs: 'Story Arcs',
+  domain: 'Domain Focus',
+};
+
+/**
+ * Significance indicator characters for the left pane.
+ * Used instead of the full bar to save horizontal space.
+ */
+const SIGNIFICANCE_INDICATORS: Readonly<Record<string, string>> = {
+  legendary: '\u2726', // ✦
+  critical: '\u2605',  // ★
+  major: '\u25C6',     // ◆
+  moderate: '\u2022',  // •
+  minor: '\u00B7',     // ·
+  trivial: ' ',
+};
 
 /**
  * EventLogPanel provides a dual-pane view of world events.
@@ -160,6 +205,18 @@ export class EventLogPanel extends BasePanel {
   private biasFilter: ChroniclerBiasFilter;
   private currentChroniclerIndex = 0;
 
+  // Chronicle mode
+  private chronicleMode: ChronicleMode = 'prose';
+  private readonly chronicleModes: readonly ChronicleMode[] = ['prose', 'compact', 'arcs', 'domain'];
+
+  // Event aggregation
+  private aggregator: EventAggregator = new EventAggregator();
+  private cachedChronicleEntries: readonly ChronicleEntry[] = [];
+  private chronicleEntriesDirty = true;
+
+  // Region filter
+  private regionFilter: EventRegionFilter = new EventRegionFilter();
+
   constructor(
     screen: blessed.Widgets.Screen,
     layout: PanelLayout,
@@ -182,8 +239,8 @@ export class EventLogPanel extends BasePanel {
     this.biasFilter = new ChroniclerBiasFilter();
     this.initializeDefaultChroniclers();
 
-    // Set panel title
-    this.setTitle('Event Log [Epic Historical]');
+    // Set panel title with chronicle mode
+    this.updatePanelTitle();
   }
 
   /**
@@ -232,6 +289,15 @@ export class EventLogPanel extends BasePanel {
   setEntityResolver(resolver: EntityResolver): void {
     this.narrativeEngine = createDefaultNarrativeEngine({ defaultTone: this.currentTone }, resolver);
     this.formatter.setEntityResolver(resolver);
+    this.aggregator.setEntityResolver(resolver);
+    this.chronicleEntriesDirty = true;
+  }
+
+  /**
+   * Set the site coordinate lookup for region filtering.
+   */
+  setSiteCoordinateLookup(lookup: SiteCoordinateLookup): void {
+    this.regionFilter.setSiteLookup(lookup);
   }
 
   /**
@@ -290,6 +356,7 @@ export class EventLogPanel extends BasePanel {
    */
   addEvent(event: WorldEvent): void {
     this.events.push(event);
+    this.chronicleEntriesDirty = true;
     this.applyFilter();
 
     // Auto-scroll if enabled
@@ -313,6 +380,7 @@ export class EventLogPanel extends BasePanel {
    */
   loadEventsFromLog(context: RenderContext): void {
     this.events = context.eventLog.getAll();
+    this.chronicleEntriesDirty = true;
     this.applyFilter();
 
     if (this.autoScroll) {
@@ -325,6 +393,7 @@ export class EventLogPanel extends BasePanel {
    */
   applyFilter(): void {
     this.filteredEvents = this.events.filter(event => this.passesFilter(event));
+    this.chronicleEntriesDirty = true;
 
     // Adjust selection if needed
     if (this.selectedIndex >= this.filteredEvents.length) {
@@ -575,18 +644,61 @@ export class EventLogPanel extends BasePanel {
   }
 
   /**
-   * Render a line from the left (raw log) panel.
+   * Rebuild the cached chronicle entries from filtered events.
+   * Called lazily when entries are dirty and rendering is needed.
+   */
+  private rebuildChronicleEntries(): void {
+    if (!this.chronicleEntriesDirty) return;
+
+    if (this.chronicleMode === 'prose') {
+      // Prose mode: aggregate low-significance events and add temporal headers
+      const rawEntries = this.aggregator.aggregate(this.filteredEvents);
+      this.cachedChronicleEntries = addTemporalHeaders(rawEntries);
+    } else {
+      // All other modes: simple event list (no aggregation)
+      this.cachedChronicleEntries = this.filteredEvents.map(event => ({
+        kind: 'event' as const,
+        event,
+      }));
+    }
+
+    this.chronicleEntriesDirty = false;
+  }
+
+  /**
+   * Get the total number of displayable chronicle lines.
+   * Accounts for chronicle mode (prose mode may have headers/aggregations).
+   */
+  getChronicleLineCount(): number {
+    this.rebuildChronicleEntries();
+    if (this.chronicleMode === 'prose') {
+      let count = 0;
+      for (const entry of this.cachedChronicleEntries) {
+        if (entry.kind === 'aggregate' && entry.aggregate.expanded) {
+          count += 1 + entry.aggregate.rawEvents.length; // header + expanded events
+        } else {
+          count += 1;
+        }
+      }
+      return count;
+    }
+    return this.cachedChronicleEntries.length;
+  }
+
+  /**
+   * Render a line from the left (chronicle) panel.
+   * Dispatches to the appropriate renderer based on chronicle mode.
    */
   private renderLeftPaneLine(
     row: number,
     width: number,
     _height: number,
-    context: RenderContext
+    _context: RenderContext
   ): string {
     // Show placeholder message when there are no events
     if (this.filteredEvents.length === 0) {
       if (row === 0) {
-        const fullMessage = 'No events yet - simulation paused';
+        const fullMessage = 'No events yet -- the world awaits its first stories';
         const message = fullMessage.slice(0, width);
         const padding = Math.max(0, Math.floor((width - message.length) / 2));
         const rightPad = Math.max(0, width - padding - message.length);
@@ -595,6 +707,134 @@ export class EventLogPanel extends BasePanel {
       return ' '.repeat(Math.max(0, width));
     }
 
+    switch (this.chronicleMode) {
+      case 'prose':
+        return this.renderProseChronicle(row, width);
+      case 'compact':
+        return this.renderCompactTimeline(row, width);
+      case 'arcs':
+        return this.renderStoryArcs(row, width);
+      case 'domain':
+        return this.renderDomainFocus(row, width);
+    }
+  }
+
+  /**
+   * Render a line in Prose Chronicle mode.
+   * Shows temporal headers, aggregated event summaries, and prose descriptions.
+   */
+  private renderProseChronicle(row: number, width: number): string {
+    this.rebuildChronicleEntries();
+
+    // Flatten expanded aggregations into a line list
+    const entryIndex = this.scrollOffset + row;
+    let currentLine = 0;
+
+    for (const entry of this.cachedChronicleEntries) {
+      if (entry.kind === 'header') {
+        if (currentLine === entryIndex) {
+          return this.renderHeaderLine(entry.text, width);
+        }
+        currentLine++;
+      } else if (entry.kind === 'aggregate') {
+        if (currentLine === entryIndex) {
+          return this.renderAggregatedLine(entry.aggregate, width, false);
+        }
+        currentLine++;
+        if (entry.aggregate.expanded) {
+          for (const subEvent of entry.aggregate.rawEvents) {
+            if (currentLine === entryIndex) {
+              return this.renderEventLine(subEvent, width, true);
+            }
+            currentLine++;
+          }
+        }
+      } else {
+        if (currentLine === entryIndex) {
+          return this.renderEventLine(entry.event, width, false);
+        }
+        currentLine++;
+      }
+    }
+
+    return ' '.repeat(width);
+  }
+
+  /**
+   * Render a temporal header line (e.g., "--- Year 3 ---").
+   */
+  private renderHeaderLine(text: string, width: number): string {
+    const truncated = text.slice(0, width);
+    const padded = truncated.padEnd(width);
+    return `{#666666-fg}{bold}${padded}{/}`;
+  }
+
+  /**
+   * Render an aggregated event summary line.
+   */
+  private renderAggregatedLine(aggregate: AggregatedEvent, width: number, _isSubItem: boolean): string {
+    const catColor = getCategoryColor(aggregate.category);
+    const icon = CATEGORY_ICONS[aggregate.category];
+    const expandChar = aggregate.expanded ? '\u25BC' : '\u25B6'; // ▼ or ▶
+
+    const summary = this.aggregator.generateSummary(aggregate);
+    const countTag = `(${aggregate.events.length})`;
+    const maxTextWidth = width - 5; // icon + expand + spaces
+    const text = `${summary} ${countTag}`.slice(0, maxTextWidth);
+    const padded = text.padEnd(maxTextWidth);
+
+    return `{${catColor}-fg}${icon} ${expandChar} ${padded}{/}`;
+  }
+
+  /**
+   * Render a single event line with prose description.
+   */
+  private renderEventLine(event: WorldEvent, width: number, isSubItem: boolean): string {
+    const isSelected = event === this.selectedEvent;
+    const isFlashing = this.isEventFlashing(event.id);
+    const isBookmarked = this.bookmarks.has(event.id);
+
+    // Significance indicator (1 char)
+    const sigLevel = this.formatter.getSignificanceLabel(event.significance).toLowerCase();
+    const sigIndicator = SIGNIFICANCE_INDICATORS[sigLevel] ?? ' ';
+    const sigColor = getSignificanceColor(event.significance);
+
+    // Bookmark indicator (1 char)
+    const bookmarkChar = isBookmarked ? '\u2605' : ' '; // ★
+
+    // Indent for sub-items within an expanded aggregate
+    const indent = isSubItem ? '  ' : '';
+
+    // Use prose description instead of raw format
+    const description = this.formatter.getEventDescription(event);
+    const time = ticksToWorldTime(event.timestamp);
+    const timePrefix = `Y${time.year} D${time.day}: `;
+
+    const maxTextWidth = width - indent.length - 4; // -2 sig+bookmark, -2 margin
+    const fullText = `${timePrefix}${description}`;
+    const truncatedText = fullText.slice(0, maxTextWidth);
+    const paddedText = truncatedText.padEnd(maxTextWidth);
+
+    // Apply coloring
+    const catColor = getCategoryColor(event.category);
+    let line: string;
+
+    if (isSelected) {
+      line = `{${sigColor}-fg}${sigIndicator}{/}{${THEME.ui.selection}-bg}{${catColor}-fg}${indent}${bookmarkChar}${paddedText}{/}`;
+    } else if (isFlashing) {
+      line = `{${sigColor}-fg}${sigIndicator}{/}{#ffff00-bg}{#000000-fg}${indent}${bookmarkChar}${paddedText}{/}`;
+    } else {
+      line = `{${sigColor}-fg}${sigIndicator}{/}{${catColor}-fg}${indent}${bookmarkChar}${paddedText}{/}`;
+    }
+
+    return line;
+  }
+
+  /**
+   * Render a line in Compact Timeline mode.
+   * One-line per event with timestamp and prose description.
+   */
+  private renderCompactTimeline(row: number, width: number): string {
     const eventIndex = this.scrollOffset + row;
 
     if (eventIndex >= this.filteredEvents.length) {
@@ -606,36 +846,126 @@ export class EventLogPanel extends BasePanel {
       return ' '.repeat(width);
     }
 
-    const isSelected = eventIndex === this.selectedIndex;
-    const isFlashing = this.isEventFlashing(event.id);
-    const isBookmarked = this.bookmarks.has(event.id);
+    return this.renderEventLine(event, width, false);
+  }
 
-    // Build significance indicator (1 char)
-    const sigColor = getSignificanceColor(event.significance);
-    const sigChar = '\u2588'; // █
+  /**
+   * Render a line in Story Arcs mode.
+   * Shows cascade chain trees for events with consequences.
+   */
+  private renderStoryArcs(row: number, width: number): string {
+    // Build arc lines on demand: find events with consequences (arc roots)
+    const arcRoots = this.filteredEvents.filter(e =>
+      e.consequences.length > 0 && e.causes.length === 0
+    );
 
-    // Build bookmark indicator (1 char)
-    const bookmarkChar = isBookmarked ? '\u2605' : ' '; // ★
-
-    // Format the event text
-    const rawText = this.formatter.formatRaw(event, context.clock);
-    const maxTextWidth = width - 4; // -2 for significance, -1 for bookmark, -1 for margin
-    const truncatedText = rawText.slice(0, maxTextWidth);
-    const paddedText = truncatedText.padEnd(maxTextWidth);
-
-    // Apply coloring
-    const catColor = getCategoryColor(event.category);
-    let line: string;
-
-    if (isSelected) {
-      line = `{${sigColor}-fg}${sigChar}{/}{${THEME.ui.selection}-bg}{${catColor}-fg}${bookmarkChar}${paddedText}{/}`;
-    } else if (isFlashing) {
-      line = `{${sigColor}-fg}${sigChar}{/}{#ffff00-bg}{#000000-fg}${bookmarkChar}${paddedText}{/}`;
-    } else {
-      line = `{${sigColor}-fg}${sigChar}{/}{${catColor}-fg}${bookmarkChar}${paddedText}{/}`;
+    // For events that are neither roots nor connected, show standalone
+    const connectedIds = new Set<EventId>();
+    for (const root of arcRoots) {
+      connectedIds.add(root.id);
+      for (const cId of root.consequences) {
+        connectedIds.add(cId);
+      }
     }
 
-    return line;
+    // Build display lines
+    const lines: string[] = [];
+
+    for (const root of arcRoots) {
+      const icon = CATEGORY_ICONS[root.category];
+      const desc = this.formatter.getEventDescription(root);
+      const sigLabel = this.formatter.getSignificanceLabel(root.significance);
+      lines.push(`\u250C\u2500 ${icon} ${desc} (${sigLabel})`);
+
+      for (let ci = 0; ci < root.consequences.length; ci++) {
+        const cId = root.consequences[ci];
+        if (cId === undefined) continue;
+        const cEvent = this.filteredEvents.find(e => e.id === cId);
+        if (cEvent === undefined) continue;
+        const cIcon = CATEGORY_ICONS[cEvent.category];
+        const cDesc = this.formatter.getEventDescription(cEvent);
+        const isLast = ci === root.consequences.length - 1;
+        const connector = isLast ? '\u2514\u2500 ' : '\u251C\u2500 ';
+        lines.push(`${connector}${cIcon} ${cDesc}`);
+      }
+      lines.push(''); // blank separator
+    }
+
+    // Add unconnected events at bottom
+    const unconnected = this.filteredEvents.filter(e => !connectedIds.has(e.id));
+    if (unconnected.length > 0 && lines.length > 0) {
+      lines.push('{#666666-fg}-- Standalone Events --{/}');
+    }
+    for (const event of unconnected.slice(0, 20)) {
+      const icon = CATEGORY_ICONS[event.category];
+      const desc = this.formatter.getEventDescription(event);
+      lines.push(`  ${icon} ${desc}`);
+    }
+
+    const displayIndex = this.scrollOffset + row;
+    const displayLine = lines[displayIndex];
+    if (displayLine === undefined) {
+      return ' '.repeat(width);
+    }
+
+    return displayLine.slice(0, width).padEnd(width);
+  }
+
+  /**
+   * Render a line in Domain Focus mode.
+   * Events grouped by domain with section headers.
+   */
+  private renderDomainFocus(row: number, width: number): string {
+    // Group events by category
+    const byDomain = new Map<EventCategory, WorldEvent[]>();
+    for (const event of this.filteredEvents) {
+      let domainEvents = byDomain.get(event.category);
+      if (domainEvents === undefined) {
+        domainEvents = [];
+        byDomain.set(event.category, domainEvents);
+      }
+      domainEvents.push(event);
+    }
+
+    // Build display lines with domain headers
+    const lines: string[] = [];
+    const domainOrder: EventCategory[] = [
+      EventCategory.Military,
+      EventCategory.Political,
+      EventCategory.Magical,
+      EventCategory.Religious,
+      EventCategory.Cultural,
+      EventCategory.Economic,
+      EventCategory.Personal,
+      EventCategory.Disaster,
+      EventCategory.Scientific,
+      EventCategory.Exploratory,
+    ];
+
+    for (const domain of domainOrder) {
+      const domainEvents = byDomain.get(domain);
+      if (domainEvents === undefined || domainEvents.length === 0) continue;
+
+      const icon = CATEGORY_ICONS[domain];
+      const catColor = getCategoryColor(domain);
+      lines.push(`{${catColor}-fg}{bold}${icon} ${domain} (${domainEvents.length}){/}`);
+
+      for (const event of domainEvents.slice(0, 50)) {
+        const desc = this.formatter.getEventDescription(event);
+        const isSelected = event === this.selectedEvent;
+        const prefix = isSelected ? '> ' : '  ';
+        lines.push(`${prefix}${desc}`);
+      }
+      lines.push(''); // separator
+    }
+
+    const displayIndex = this.scrollOffset + row;
+    const displayLine = lines[displayIndex];
+    if (displayLine === undefined) {
+      return ' '.repeat(width);
+    }
+
+    return displayLine.slice(0, width).padEnd(width);
   }
 
   /**
@@ -790,7 +1120,47 @@ export class EventLogPanel extends BasePanel {
 
     // Significance word label
     const sigLabel = this.formatter.getSignificanceLabel(event.significance);
-    lines.push(`${sigLabel} event`);
+    lines.push(`${sigLabel} event (sig ${event.significance})`);
+
+    // ── Cascade chain ──
+    if (event.causes.length > 0) {
+      lines.push('');
+      lines.push('Caused by:');
+      for (const causeId of event.causes.slice(0, 2)) {
+        const causeEvent = context.eventLog.getById(causeId);
+        if (causeEvent !== undefined) {
+          lines.push(`  \u2190 ${this.formatter.getShortNarrative(causeEvent)}`);
+        }
+      }
+    }
+
+    // ── Chronicler Perspectives ──
+    const allChroniclers = this.chroniclerRegistry.getAll();
+    if (allChroniclers.length > 1 && event.significance >= 50) {
+      lines.push('');
+      lines.push('Other perspectives:');
+      for (let ci = 0; ci < Math.min(2, allChroniclers.length); ci++) {
+        const chronicler = allChroniclers[ci];
+        if (chronicler === undefined || ci === this.currentChroniclerIndex) continue;
+        const biasContext = {
+          event,
+          baseNarrative: narrative.body,
+          entityNames: new Map<EntityId, string>(),
+          factionNames: new Map<import('@fws/core').FactionId, string>(),
+          siteNames: new Map<import('@fws/core').SiteId, string>(),
+          currentTime: context.clock.currentTime,
+        };
+        const altOutput = this.biasFilter.apply(chronicler, biasContext);
+        if (altOutput.narrative.length > 0) {
+          const altText = altOutput.narrative.slice(0, contentWidth - 4);
+          lines.push(`  ${chronicler.name}:`);
+          const altWrapped = this.wrapText(altText, contentWidth - 4);
+          for (const altLine of altWrapped) {
+            lines.push(`    ${altLine}`);
+          }
+        }
+      }
+    }
 
     // Check for vignette trigger
     this.checkVignetteTrigger(event, context);
@@ -801,6 +1171,10 @@ export class EventLogPanel extends BasePanel {
       lines.push('\u2605 Vignette Available');
       lines.push('Press "v" to view');
     }
+
+    // Navigation hint
+    lines.push('');
+    lines.push('Enter: inspect  |  c: cascade  |  n: mode');
 
     return lines;
   }
@@ -1150,6 +1524,14 @@ export class EventLogPanel extends BasePanel {
         this.showVignette();
         return true;
 
+      case 'n':
+        this.cycleChronicleMode();
+        return true;
+
+      case 'r':
+        this.toggleRegionFilter();
+        return true;
+
       case 'wheelup':
         this.scrollUp(3);
         return true;
@@ -1172,9 +1554,7 @@ export class EventLogPanel extends BasePanel {
     const nextTone = this.tones[nextIndex];
     if (nextTone !== undefined) {
       this.currentTone = nextTone;
-      // Update panel title to show current tone
-      const toneName = this.formatToneName(this.currentTone);
-      this.setTitle(`Event Log [${toneName}]`);
+      this.updatePanelTitle();
     }
   }
 
@@ -1199,13 +1579,45 @@ export class EventLogPanel extends BasePanel {
     const chroniclers = this.chroniclerRegistry.getAll();
     if (chroniclers.length > 0) {
       this.currentChroniclerIndex = (this.currentChroniclerIndex + 1) % chroniclers.length;
-      const currentChronicler = chroniclers[this.currentChroniclerIndex];
-      if (currentChronicler !== undefined) {
-        // Update panel title to show chronicler
-        const toneName = this.formatToneName(this.currentTone);
-        this.setTitle(`Event Log [${toneName}] - ${currentChronicler.name}`);
-      }
+      this.updatePanelTitle();
     }
+  }
+
+  /**
+   * Cycle through chronicle modes (prose -> compact -> arcs -> domain).
+   */
+  private cycleChronicleMode(): void {
+    const currentIndex = this.chronicleModes.indexOf(this.chronicleMode);
+    const nextIndex = (currentIndex + 1) % this.chronicleModes.length;
+    const nextMode = this.chronicleModes[nextIndex];
+    if (nextMode !== undefined) {
+      this.chronicleMode = nextMode;
+      this.chronicleEntriesDirty = true;
+      this.scrollOffset = 0;
+      this.updatePanelTitle();
+    }
+  }
+
+  /**
+   * Toggle region-contextual filtering.
+   */
+  private toggleRegionFilter(): void {
+    this.regionFilter.toggle();
+    this.chronicleEntriesDirty = true;
+    this.updatePanelTitle();
+  }
+
+  /**
+   * Update the panel title to reflect current mode, tone, and chronicler.
+   */
+  private updatePanelTitle(): void {
+    const modeName = CHRONICLE_MODE_NAMES[this.chronicleMode];
+    const toneName = this.formatToneName(this.currentTone);
+    const chroniclers = this.chroniclerRegistry.getAll();
+    const currentChronicler = chroniclers[this.currentChroniclerIndex];
+    const chroniclerName = currentChronicler !== undefined ? ` - ${currentChronicler.name}` : '';
+    const regionTag = this.regionFilter.isEnabled() ? ' [Region]' : '';
+    this.setTitle(`Chronicle: ${modeName} [${toneName}]${chroniclerName}${regionTag}`);
   }
 
   /**
@@ -1562,6 +1974,27 @@ export class EventLogPanel extends BasePanel {
   }
 
   /**
+   * Get the current chronicle mode.
+   */
+  getChronicleMode(): ChronicleMode {
+    return this.chronicleMode;
+  }
+
+  /**
+   * Get the event aggregator (for testing).
+   */
+  getAggregator(): EventAggregator {
+    return this.aggregator;
+  }
+
+  /**
+   * Get the region filter (for testing/external access).
+   */
+  getRegionFilter(): EventRegionFilter {
+    return this.regionFilter;
+  }
+
+  /**
    * Cleanup.
    */
   destroy(): void {
@@ -1569,6 +2002,12 @@ export class EventLogPanel extends BasePanel {
     super.destroy();
   }
 }
+
+// Re-export types from aggregator and filter modules
+export type { ChronicleEntry, AggregatedEvent } from './event-aggregator.js';
+export { EventAggregator, addTemporalHeaders } from './event-aggregator.js';
+export { EventRegionFilter } from './event-filter.js';
+export type { SiteCoordinateLookup, RegionFilterConfig, RegionFilterResult } from './event-filter.js';
 
 /**
  * Create a default layout for the event log panel.
