@@ -82,6 +82,11 @@ export type GoToLocationHandler = (x: number, y: number) => void;
 export type InspectEntityHandler = (entityId: EntityId) => void;
 
 /**
+ * Inspect event handler for opening event inspector.
+ */
+export type InspectEventHandler = (eventId: EventId) => void;
+
+/**
  * Panel mode for UI state.
  */
 type PanelMode = 'normal' | 'filter' | 'search' | 'cascade' | 'vignette';
@@ -119,6 +124,7 @@ export class EventLogPanel extends BasePanel {
   private onEventSelected: EventSelectionHandler | null = null;
   private onGoToLocation: GoToLocationHandler | null = null;
   private onInspectEntity: InspectEntityHandler | null = null;
+  private onInspectEvent: InspectEventHandler | null = null;
 
   // Live subscription
   private eventSubscription: Unsubscribe | null = null;
@@ -247,6 +253,13 @@ export class EventLogPanel extends BasePanel {
    */
   setInspectEntityHandler(handler: InspectEntityHandler): void {
     this.onInspectEntity = handler;
+  }
+
+  /**
+   * Set the inspect event handler. Called when the user wants to inspect the selected event itself.
+   */
+  setInspectEventHandler(handler: InspectEventHandler): void {
+    this.onInspectEvent = handler;
   }
 
   /**
@@ -1014,6 +1027,14 @@ export class EventLogPanel extends BasePanel {
     if (x < leftWidth) {
       const eventIndex = this.scrollOffset + y;
       if (eventIndex >= 0 && eventIndex < this.filteredEvents.length) {
+        // If clicking on already-selected event, inspect it (double-click pattern)
+        if (eventIndex === this.selectedIndex && this.onInspectEvent !== null) {
+          const evt = this.filteredEvents[eventIndex];
+          if (evt !== undefined) {
+            this.onInspectEvent(evt.id);
+            return true;
+          }
+        }
         this.selectedIndex = eventIndex;
         this.autoScroll = false;
         this.updateSelectedEvent();
@@ -1110,6 +1131,10 @@ export class EventLogPanel extends BasePanel {
         return true;
 
       case 'enter':
+        this.inspectSelectedEvent();
+        return true;
+
+      case 'i':
         this.inspectPrimaryParticipant();
         return true;
 
@@ -1425,6 +1450,15 @@ export class EventLogPanel extends BasePanel {
         // In a real implementation, this would resolve the SiteId to coordinates
         this.onGoToLocation(this.selectedEvent.location, 0);
       }
+    }
+  }
+
+  /**
+   * Inspect the selected event (opens in the Event Inspector).
+   */
+  private inspectSelectedEvent(): void {
+    if (this.selectedEvent !== null && this.onInspectEvent !== null) {
+      this.onInspectEvent(this.selectedEvent.id);
     }
   }
 

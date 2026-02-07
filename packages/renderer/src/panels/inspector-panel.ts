@@ -5,16 +5,27 @@
 
 import type * as blessed from 'blessed';
 import { BasePanel } from '../panel.js';
-import type { PanelLayout, RenderContext } from '../types.js';
+import type { PanelLayout, RenderContext, RenderableTile } from '../types.js';
 import { PanelId } from '../types.js';
 import { EventCategory, WorldFingerprintCalculator, FINGERPRINT_DOMAINS } from '@fws/core';
-import type { EntityId, WorldEvent } from '@fws/core';
+import type { EntityId, EventId, WorldEvent } from '@fws/core';
 import { getSignificanceColor } from '../theme.js';
 import { CharacterInspector } from './character-inspector.js';
 import { LocationInspector } from './location-inspector.js';
 import { FactionInspector } from './faction-inspector.js';
 import { ArtifactInspector } from './artifact-inspector.js';
+import { EventInspector } from './event-inspector.js';
+import { RegionInspector } from './region-inspector.js';
 import { CATEGORY_ICONS, EventFormatter, defaultFormatter } from './event-formatter.js';
+import {
+  TYPE_ICONS,
+  TYPE_COLORS,
+  ENTITY_NAME_COLOR,
+  DIM_COLOR,
+  createEntitySpanMap,
+  findEntityAtPosition,
+} from './inspector-prose.js';
+import type { EntitySpanMap } from './inspector-prose.js';
 
 /**
  * Domain prose mapping — atmospheric text for world pulse domains.
@@ -84,16 +95,34 @@ function getDomainProse(domain: string, value: number): string {
 /**
  * Entity types that can be inspected.
  */
-export type InspectableEntityType = 'character' | 'location' | 'faction' | 'artifact' | 'unknown';
+export type InspectableEntityType =
+  | 'character'
+  | 'location'
+  | 'faction'
+  | 'artifact'
+  | 'event'
+  | 'region'
+  | 'unknown';
 
 /**
- * Navigation history entry.
+ * Navigation history entry with section state persistence.
  */
-export interface HistoryEntry {
+export interface NavigationEntry {
   readonly entityId: EntityId;
   readonly entityType: InspectableEntityType;
+  readonly scrollOffset: number;
+  readonly expandedSections: readonly string[];
   readonly timestamp: number;
+  /** For events: store the EventId (different from EntityId) */
+  readonly eventId?: EventId;
+  /** For regions: store coordinates (regions are not entities) */
+  readonly regionCoords?: { readonly x: number; readonly y: number };
 }
+
+/**
+ * Legacy alias for NavigationEntry.
+ */
+export type HistoryEntry = NavigationEntry;
 
 /**
  * Inspector mode.
@@ -118,8 +147,12 @@ export interface WelcomeData {
 export interface InspectorSection {
   readonly id: string;
   readonly title: string;
+  readonly summaryHint?: string;
   collapsed: boolean;
 }
+
+/** Maximum navigation history depth */
+const MAX_HISTORY_DEPTH = 50;
 
 /**
  * Inspector panel for viewing entity details.
@@ -127,7 +160,7 @@ export interface InspectorSection {
 export class InspectorPanel extends BasePanel {
   private currentEntityId: EntityId | null = null;
   private currentEntityType: InspectableEntityType = 'unknown';
-  private history: HistoryEntry[] = [];
+  private history: NavigationEntry[] = [];
   private historyIndex = -1;
   private mode: InspectorMode = 'overview';
   private scrollOffset = 0;
@@ -138,6 +171,16 @@ export class InspectorPanel extends BasePanel {
   private readonly locationInspector: LocationInspector;
   private readonly factionInspector: FactionInspector;
   private readonly artifactInspector: ArtifactInspector;
+  private readonly eventInspector: EventInspector;
+  private readonly regionInspector: RegionInspector;
+
+  // Entity span tracking for clickable names
+  private entitySpans: EntitySpanMap = createEntitySpanMap();
+
+  // Current event/region data for non-entity inspections
+  private currentEventId: EventId | null = null;
+  private currentRegionCoords: { x: number; y: number } | null = null;
+  private currentRegionTile: RenderableTile | null = null;
 
   // World dashboard
   private readonly fingerprintCalculator = new WorldFingerprintCalculator();
@@ -165,6 +208,8 @@ export class InspectorPanel extends BasePanel {
     this.locationInspector = new LocationInspector();
     this.factionInspector = new FactionInspector();
     this.artifactInspector = new ArtifactInspector();
+    this.eventInspector = new EventInspector();
+    this.regionInspector = new RegionInspector();
   }
 
   /**
@@ -180,27 +225,145 @@ export class InspectorPanel extends BasePanel {
    * Inspect an entity with known type.
    */
   inspectWithType(entityId: EntityId, entityType: InspectableEntityType, _context: RenderContext): void {
+    // Save current section state before navigating away
+    this.saveCurrentSectionState();
+
     // Add to history if different from current
-    if (this.currentEntityId !== entityId) {
+    if (this.currentEntityId !== entityId || this.currentEntityType !== entityType) {
       // Truncate forward history if navigating from middle
       if (this.historyIndex < this.history.length - 1) {
         this.history = this.history.slice(0, this.historyIndex + 1);
       }
 
-      const entry: HistoryEntry = {
+      const entry: NavigationEntry = {
         entityId,
         entityType,
+        scrollOffset: 0,
+        expandedSections: [],
         timestamp: Date.now(),
       };
       this.history.push(entry);
+
+      // Enforce maximum history depth
+      if (this.history.length > MAX_HISTORY_DEPTH) {
+        this.history = this.history.slice(this.history.length - MAX_HISTORY_DEPTH);
+      }
       this.historyIndex = this.history.length - 1;
     }
 
     this.currentEntityId = entityId;
     this.currentEntityType = entityType;
+    this.currentEventId = null;
+    this.currentRegionCoords = null;
+    this.currentRegionTile = null;
     this.scrollOffset = 0;
     this.mode = 'overview';
+    this.entitySpans = createEntitySpanMap();
     this.initializeSections(entityType);
+  }
+
+  /**
+   * Inspect an event by EventId (events are not ECS entities).
+   */
+  inspectEvent(eventId: EventId, context: RenderContext): void {
+    // Save current section state
+    this.saveCurrentSectionState();
+
+    // Use eventId cast as EntityId for history tracking
+    const entityId = eventId as unknown as EntityId;
+
+    // Truncate forward history
+    if (this.historyIndex < this.history.length - 1) {
+      this.history = this.history.slice(0, this.historyIndex + 1);
+    }
+
+    const entry: NavigationEntry = {
+      entityId,
+      entityType: 'event',
+      scrollOffset: 0,
+      expandedSections: [],
+      timestamp: Date.now(),
+      eventId,
+    };
+    this.history.push(entry);
+    if (this.history.length > MAX_HISTORY_DEPTH) {
+      this.history = this.history.slice(this.history.length - MAX_HISTORY_DEPTH);
+    }
+    this.historyIndex = this.history.length - 1;
+
+    this.currentEntityId = entityId;
+    this.currentEntityType = 'event';
+    this.currentEventId = eventId;
+    this.currentRegionCoords = null;
+    this.currentRegionTile = null;
+    this.scrollOffset = 0;
+    this.mode = 'overview';
+    this.entitySpans = createEntitySpanMap();
+
+    // Initialize event sections
+    const event = context.eventLog.getById(eventId);
+    this.sections = this.eventInspector.getSections(event);
+  }
+
+  /**
+   * Inspect a region tile (regions are coordinates, not entities).
+   */
+  inspectRegion(x: number, y: number, tile: RenderableTile, _context: RenderContext): void {
+    // Save current section state
+    this.saveCurrentSectionState();
+
+    // Use a synthetic EntityId from coordinates for history
+    const syntheticId = (x * 10000 + y) as unknown as EntityId;
+
+    // Truncate forward history
+    if (this.historyIndex < this.history.length - 1) {
+      this.history = this.history.slice(0, this.historyIndex + 1);
+    }
+
+    const entry: NavigationEntry = {
+      entityId: syntheticId,
+      entityType: 'region',
+      scrollOffset: 0,
+      expandedSections: [],
+      timestamp: Date.now(),
+      regionCoords: { x, y },
+    };
+    this.history.push(entry);
+    if (this.history.length > MAX_HISTORY_DEPTH) {
+      this.history = this.history.slice(this.history.length - MAX_HISTORY_DEPTH);
+    }
+    this.historyIndex = this.history.length - 1;
+
+    this.currentEntityId = syntheticId;
+    this.currentEntityType = 'region';
+    this.currentEventId = null;
+    this.currentRegionCoords = { x, y };
+    this.currentRegionTile = tile;
+    this.scrollOffset = 0;
+    this.mode = 'overview';
+    this.entitySpans = createEntitySpanMap();
+
+    // Initialize region sections
+    this.sections = this.regionInspector.getSections(tile);
+  }
+
+  /**
+   * Save current section expanded/collapsed state into the current history entry.
+   */
+  private saveCurrentSectionState(): void {
+    if (this.historyIndex >= 0 && this.historyIndex < this.history.length) {
+      const currentEntry = this.history[this.historyIndex];
+      if (currentEntry !== undefined) {
+        const expandedIds = this.sections
+          .filter(s => !s.collapsed)
+          .map(s => s.id);
+        this.history[this.historyIndex] = {
+          ...currentEntry,
+          scrollOffset: this.scrollOffset,
+          expandedSections: expandedIds,
+        };
+      }
+    }
   }
 
   /**
@@ -208,13 +371,11 @@ export class InspectorPanel extends BasePanel {
    */
   back(): boolean {
     if (this.historyIndex > 0) {
+      this.saveCurrentSectionState();
       this.historyIndex--;
       const entry = this.history[this.historyIndex];
       if (entry !== undefined) {
-        this.currentEntityId = entry.entityId;
-        this.currentEntityType = entry.entityType;
-        this.scrollOffset = 0;
-        this.initializeSections(entry.entityType);
+        this.restoreFromEntry(entry);
         return true;
       }
     }
@@ -226,17 +387,36 @@ export class InspectorPanel extends BasePanel {
    */
   forward(): boolean {
     if (this.historyIndex < this.history.length - 1) {
+      this.saveCurrentSectionState();
       this.historyIndex++;
       const entry = this.history[this.historyIndex];
       if (entry !== undefined) {
-        this.currentEntityId = entry.entityId;
-        this.currentEntityType = entry.entityType;
-        this.scrollOffset = 0;
-        this.initializeSections(entry.entityType);
+        this.restoreFromEntry(entry);
         return true;
       }
     }
     return false;
+  }
+
+  /**
+   * Restore inspector state from a navigation entry.
+   */
+  private restoreFromEntry(entry: NavigationEntry): void {
+    this.currentEntityId = entry.entityId;
+    this.currentEntityType = entry.entityType;
+    this.currentEventId = entry.eventId ?? null;
+    this.currentRegionCoords = entry.regionCoords ? { x: entry.regionCoords.x, y: entry.regionCoords.y } : null;
+    this.scrollOffset = entry.scrollOffset;
+    this.entitySpans = createEntitySpanMap();
+    this.initializeSections(entry.entityType);
+
+    // Restore section expanded state
+    if (entry.expandedSections.length > 0) {
+      const expandedSet = new Set(entry.expandedSections);
+      for (const section of this.sections) {
+        section.collapsed = !expandedSet.has(section.id);
+      }
+    }
   }
 
   /**
@@ -245,10 +425,14 @@ export class InspectorPanel extends BasePanel {
   clear(): void {
     this.currentEntityId = null;
     this.currentEntityType = 'unknown';
+    this.currentEventId = null;
+    this.currentRegionCoords = null;
+    this.currentRegionTile = null;
     this.history = [];
     this.historyIndex = -1;
     this.scrollOffset = 0;
     this.sections = [];
+    this.entitySpans = createEntitySpanMap();
   }
 
   /**
@@ -303,6 +487,18 @@ export class InspectorPanel extends BasePanel {
         break;
       case 'artifact':
         this.sections = this.artifactInspector.getSections();
+        break;
+      case 'event':
+        // Sections already initialized in inspectEvent()
+        if (this.sections.length === 0) {
+          this.sections = this.eventInspector.getSections();
+        }
+        break;
+      case 'region':
+        // Sections already initialized in inspectRegion()
+        if (this.sections.length === 0 && this.currentRegionTile !== null) {
+          this.sections = this.regionInspector.getSections(this.currentRegionTile);
+        }
         break;
       default:
         this.sections = [];
@@ -366,6 +562,64 @@ export class InspectorPanel extends BasePanel {
    */
   getSections(): readonly InspectorSection[] {
     return this.sections;
+  }
+
+  /**
+   * Get entity span map for click detection.
+   */
+  getEntitySpans(): EntitySpanMap {
+    return this.entitySpans;
+  }
+
+  /**
+   * Get current event ID (for event inspection).
+   */
+  getCurrentEventId(): EventId | null {
+    return this.currentEventId;
+  }
+
+  /**
+   * Get current region coordinates (for region inspection).
+   */
+  getCurrentRegionCoords(): { x: number; y: number } | null {
+    return this.currentRegionCoords;
+  }
+
+  /**
+   * Handle click at a position within the inspector panel.
+   * Checks entitySpans for clickable entity names.
+   * Returns true if a click was handled.
+   */
+  override handleClick(x: number, y: number): boolean {
+    // Adjust for scroll offset
+    const adjustedRow = y + this.scrollOffset;
+
+    const entityId = findEntityAtPosition(this.entitySpans, adjustedRow, x);
+    if (entityId !== undefined) {
+      if (this.inspectHandler !== null) {
+        this.inspectHandler(entityId);
+      }
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Handle click with context - allows navigation within inspector.
+   */
+  handleClickWithContext(x: number, y: number, context: RenderContext): boolean {
+    const adjustedRow = y + this.scrollOffset;
+
+    const entityId = findEntityAtPosition(this.entitySpans, adjustedRow, x);
+    if (entityId !== undefined) {
+      if (this.inspectHandler !== null) {
+        this.inspectHandler(entityId);
+      } else {
+        this.inspect(entityId, context);
+      }
+      return true;
+    }
+    return false;
   }
 
   /**
@@ -514,10 +768,13 @@ export class InspectorPanel extends BasePanel {
       return;
     }
 
+    // Clear entity spans for fresh tracking
+    this.entitySpans = createEntitySpanMap();
+
     const lines: string[] = [];
 
-    // Render header with navigation
-    lines.push(...this.renderHeader());
+    // Render header with navigation and breadcrumbs
+    lines.push(...this.renderHeader(context));
 
     // Render content based on entity type
     switch (this.currentEntityType) {
@@ -533,9 +790,34 @@ export class InspectorPanel extends BasePanel {
       case 'artifact':
         lines.push(...this.artifactInspector.render(this.currentEntityId, context, this.sections, this.mode));
         break;
+      case 'event':
+        if (this.currentEventId !== null) {
+          lines.push(...this.eventInspector.render(this.currentEventId, context, this.sections, this.mode));
+        } else {
+          lines.push('Event not found');
+        }
+        break;
+      case 'region':
+        if (this.currentRegionCoords !== null && this.currentRegionTile !== null) {
+          lines.push(...this.regionInspector.render(
+            this.currentRegionCoords.x,
+            this.currentRegionCoords.y,
+            this.currentRegionTile,
+            context,
+            this.sections,
+            this.mode
+          ));
+        } else {
+          lines.push('Region data unavailable');
+        }
+        break;
       default:
         lines.push('Unknown entity type');
     }
+
+    // Render footer hint bar
+    lines.push('');
+    lines.push(this.renderFooterHints());
 
     // Apply scroll offset
     const { height } = this.getInnerDimensions();
@@ -817,49 +1099,242 @@ export class InspectorPanel extends BasePanel {
   }
 
   /**
-   * Render header with entity name and navigation.
+   * Render header with entity type, name, breadcrumbs.
    */
-  private renderHeader(): string[] {
+  private renderHeader(context: RenderContext): string[] {
     const lines: string[] = [];
+    const { width } = this.getInnerDimensions();
 
-    // Navigation indicator
-    const canBack = this.historyIndex > 0;
-    const canForward = this.historyIndex < this.history.length - 1;
-    const navIndicator = `${canBack ? '←' : ' '} ${this.historyIndex + 1}/${this.history.length} ${canForward ? '→' : ' '}`;
+    const icon = TYPE_ICONS[this.currentEntityType] ?? '?';
+    const color = TYPE_COLORS[this.currentEntityType] ?? '#888888';
+    const typeLabel = this.currentEntityType.toUpperCase();
 
-    // Entity type icon
-    const typeIcon = this.getEntityTypeIcon(this.currentEntityType);
+    // Line 1: Type label with rule
+    const ruleLen = Math.max(0, width - typeLabel.length - 6);
+    lines.push(`{${color}-fg}${icon}{/} {bold}${typeLabel}{/bold} ${'─'.repeat(ruleLen)}`);
 
-    // Mode tabs
-    const modes: InspectorMode[] = ['overview', 'relationships', 'timeline', 'details'];
-    const modeLabels = modes.map(m => {
-      const label = m.charAt(0).toUpperCase();
-      return m === this.mode ? `[${label}]` : ` ${label} `;
-    }).join('');
+    // Line 2: Entity name and summary
+    const entityName = this.resolveEntityName(context);
+    lines.push(`  {bold}${entityName}{/bold}`);
 
-    lines.push(`${typeIcon} Entity #${this.currentEntityId}  ${navIndicator}`);
-    lines.push(`Mode: ${modeLabels}`);
-    lines.push('─'.repeat(40));
+    // Line 3: One-liner summary + temporal context
+    const summary = this.getEntitySummary(context);
+    if (summary.length > 0) {
+      lines.push(`  {${DIM_COLOR}-fg}${summary}{/}`);
+    }
+
+    // Line 4: Breadcrumbs
+    const breadcrumbs = this.renderBreadcrumbs(context, width);
+    lines.push(`  ${breadcrumbs}`);
+
+    // Divider
+    lines.push('═'.repeat(Math.min(width, 60)));
 
     return lines;
   }
 
   /**
-   * Get icon for entity type.
+   * Resolve the display name for the current entity.
    */
-  private getEntityTypeIcon(type: InspectableEntityType): string {
-    switch (type) {
-      case 'character':
-        return '👤';
-      case 'location':
-        return '🏰';
-      case 'faction':
-        return '⚜';
-      case 'artifact':
-        return '✦';
-      default:
-        return '?';
+  private resolveEntityName(context: RenderContext): string {
+    if (this.currentEntityId === null) return 'Unknown';
+
+    // Events: use subtype or description
+    if (this.currentEntityType === 'event' && this.currentEventId !== null) {
+      const event = context.eventLog.getById(this.currentEventId);
+      if (event !== undefined) {
+        const desc = (event.data as Record<string, unknown>)['description'];
+        if (typeof desc === 'string' && desc.length > 0) return desc;
+        return this.formatter.getShortNarrative(event);
+      }
+      return `Event #${this.currentEventId}`;
     }
+
+    // Regions: coordinates
+    if (this.currentEntityType === 'region' && this.currentRegionCoords !== null) {
+      const biome = this.currentRegionTile?.biome ?? 'Unknown';
+      return `${biome} (${this.currentRegionCoords.x}, ${this.currentRegionCoords.y})`;
+    }
+
+    // ECS entities: use Status.titles
+    const { world } = context;
+    if (world.hasStore('Status')) {
+      const status = world.getComponent(this.currentEntityId, 'Status') as { titles?: string[] } | undefined;
+      if (status?.titles !== undefined && status.titles.length > 0 && status.titles[0] !== undefined) {
+        return status.titles[0];
+      }
+    }
+
+    return `#${this.currentEntityId}`;
+  }
+
+  /**
+   * Get a one-liner summary for the current entity.
+   */
+  private getEntitySummary(context: RenderContext): string {
+    if (this.currentEntityId === null) return '';
+
+    if (this.currentEntityType === 'event' && this.currentEventId !== null) {
+      const event = context.eventLog.getById(this.currentEventId);
+      if (event !== undefined) {
+        const year = Math.floor(event.timestamp / 360) + 1;
+        const season = this.tickToSeason(event.timestamp);
+        return `${event.category}  |  Year ${year}, ${season}  |  Significance: ${event.significance}`;
+      }
+    }
+
+    if (this.currentEntityType === 'region' && this.currentRegionTile !== null) {
+      const biome = this.currentRegionTile.biome;
+      return biome;
+    }
+
+    if (this.currentEntityType === 'character') {
+      const parts: string[] = [];
+      const { world, clock } = context;
+
+      // Faction membership
+      if (world.hasStore('Membership')) {
+        const membership = world.getComponent(this.currentEntityId, 'Membership') as { factionId?: number | null; rank?: string } | undefined;
+        if (membership?.rank !== undefined) {
+          parts.push(membership.rank);
+        }
+      }
+
+      // Age approximation from current tick
+      if (clock.currentTick > 0) {
+        const year = Math.floor(clock.currentTick / 360) + 1;
+        parts.push(`Year ${year}`);
+      }
+
+      return parts.join('  |  ');
+    }
+
+    if (this.currentEntityType === 'faction') {
+      const { world } = context;
+      const parts: string[] = [];
+
+      if (world.hasStore('Government')) {
+        const gov = world.getComponent(this.currentEntityId, 'Government') as { governmentType?: string } | undefined;
+        if (gov?.governmentType !== undefined) {
+          parts.push(gov.governmentType);
+        }
+      }
+
+      if (world.hasStore('Territory')) {
+        const territory = world.getComponent(this.currentEntityId, 'Territory') as { totalPopulation?: number } | undefined;
+        if (territory?.totalPopulation !== undefined && territory.totalPopulation > 0) {
+          parts.push(`${territory.totalPopulation.toLocaleString()} souls`);
+        }
+      }
+
+      return parts.join('  |  ');
+    }
+
+    return '';
+  }
+
+  /**
+   * Convert tick to season string.
+   */
+  private tickToSeason(tick: number): string {
+    const month = Math.floor((tick % 360) / 30) + 1;
+    if (month >= 1 && month <= 3) return 'Winter';
+    if (month >= 4 && month <= 6) return 'Spring';
+    if (month >= 7 && month <= 9) return 'Summer';
+    return 'Autumn';
+  }
+
+  /**
+   * Render breadcrumb trail showing navigation path.
+   */
+  private renderBreadcrumbs(context: RenderContext, _maxWidth: number): string {
+    const canBack = this.historyIndex > 0;
+    const canForward = this.historyIndex < this.history.length - 1;
+
+    const backStr = canBack ? '{bold}< Back{/bold}' : '{#666666-fg}< Back{/}';
+    const fwdStr = canForward ? '{bold}Fwd >{/bold}' : '{#666666-fg}Fwd >{/}';
+
+    // Build breadcrumb segments from history
+    const segments: string[] = ['[World]'];
+    const startIdx = Math.max(0, this.historyIndex - 2);
+    for (let i = startIdx; i <= this.historyIndex; i++) {
+      const entry = this.history[i];
+      if (entry === undefined) continue;
+      const name = this.resolveHistoryEntryName(entry, context);
+      const truncated = name.length > 15 ? name.slice(0, 13) + '..' : name;
+      if (i === this.historyIndex) {
+        segments.push(`{bold}${truncated}{/bold}`);
+      } else {
+        segments.push(`{${ENTITY_NAME_COLOR}-fg}${truncated}{/}`);
+      }
+    }
+
+    // Truncate to max 4 segments
+    if (segments.length > 4) {
+      const kept = segments.slice(segments.length - 3);
+      segments.length = 0;
+      segments.push('...');
+      segments.push(...kept);
+    }
+
+    const trail = segments.join(' > ');
+    return `${backStr}   ${trail}   ${fwdStr}`;
+  }
+
+  /**
+   * Resolve a display name for a history entry.
+   */
+  private resolveHistoryEntryName(entry: NavigationEntry, context: RenderContext): string {
+    if (entry.entityType === 'event' && entry.eventId !== undefined) {
+      const event = context.eventLog.getById(entry.eventId);
+      if (event !== undefined) {
+        return this.formatter.getShortNarrative(event);
+      }
+      return `Event`;
+    }
+
+    if (entry.entityType === 'region' && entry.regionCoords !== undefined) {
+      return `(${entry.regionCoords.x},${entry.regionCoords.y})`;
+    }
+
+    const { world } = context;
+    if (world.hasStore('Status')) {
+      const status = world.getComponent(entry.entityId, 'Status') as { titles?: string[] } | undefined;
+      if (status?.titles !== undefined && status.titles.length > 0 && status.titles[0] !== undefined) {
+        return status.titles[0];
+      }
+    }
+
+    return `#${entry.entityId}`;
+  }
+
+  /**
+   * Render footer hint bar with context-sensitive controls.
+   */
+  private renderFooterHints(): string {
+    const maxSection = this.sections.length;
+    const sectionRange = maxSection > 0 ? `[1-${maxSection}]` : '';
+
+    let hints = `{#666666-fg}${sectionRange} Sections  [Bksp] Back  [o/r/t/d] Mode`;
+
+    switch (this.currentEntityType) {
+      case 'character':
+        hints += '  [g] Location';
+        break;
+      case 'faction':
+        hints += '  [g] Capital';
+        break;
+      case 'event':
+        hints += '  [g] Map';
+        break;
+      case 'region':
+      case 'location':
+        hints += '  [g] Map';
+        break;
+    }
+
+    hints += '{/}';
+    return hints;
   }
 
   /**

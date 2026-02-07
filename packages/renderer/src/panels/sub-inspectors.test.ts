@@ -11,12 +11,14 @@ import type { World, WorldClock, SpatialIndex, EntityId } from '@fws/core';
 interface MockWorldOverrides {
   hasStore?: (type: string) => boolean;
   getComponent?: (id: EntityId, type: string) => unknown;
+  getStore?: (type: string) => { getAll: () => Map<EntityId, unknown> };
 }
 
 function createMockWorld(overrides?: MockWorldOverrides): World {
   return {
     hasStore: overrides?.hasStore ?? (() => false),
     getComponent: overrides?.getComponent ?? (() => undefined),
+    getStore: overrides?.getStore ?? (() => ({ getAll: () => new Map() })),
   } as unknown as World;
 }
 
@@ -49,20 +51,47 @@ describe('LocationInspector', () => {
   });
 
   describe('getSections', () => {
-    it('returns 8 sections', () => {
-      expect(sections).toHaveLength(8);
+    it('returns 7 sections', () => {
+      expect(sections).toHaveLength(7);
     });
 
-    it('includes required sections', () => {
+    it('includes required section IDs', () => {
       const sectionIds = sections.map(s => s.id);
-      expect(sectionIds).toContain('overview');
-      expect(sectionIds).toContain('geography');
-      expect(sectionIds).toContain('demographics');
-      expect(sectionIds).toContain('economy');
-      expect(sectionIds).toContain('governance');
-      expect(sectionIds).toContain('military');
-      expect(sectionIds).toContain('structures');
-      expect(sectionIds).toContain('history');
+      expect(sectionIds).toContain('living-portrait');
+      expect(sectionIds).toContain('people-peoples');
+      expect(sectionIds).toContain('power-governance');
+      expect(sectionIds).toContain('trade-industry');
+      expect(sectionIds).toContain('walls-works');
+      expect(sectionIds).toContain('notable-souls');
+      expect(sectionIds).toContain('the-annals');
+    });
+
+    it('first 2 sections expanded by default', () => {
+      expect(sections[0]?.collapsed).toBe(false);
+      expect(sections[1]?.collapsed).toBe(false);
+    });
+
+    it('remaining sections collapsed by default', () => {
+      expect(sections[2]?.collapsed).toBe(true);
+      expect(sections[3]?.collapsed).toBe(true);
+      expect(sections[4]?.collapsed).toBe(true);
+      expect(sections[5]?.collapsed).toBe(true);
+      expect(sections[6]?.collapsed).toBe(true);
+    });
+
+    it('includes settlement type summary hint from context', () => {
+      const entityId = toEntityId(1);
+      const worldWithPop = {
+        hasStore: (type: string) => type === 'Population',
+        getComponent: (id: EntityId, type: string) => {
+          if (type === 'Population' && id === entityId) return { count: 5000 };
+          return undefined;
+        },
+        getStore: () => ({ getAll: () => new Map() }),
+      };
+      const ctx = createMockContext(worldWithPop);
+      const sects = inspector.getSections(entityId, ctx);
+      expect(sects[0]?.summaryHint).toBe('City');
     });
   });
 
@@ -75,42 +104,46 @@ describe('LocationInspector', () => {
       expect(lines.length).toBeGreaterThan(0);
     });
 
-    it('renders in relationships mode', () => {
+    it('renders in all modes without error', () => {
+      const entityId = toEntityId(1);
+      for (const mode of ['overview', 'relationships', 'timeline', 'details'] as const) {
+        const lines = inspector.render(entityId, context, sections, mode);
+        expect(lines).toBeInstanceOf(Array);
+        expect(lines.length).toBeGreaterThan(0);
+      }
+    });
+
+    it('renders relationships mode with Trade & Relations header', () => {
       const lines = inspector.render(toEntityId(1), context, sections, 'relationships');
-
-      expect(lines.some(l => l.includes('Trade') || l.includes('Relations'))).toBe(true);
+      expect(lines.some(l => l.includes('Trade') && l.includes('Relations'))).toBe(true);
     });
 
-    it('renders in timeline mode', () => {
+    it('renders timeline mode with Settlement Timeline header', () => {
       const lines = inspector.render(toEntityId(1), context, sections, 'timeline');
-
-      expect(lines.some(l => l.includes('Timeline'))).toBe(true);
+      expect(lines.some(l => l.includes('Settlement Timeline'))).toBe(true);
     });
 
-    it('renders in details mode', () => {
+    it('renders details mode with Full Settlement Details', () => {
       const lines = inspector.render(toEntityId(1), context, sections, 'details');
-
-      expect(lines.some(l => l.includes('Full Details'))).toBe(true);
+      expect(lines.some(l => l.includes('Full Settlement Details'))).toBe(true);
     });
   });
 
-  describe('overview section', () => {
-    it('displays settlement name from Status', () => {
+  describe('living portrait section', () => {
+    it('displays settlement name from Status via ruling faction', () => {
       const entityId = toEntityId(1);
-      const worldWithStatus = {
-        hasStore: (type: string) => type === 'Status',
+      const worldWithOwnership = {
+        hasStore: (type: string) => type === 'Ownership' || type === 'Status',
         getComponent: (id: EntityId, type: string) => {
-          if (type === 'Status' && id === entityId) {
-            return { titles: ['Ironforge'] };
-          }
+          if (type === 'Ownership' && id === entityId) return { ownerId: 99 };
+          if (type === 'Status' && (id as unknown as number) === 99) return { titles: ['Iron Confederacy'] };
           return undefined;
         },
+        getStore: () => ({ getAll: () => new Map() }),
       };
-      const ctx = createMockContext(worldWithStatus);
-
+      const ctx = createMockContext(worldWithOwnership);
       const lines = inspector.render(entityId, ctx, sections, 'overview');
-
-      expect(lines.some(l => l.includes('Ironforge'))).toBe(true);
+      expect(lines.some(l => l.includes('Iron Confederacy'))).toBe(true);
     });
 
     it('displays population with size category', () => {
@@ -123,44 +156,47 @@ describe('LocationInspector', () => {
           }
           return undefined;
         },
+        getStore: () => ({ getAll: () => new Map() }),
       };
       const ctx = createMockContext(worldWithPopulation);
-
       const lines = inspector.render(entityId, ctx, sections, 'overview');
 
-      // Check for population value - locale may format differently
       expect(lines.some(l => l.includes('Population') && l.includes('5'))).toBe(true);
       expect(lines.some(l => l.includes('City') || l.includes('Town'))).toBe(true);
     });
-  });
 
-  describe('geography section', () => {
-    it('displays position and biome', () => {
+    it('displays biome context', () => {
       const entityId = toEntityId(1);
-      const worldWithGeo = {
-        hasStore: (type: string) => ['Position', 'Biome'].includes(type),
+      const worldWithBiome = {
+        hasStore: (type: string) => type === 'Biome',
         getComponent: (id: EntityId, type: string) => {
-          if (id === entityId) {
-            if (type === 'Position') return { x: 10, y: 20 };
-            if (type === 'Biome') return { biomeType: 'Forest', fertility: 70, moisture: 60 };
-          }
+          if (type === 'Biome' && id === entityId) return { biomeType: 'Forest' };
           return undefined;
         },
+        getStore: () => ({ getAll: () => new Map() }),
       };
-      const ctx = createMockContext(worldWithGeo);
+      const ctx = createMockContext(worldWithBiome);
+      const lines = inspector.render(entityId, ctx, sections, 'overview');
+      expect(lines.some(l => l.includes('forest'))).toBe(true);
+    });
 
-      const expandedSections = sections.map(s =>
-        s.id === 'geography' ? { ...s, collapsed: false } : s
-      );
-
-      const lines = inspector.render(entityId, ctx, expandedSections, 'overview');
-
+    it('displays coordinates', () => {
+      const entityId = toEntityId(1);
+      const worldWithPos = {
+        hasStore: (type: string) => type === 'Position',
+        getComponent: (id: EntityId, type: string) => {
+          if (type === 'Position' && id === entityId) return { x: 10, y: 20 };
+          return undefined;
+        },
+        getStore: () => ({ getAll: () => new Map() }),
+      };
+      const ctx = createMockContext(worldWithPos);
+      const lines = inspector.render(entityId, ctx, sections, 'overview');
       expect(lines.some(l => l.includes('10') && l.includes('20'))).toBe(true);
-      expect(lines.some(l => l.includes('Forest'))).toBe(true);
     });
   });
 
-  describe('economy section', () => {
+  describe('trade & industry section', () => {
     it('displays wealth and industries', () => {
       const entityId = toEntityId(1);
       const worldWithEconomy = {
@@ -171,13 +207,13 @@ describe('LocationInspector', () => {
           }
           return undefined;
         },
+        getStore: () => ({ getAll: () => new Map() }),
       };
       const ctx = createMockContext(worldWithEconomy);
 
       const expandedSections = sections.map(s =>
-        s.id === 'economy' ? { ...s, collapsed: false } : s
+        s.id === 'trade-industry' ? { ...s, collapsed: false } : s
       );
-
       const lines = inspector.render(entityId, ctx, expandedSections, 'overview');
 
       expect(lines.some(l => l.includes('Mining'))).toBe(true);
@@ -185,7 +221,7 @@ describe('LocationInspector', () => {
     });
   });
 
-  describe('military section', () => {
+  describe('walls & works section', () => {
     it('displays garrison and fortifications', () => {
       const entityId = toEntityId(1);
       const worldWithMilitary = {
@@ -197,17 +233,78 @@ describe('LocationInspector', () => {
           }
           return undefined;
         },
+        getStore: () => ({ getAll: () => new Map() }),
       };
       const ctx = createMockContext(worldWithMilitary);
 
       const expandedSections = sections.map(s =>
-        s.id === 'military' ? { ...s, collapsed: false } : s
+        s.id === 'walls-works' ? { ...s, collapsed: false } : s
       );
-
       const lines = inspector.render(entityId, ctx, expandedSections, 'overview');
 
       expect(lines.some(l => l.includes('500'))).toBe(true);
       expect(lines.some(l => l.includes('Stone') || l.includes('Level 3'))).toBe(true);
+    });
+  });
+
+  describe('notable souls section', () => {
+    it('shows characters at the same location', () => {
+      const entityId = toEntityId(1);
+      const charId = toEntityId(10);
+      const positionStore = new Map<EntityId, unknown>();
+      positionStore.set(entityId, { x: 5, y: 5 });
+      positionStore.set(charId, { x: 5, y: 5 });
+
+      const worldWithChars = {
+        hasStore: (type: string) => type === 'Position' || type === 'Attribute' || type === 'Status',
+        getComponent: (id: EntityId, type: string) => {
+          if (type === 'Position') {
+            if (id === entityId) return { x: 5, y: 5 };
+            if (id === charId) return { x: 5, y: 5 };
+          }
+          if (type === 'Attribute' && id === charId) return { strength: 10 };
+          if (type === 'Status' && id === charId) return { titles: ['Gandalf the Grey'] };
+          return undefined;
+        },
+        getStore: (type: string) => {
+          if (type === 'Position') return { getAll: () => positionStore };
+          return { getAll: () => new Map() };
+        },
+      };
+      const ctx = createMockContext(worldWithChars);
+
+      const expandedSections = sections.map(s =>
+        s.id === 'notable-souls' ? { ...s, collapsed: false } : s
+      );
+      const lines = inspector.render(entityId, ctx, expandedSections, 'overview');
+      expect(lines.some(l => l.includes('Gandalf the Grey'))).toBe(true);
+    });
+
+    it('shows no inhabitants message when empty', () => {
+      const expandedSections = sections.map(s =>
+        s.id === 'notable-souls' ? { ...s, collapsed: false } : s
+      );
+      const lines = inspector.render(toEntityId(1), context, expandedSections, 'overview');
+      expect(lines.some(l => l.includes('No notable inhabitants'))).toBe(true);
+    });
+  });
+
+  describe('entity span tracking', () => {
+    it('provides an entity span map', () => {
+      const spans = inspector.getEntitySpans();
+      expect(spans).toBeInstanceOf(Map);
+    });
+
+    it('resets spans on each render', () => {
+      inspector.render(toEntityId(1), context, sections, 'overview');
+      const spans1 = inspector.getEntitySpans();
+
+      inspector.render(toEntityId(1), context, sections, 'overview');
+      const spans2 = inspector.getEntitySpans();
+
+      expect(spans2).toBeInstanceOf(Map);
+      // Should be a fresh map (different reference)
+      expect(spans1).not.toBe(spans2);
     });
   });
 });
@@ -224,21 +321,60 @@ describe('FactionInspector', () => {
   });
 
   describe('getSections', () => {
-    it('returns 9 sections', () => {
-      expect(sections).toHaveLength(9);
+    it('returns 8 sections', () => {
+      expect(sections).toHaveLength(8);
     });
 
-    it('includes required sections', () => {
+    it('includes required section IDs', () => {
       const sectionIds = sections.map(s => s.id);
-      expect(sectionIds).toContain('overview');
-      expect(sectionIds).toContain('heraldry');
-      expect(sectionIds).toContain('government');
-      expect(sectionIds).toContain('territory');
-      expect(sectionIds).toContain('military');
-      expect(sectionIds).toContain('diplomacy');
-      expect(sectionIds).toContain('economy');
-      expect(sectionIds).toContain('leadership');
-      expect(sectionIds).toContain('history');
+      expect(sectionIds).toContain('rise-reign');
+      expect(sectionIds).toContain('banner-creed');
+      expect(sectionIds).toContain('court-council');
+      expect(sectionIds).toContain('lands-holdings');
+      expect(sectionIds).toContain('swords-shields');
+      expect(sectionIds).toContain('alliances-enmities');
+      expect(sectionIds).toContain('coffers-commerce');
+      expect(sectionIds).toContain('chronicles');
+    });
+
+    it('first 3 sections expanded by default', () => {
+      expect(sections[0]?.collapsed).toBe(false);
+      expect(sections[1]?.collapsed).toBe(false);
+      expect(sections[2]?.collapsed).toBe(false);
+    });
+
+    it('remaining sections collapsed by default', () => {
+      expect(sections[3]?.collapsed).toBe(true);
+      expect(sections[4]?.collapsed).toBe(true);
+      expect(sections[5]?.collapsed).toBe(true);
+      expect(sections[6]?.collapsed).toBe(true);
+      expect(sections[7]?.collapsed).toBe(true);
+    });
+
+    it('includes summary hints from context data', () => {
+      const entityId = toEntityId(1);
+      const worldWithData = {
+        hasStore: (type: string) => ['Origin', 'Territory', 'Military', 'Diplomacy', 'Economy', 'Hierarchy'].includes(type),
+        getComponent: (id: EntityId, type: string) => {
+          if (id !== entityId) return undefined;
+          if (type === 'Origin') return { foundingTick: 360 }; // Year 2 -> age = 0 at tick 360
+          if (type === 'Territory') return { controlledRegions: [1, 2, 3] };
+          if (type === 'Military') return { strength: 5000 };
+          if (type === 'Diplomacy') return { relations: new Map([[2, 50], [3, -60]]) };
+          if (type === 'Economy') return { wealth: 14200 };
+          if (type === 'Hierarchy') return { leaderId: 100 };
+          return undefined;
+        },
+        getStore: () => ({ getAll: () => new Map() }),
+      };
+      const ctx = createMockContext(worldWithData);
+      const sects = inspector.getSections(entityId, ctx);
+
+      expect(sects[3]?.summaryHint).toBe('3 regions');
+      expect(sects[4]?.summaryHint).toContain('5');
+      expect(sects[4]?.summaryHint).toContain('strong');
+      expect(sects[5]?.summaryHint).toBe('2 relations');
+      expect(sects[6]?.summaryHint).toContain('gold');
     });
   });
 
@@ -252,9 +388,24 @@ describe('FactionInspector', () => {
         expect(lines.length).toBeGreaterThan(0);
       }
     });
+
+    it('renders relationships mode with Diplomatic Relations header', () => {
+      const lines = inspector.render(toEntityId(1), context, sections, 'relationships');
+      expect(lines.some(l => l.includes('Diplomatic Relations'))).toBe(true);
+    });
+
+    it('renders timeline mode with Faction History header', () => {
+      const lines = inspector.render(toEntityId(1), context, sections, 'timeline');
+      expect(lines.some(l => l.includes('Faction History'))).toBe(true);
+    });
+
+    it('renders details mode with Full Faction Details', () => {
+      const lines = inspector.render(toEntityId(1), context, sections, 'details');
+      expect(lines.some(l => l.includes('Full Faction Details'))).toBe(true);
+    });
   });
 
-  describe('government section', () => {
+  describe('rise & reign section', () => {
     it('displays government type and stability', () => {
       const entityId = toEntityId(1);
       const worldWithGov = {
@@ -265,22 +416,42 @@ describe('FactionInspector', () => {
           }
           return undefined;
         },
+        getStore: () => ({ getAll: () => new Map() }),
       };
       const ctx = createMockContext(worldWithGov);
 
-      const expandedSections = sections.map(s =>
-        s.id === 'government' ? { ...s, collapsed: false } : s
-      );
-
-      const lines = inspector.render(entityId, ctx, expandedSections, 'overview');
+      const lines = inspector.render(entityId, ctx, sections, 'overview');
 
       expect(lines.some(l => l.includes('Monarchy'))).toBe(true);
       expect(lines.some(l => l.includes('Stability'))).toBe(true);
     });
+
+    it('displays founding prose with age', () => {
+      const entityId = toEntityId(1);
+      const worldWithOrigin = {
+        hasStore: (type: string) => type === 'Origin' || type === 'Status',
+        getComponent: (id: EntityId, type: string) => {
+          if (id !== entityId) return undefined;
+          if (type === 'Origin') return { foundingTick: 0, founderId: 50 };
+          if (type === 'Status') {
+            return { titles: ['Iron Confederacy'] };
+          }
+          return undefined;
+        },
+        getStore: () => ({ getAll: () => new Map() }),
+      };
+      const ctx = createMockContext(worldWithOrigin);
+
+      const lines = inspector.render(entityId, ctx, sections, 'overview');
+
+      expect(lines.some(l => l.includes('Iron Confederacy'))).toBe(true);
+      expect(lines.some(l => l.includes('Year 1'))).toBe(true);
+      expect(lines.some(l => l.includes('endured'))).toBe(true);
+    });
   });
 
-  describe('territory section', () => {
-    it('displays controlled regions', () => {
+  describe('lands & holdings section', () => {
+    it('displays controlled regions and capital', () => {
       const entityId = toEntityId(1);
       const worldWithTerritory = {
         hasStore: (type: string) => type === 'Territory',
@@ -290,71 +461,168 @@ describe('FactionInspector', () => {
           }
           return undefined;
         },
+        getStore: () => ({ getAll: () => new Map() }),
       };
       const ctx = createMockContext(worldWithTerritory);
 
       const expandedSections = sections.map(s =>
-        s.id === 'territory' ? { ...s, collapsed: false } : s
+        s.id === 'lands-holdings' ? { ...s, collapsed: false } : s
       );
-
       const lines = inspector.render(entityId, ctx, expandedSections, 'overview');
 
       expect(lines.some(l => l.includes('Capital'))).toBe(true);
       expect(lines.some(l => l.includes('Controlled Regions'))).toBe(true);
+      expect(lines.some(l => l.includes('5 regions'))).toBe(true);
     });
   });
 
-  describe('diplomacy section', () => {
-    it('displays relations with labels', () => {
+  describe('alliances & enmities section', () => {
+    it('categorizes relations into ALLIES, ENEMIES, NEUTRAL', () => {
       const entityId = toEntityId(1);
       const worldWithDiplomacy = {
         hasStore: (type: string) => type === 'Diplomacy',
         getComponent: (id: EntityId, type: string) => {
           if (type === 'Diplomacy' && id === entityId) {
             return {
-              relations: new Map([[2, 80], [3, -60]]),
+              relations: new Map([[2, 80], [3, -60], [4, 10]]),
               treaties: ['Trade Agreement with #2'],
             };
           }
           return undefined;
         },
+        getStore: () => ({ getAll: () => new Map() }),
       };
       const ctx = createMockContext(worldWithDiplomacy);
 
       const expandedSections = sections.map(s =>
-        s.id === 'diplomacy' ? { ...s, collapsed: false } : s
+        s.id === 'alliances-enmities' ? { ...s, collapsed: false } : s
       );
-
       const lines = inspector.render(entityId, ctx, expandedSections, 'overview');
 
-      expect(lines.some(l => l.includes('Allied') || l.includes('Friendly'))).toBe(true);
-      expect(lines.some(l => l.includes('Hostile') || l.includes('Unfriendly'))).toBe(true);
+      expect(lines.some(l => l.includes('ALLIES'))).toBe(true);
+      expect(lines.some(l => l.includes('ENEMIES'))).toBe(true);
+      expect(lines.some(l => l.includes('NEUTRAL'))).toBe(true);
       expect(lines.some(l => l.includes('Treaties'))).toBe(true);
+    });
+
+    it('uses diplomacy labels from shared prose', () => {
+      const entityId = toEntityId(1);
+      const worldWithDiplomacy = {
+        hasStore: (type: string) => type === 'Diplomacy',
+        getComponent: (id: EntityId, type: string) => {
+          if (type === 'Diplomacy' && id === entityId) {
+            return {
+              relations: new Map([[2, 80], [3, -80]]),
+            };
+          }
+          return undefined;
+        },
+        getStore: () => ({ getAll: () => new Map() }),
+      };
+      const ctx = createMockContext(worldWithDiplomacy);
+
+      const expandedSections = sections.map(s =>
+        s.id === 'alliances-enmities' ? { ...s, collapsed: false } : s
+      );
+      const lines = inspector.render(entityId, ctx, expandedSections, 'overview');
+
+      expect(lines.some(l => l.includes('Allied'))).toBe(true);
+      expect(lines.some(l => l.includes('Hostile'))).toBe(true);
     });
   });
 
-  describe('leadership section', () => {
+  describe('court & council section', () => {
     it('displays leader and subordinates', () => {
       const entityId = toEntityId(1);
       const worldWithHierarchy = {
-        hasStore: (type: string) => type === 'Hierarchy',
+        hasStore: (type: string) => type === 'Hierarchy' || type === 'Status',
         getComponent: (id: EntityId, type: string) => {
           if (type === 'Hierarchy' && id === entityId) {
             return { leaderId: 100, subordinateIds: [101, 102, 103] };
           }
+          if (type === 'Status' && (id as unknown as number) === 100) {
+            return { titles: ['Thorin Ironhand'] };
+          }
           return undefined;
         },
+        getStore: () => ({ getAll: () => new Map() }),
       };
       const ctx = createMockContext(worldWithHierarchy);
 
-      const expandedSections = sections.map(s =>
-        s.id === 'leadership' ? { ...s, collapsed: false } : s
-      );
+      const lines = inspector.render(entityId, ctx, sections, 'overview');
 
+      expect(lines.some(l => l.includes('Thorin Ironhand'))).toBe(true);
+      expect(lines.some(l => l.includes('Leader'))).toBe(true);
+    });
+  });
+
+  describe('coffers & commerce section', () => {
+    it('displays economic prose and treasury', () => {
+      const entityId = toEntityId(1);
+      const worldWithEconomy = {
+        hasStore: (type: string) => type === 'Economy',
+        getComponent: (id: EntityId, type: string) => {
+          if (type === 'Economy' && id === entityId) {
+            return { wealth: 20000, industries: ['Mining', 'Smithing'] };
+          }
+          return undefined;
+        },
+        getStore: () => ({ getAll: () => new Map() }),
+      };
+      const ctx = createMockContext(worldWithEconomy);
+
+      const expandedSections = sections.map(s =>
+        s.id === 'coffers-commerce' ? { ...s, collapsed: false } : s
+      );
       const lines = inspector.render(entityId, ctx, expandedSections, 'overview');
 
-      expect(lines.some(l => l.includes('Leader') && l.includes('100'))).toBe(true);
-      expect(lines.some(l => l.includes('Council') || l.includes('Subordinates'))).toBe(true);
+      expect(lines.some(l => l.includes('Treasury'))).toBe(true);
+      expect(lines.some(l => l.includes('Mining'))).toBe(true);
+      expect(lines.some(l => l.includes('Smithing'))).toBe(true);
+    });
+  });
+
+  describe('swords & shields section', () => {
+    it('displays military prose and strength', () => {
+      const entityId = toEntityId(1);
+      const worldWithMilitary = {
+        hasStore: (type: string) => type === 'Military',
+        getComponent: (id: EntityId, type: string) => {
+          if (type === 'Military' && id === entityId) {
+            return { strength: 12000, morale: 78, training: 85 };
+          }
+          return undefined;
+        },
+        getStore: () => ({ getAll: () => new Map() }),
+      };
+      const ctx = createMockContext(worldWithMilitary);
+
+      const expandedSections = sections.map(s =>
+        s.id === 'swords-shields' ? { ...s, collapsed: false } : s
+      );
+      const lines = inspector.render(entityId, ctx, expandedSections, 'overview');
+
+      expect(lines.some(l => l.includes('12') && l.includes('000'))).toBe(true);
+      expect(lines.some(l => l.includes('Morale'))).toBe(true);
+      expect(lines.some(l => l.includes('Training'))).toBe(true);
+    });
+  });
+
+  describe('entity span tracking', () => {
+    it('provides an entity span map', () => {
+      const spans = inspector.getEntitySpans();
+      expect(spans).toBeInstanceOf(Map);
+    });
+
+    it('resets spans on each render', () => {
+      inspector.render(toEntityId(1), context, sections, 'overview');
+      const spans1 = inspector.getEntitySpans();
+
+      inspector.render(toEntityId(1), context, sections, 'overview');
+      const spans2 = inspector.getEntitySpans();
+
+      expect(spans2).toBeInstanceOf(Map);
+      expect(spans1).not.toBe(spans2);
     });
   });
 });

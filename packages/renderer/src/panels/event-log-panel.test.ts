@@ -5,7 +5,7 @@ import { MockScreen, createMockBoxFactory } from '../panel.js';
 import type { RenderContext } from '../types.js';
 import { PanelId } from '../types.js';
 import { EventCategory, EventLog, EventBus, toEntityId, toEventId, toSiteId } from '@fws/core';
-import type { WorldEvent, World, WorldClock, SpatialIndex, EntityId } from '@fws/core';
+import type { WorldEvent, World, WorldClock, SpatialIndex, EntityId, EventId } from '@fws/core';
 
 // Helper to create mock events
 function createMockEvent(id: number, overrides: Partial<WorldEvent> = {}): WorldEvent {
@@ -437,7 +437,21 @@ describe('EventLogPanel', () => {
       expect(calledX).toBe(42);
     });
 
-    it('calls inspect entity handler', () => {
+    it('calls inspect event handler on Enter', () => {
+      let inspectedEventId: EventId | undefined;
+      panel.setInspectEventHandler((eventId) => {
+        inspectedEventId = eventId;
+      });
+
+      const event = createMockEvent(1, { participants: [toEntityId(99)] });
+      panel.addEvent(event);
+      panel.handleInput('down');
+      panel.handleInput('enter');
+
+      expect(inspectedEventId).toBe(event.id);
+    });
+
+    it('calls inspect entity handler on i key', () => {
       let inspectedId: EntityId | undefined;
       panel.setInspectEntityHandler((entityId) => {
         inspectedId = entityId;
@@ -445,9 +459,37 @@ describe('EventLogPanel', () => {
 
       panel.addEvent(createMockEvent(1, { participants: [toEntityId(99)] }));
       panel.handleInput('down');
-      panel.handleInput('enter');
+      panel.handleInput('i');
 
       expect(inspectedId).toBe(toEntityId(99));
+    });
+
+    it('click on already-selected event triggers event inspection', () => {
+      let inspectedEventId: EventId | undefined;
+      panel.setInspectEventHandler((eventId) => {
+        inspectedEventId = eventId;
+      });
+
+      const event1 = createMockEvent(1, { participants: [toEntityId(99)] });
+      const event2 = createMockEvent(2, { participants: [toEntityId(100)] });
+      panel.addEvent(event1);
+      panel.addEvent(event2);
+
+      // First click on row 0 selects event1 (autoScroll moved selection to last event)
+      panel.handleClick(0, 0);
+      expect(inspectedEventId).toBeUndefined();
+
+      // Second click on same row (event1 already selected) triggers inspection
+      panel.handleClick(0, 0);
+      expect(inspectedEventId).toBe(event1.id);
+    });
+
+    it('Enter without inspect event handler does not throw', () => {
+      panel.addEvent(createMockEvent(1));
+      panel.handleInput('down');
+
+      // No handler set, should not throw
+      expect(() => panel.handleInput('enter')).not.toThrow();
     });
   });
 

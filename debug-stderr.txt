@@ -1,0 +1,8 @@
+[DIAG] TERM=xterm-256color
+[DIAG] COLORTERM=truecolor
+[DIAG] process.stdout.columns=undefined, rows=undefined, isTTY=undefined
+[DIAG] screen.width=1, screen.height=1
+[DIAG] program.cols=1, program.rows=1
+[DIAG] program.output.columns=undefined, rows=undefined, isTTY=undefined
+[DIAG] tput.colors=256, tput.numbers.max_colors=256
+[DIAG] AFTER FIX: program.cols=80, program.rows=24, screen.width=80, screen.height=24

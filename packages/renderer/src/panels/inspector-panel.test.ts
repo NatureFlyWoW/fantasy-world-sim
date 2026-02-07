@@ -344,7 +344,7 @@ describe('InspectorPanel', () => {
 
       const sections = panel.getSections();
       expect(sections.length).toBeGreaterThan(0);
-      expect(sections.some(s => s.id === 'attributes')).toBe(true);
+      expect(sections.some(s => s.id === 'story-so-far')).toBe(true);
     });
 
     it('toggles section collapsed state', () => {
@@ -363,7 +363,7 @@ describe('InspectorPanel', () => {
       panel.inspect(entityId, ctx);
 
       const initialState = panel.getSections()[0]?.collapsed;
-      panel.toggleSection('header');
+      panel.toggleSection('story-so-far');
       const newState = panel.getSections()[0]?.collapsed;
 
       expect(newState).toBe(!initialState);

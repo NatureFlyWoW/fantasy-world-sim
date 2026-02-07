@@ -23,6 +23,7 @@ export type {
   EventSelectionHandler,
   GoToLocationHandler,
   InspectEntityHandler,
+  InspectEventHandler,
 } from './event-log-panel.js';
 
 // Inspector panel
@@ -33,6 +34,7 @@ export {
 export type {
   InspectableEntityType,
   HistoryEntry,
+  NavigationEntry,
   InspectorMode,
   InspectorSection,
 } from './inspector-panel.js';
@@ -42,6 +44,39 @@ export { CharacterInspector } from './character-inspector.js';
 export { LocationInspector } from './location-inspector.js';
 export { FactionInspector } from './faction-inspector.js';
 export { ArtifactInspector } from './artifact-inspector.js';
+export { EventInspector } from './event-inspector.js';
+export { RegionInspector } from './region-inspector.js';
+
+// Inspector prose utilities
+export {
+  HEALTH_PROSE,
+  PERSONALITY_AXIS,
+  SETTLEMENT_SIZE_PROSE,
+  RELATION_CATEGORY_PROSE,
+  MILITARY_PROSE,
+  ECONOMIC_PROSE,
+  SIGNIFICANCE_LABELS,
+  getHealthState,
+  getPersonalityDescriptor,
+  getSettlementSize,
+  getSignificanceLabel,
+  getDiplomacyLabel,
+  getEconomicState,
+  getMilitaryState,
+  renderBar,
+  renderEntityName,
+  renderDottedLeader,
+  stripTags,
+  wrapText,
+  tickToYear,
+  tickToSeason,
+  createEntitySpanMap,
+  addEntitySpan,
+  findEntityAtPosition,
+  TYPE_ICONS,
+  TYPE_COLORS,
+} from './inspector-prose.js';
+export type { EntitySpan, EntitySpanMap } from './inspector-prose.js';
 
 // Graph layout and rendering
 export {

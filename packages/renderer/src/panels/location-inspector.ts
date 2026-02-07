@@ -1,37 +1,132 @@
 /**
- * Location Inspector - renders detailed settlement/site information.
- * Provides sections: overview, geography, demographics, economy, governance, military, structures, history.
+ * Location (Site) Inspector - renders detailed settlement/site information with prose-first design.
+ * Provides 7 sections: A Living Portrait, People & Peoples, Power & Governance,
+ * Trade & Industry, Walls & Works, Notable Souls, The Annals.
  */
 
 import type { EntityId } from '@fws/core';
 import type { RenderContext } from '../types.js';
 import type { InspectorSection, InspectorMode } from './inspector-panel.js';
+import {
+  DIM_COLOR,
+  SETTLEMENT_SIZE_PROSE,
+  ECONOMIC_PROSE,
+  renderEntityName,
+  renderBar,
+  getSettlementSize,
+  getEconomicState,
+  tickToYear,
+  tickToSeason,
+  getSignificanceLabel,
+  createEntitySpanMap,
+} from './inspector-prose.js';
+import type { EntitySpanMap } from './inspector-prose.js';
 
 /**
- * Bar rendering constants.
+ * Fortification level prose.
  */
-const BAR_WIDTH = 20;
-const FILLED_BLOCK = '█';
-const EMPTY_BLOCK = '░';
+const FORTIFICATION_PROSE: Readonly<Record<string, string>> = {
+  None: 'The settlement lies open and undefended',
+  Palisade: 'A wooden palisade offers modest protection against raiders',
+  'Wooden Walls': 'Sturdy wooden walls encircle the settlement',
+  'Stone Walls': 'Solid stone walls stand guard over the approaches',
+  'Fortified Walls': 'Thick fortified walls bristle with towers and battlements',
+  Castle: 'A mighty castle dominates the skyline, its defenses virtually impregnable',
+};
 
 /**
- * Location inspector sub-component.
+ * Location inspector sub-component with prose-first rendering.
  */
 export class LocationInspector {
+  private entitySpans: EntitySpanMap = createEntitySpanMap();
+
   /**
    * Get available sections for location inspection.
    */
-  getSections(): InspectorSection[] {
+  getSections(entityId?: EntityId, context?: RenderContext): InspectorSection[] {
+    let settlementType = '';
+    let popHint = '';
+    let rulerHint = '';
+    let wealthHint = '';
+    let fortHint = '';
+    let charCount = 0;
+    let eventCount = 0;
+
+    if (entityId !== undefined && context !== undefined) {
+      const { world } = context;
+
+      // Population and size
+      if (world.hasStore('Population')) {
+        const pop = world.getComponent(entityId, 'Population') as { count?: number } | undefined;
+        if (pop?.count !== undefined) {
+          settlementType = getSettlementSize(pop.count);
+          popHint = `${pop.count.toLocaleString()} souls`;
+        }
+      }
+
+      // Ruler/faction
+      if (world.hasStore('Ownership')) {
+        const ownership = world.getComponent(entityId, 'Ownership') as { ownerId?: number | null } | undefined;
+        if (ownership?.ownerId !== undefined && ownership.ownerId !== null) {
+          rulerHint = this.resolveEntityName(ownership.ownerId as unknown as EntityId, context);
+        }
+      }
+
+      // Wealth
+      if (world.hasStore('Economy')) {
+        const economy = world.getComponent(entityId, 'Economy') as { wealth?: number } | undefined;
+        if (economy?.wealth !== undefined) {
+          const state = getEconomicState(economy.wealth);
+          const econProse = ECONOMIC_PROSE[state];
+          wealthHint = econProse !== undefined ? state.charAt(0).toUpperCase() + state.slice(1) : '';
+        }
+      }
+
+      // Fortification
+      if (world.hasStore('Structures')) {
+        const structures = world.getComponent(entityId, 'Structures') as { fortificationLevel?: number } | undefined;
+        if (structures?.fortificationLevel !== undefined) {
+          fortHint = this.getFortificationName(structures.fortificationLevel);
+        }
+      }
+
+      // Notable characters (count entities at this position)
+      if (world.hasStore('Position')) {
+        const pos = world.getComponent(entityId, 'Position') as { x?: number; y?: number } | undefined;
+        if (pos?.x !== undefined && pos.y !== undefined) {
+          const posStore = world.getStore('Position') as unknown as { getAll: () => Map<EntityId, { x?: number; y?: number }> } | undefined;
+          if (posStore !== undefined) {
+            for (const [eid, ePos] of posStore.getAll()) {
+              if (eid !== entityId && ePos.x === pos.x && ePos.y === pos.y) {
+                if (world.hasStore('Attribute') && world.getComponent(eid, 'Attribute') !== undefined) {
+                  charCount++;
+                }
+              }
+            }
+          }
+        }
+      }
+
+      // Event count
+      eventCount = context.eventLog.getByEntity(entityId).length;
+    }
+
     return [
-      { id: 'overview', title: 'Overview', collapsed: false },
-      { id: 'geography', title: 'Geography', collapsed: false },
-      { id: 'demographics', title: 'Demographics', collapsed: true },
-      { id: 'economy', title: 'Economy', collapsed: true },
-      { id: 'governance', title: 'Governance', collapsed: true },
-      { id: 'military', title: 'Military', collapsed: true },
-      { id: 'structures', title: 'Structures', collapsed: true },
-      { id: 'history', title: 'History', collapsed: true },
+      { id: 'living-portrait', title: 'A Living Portrait', collapsed: false, ...(settlementType.length > 0 ? { summaryHint: settlementType } : {}) },
+      { id: 'people-peoples', title: 'People & Peoples', collapsed: false, ...(popHint.length > 0 ? { summaryHint: popHint } : {}) },
+      { id: 'power-governance', title: 'Power & Governance', collapsed: true, ...(rulerHint.length > 0 ? { summaryHint: rulerHint } : {}) },
+      { id: 'trade-industry', title: 'Trade & Industry', collapsed: true, ...(wealthHint.length > 0 ? { summaryHint: wealthHint } : {}) },
+      { id: 'walls-works', title: 'Walls & Works', collapsed: true, ...(fortHint.length > 0 ? { summaryHint: fortHint } : {}) },
+      { id: 'notable-souls', title: 'Notable Souls', collapsed: true, ...(charCount > 0 ? { summaryHint: `${charCount} characters` } : {}) },
+      { id: 'the-annals', title: 'The Annals', collapsed: true, ...(eventCount > 0 ? { summaryHint: `${eventCount} events` } : {}) },
     ];
+  }
+
+  /**
+   * Get entity span map for click detection.
+   */
+  getEntitySpans(): EntitySpanMap {
+    return this.entitySpans;
   }
 
   /**
@@ -43,6 +138,7 @@ export class LocationInspector {
     sections: readonly InspectorSection[],
     mode: InspectorMode
   ): string[] {
+    this.entitySpans = createEntitySpanMap();
     const lines: string[] = [];
 
     switch (mode) {
@@ -77,13 +173,14 @@ export class LocationInspector {
       const section = sections[i];
       if (section === undefined) continue;
 
-      const indicator = section.collapsed ? '▶' : '▼';
+      const indicator = section.collapsed ? '>' : 'v';
       const num = i + 1;
-      lines.push(`${indicator} [${num}] ${section.title}`);
+      const hint = section.summaryHint !== undefined ? `  {${DIM_COLOR}-fg}${section.summaryHint}{/}` : '';
+      lines.push(`  ${indicator} [${num}] ${section.title}${hint}`);
 
       if (!section.collapsed) {
         const content = this.renderSection(section.id, entityId, context);
-        lines.push(...content.map(line => `  ${line}`));
+        lines.push(...content.map(line => `    ${line}`));
         lines.push('');
       }
     }
@@ -96,151 +193,103 @@ export class LocationInspector {
    */
   private renderSection(sectionId: string, entityId: EntityId, context: RenderContext): string[] {
     switch (sectionId) {
-      case 'overview':
-        return this.renderOverviewSection(entityId, context);
-      case 'geography':
-        return this.renderGeography(entityId, context);
-      case 'demographics':
-        return this.renderDemographics(entityId, context);
-      case 'economy':
-        return this.renderEconomy(entityId, context);
-      case 'governance':
-        return this.renderGovernance(entityId, context);
-      case 'military':
-        return this.renderMilitary(entityId, context);
-      case 'structures':
-        return this.renderStructures(entityId, context);
-      case 'history':
-        return this.renderHistory(entityId, context);
+      case 'living-portrait':
+        return this.renderLivingPortrait(entityId, context);
+      case 'people-peoples':
+        return this.renderPeoplePeoples(entityId, context);
+      case 'power-governance':
+        return this.renderPowerGovernance(entityId, context);
+      case 'trade-industry':
+        return this.renderTradeIndustry(entityId, context);
+      case 'walls-works':
+        return this.renderWallsWorks(entityId, context);
+      case 'notable-souls':
+        return this.renderNotableSouls(entityId, context);
+      case 'the-annals':
+        return this.renderTheAnnals(entityId, context);
       default:
         return ['Unknown section'];
     }
   }
 
-  /**
-   * Render overview section with basic info.
-   */
-  private renderOverviewSection(entityId: EntityId, context: RenderContext): string[] {
+  // ─── Section 1: A Living Portrait ─────────────────────────────────
+
+  private renderLivingPortrait(entityId: EntityId, context: RenderContext): string[] {
     const { world } = context;
     const lines: string[] = [];
 
-    // Get status for name
-    const status = world.hasStore('Status')
-      ? world.getComponent(entityId, 'Status') as { titles?: string[] } | undefined
-      : undefined;
-
-    // Get population
     const population = world.hasStore('Population')
       ? world.getComponent(entityId, 'Population') as { count?: number; growthRate?: number } | undefined
       : undefined;
-
-    // Get ownership
     const ownership = world.hasStore('Ownership')
       ? world.getComponent(entityId, 'Ownership') as { ownerId?: number | null } | undefined
       : undefined;
-
-    // Name
-    if (status?.titles !== undefined && status.titles.length > 0) {
-      lines.push(`Name: ${status.titles[0] ?? 'Unknown Settlement'}`);
-    } else {
-      lines.push(`Location #${entityId}`);
-    }
-
-    // Population
-    if (population?.count !== undefined) {
-      const pop = population.count;
-      const sizeCategory = this.getSettlementSize(pop);
-      lines.push(`Population: ${pop.toLocaleString()} (${sizeCategory})`);
-
-      if (population.growthRate !== undefined) {
-        const growthPct = (population.growthRate * 100).toFixed(1);
-        const growthSign = population.growthRate >= 0 ? '+' : '';
-        lines.push(`Growth Rate: ${growthSign}${growthPct}%`);
-      }
-    }
-
-    // Owner
-    if (ownership?.ownerId !== undefined && ownership.ownerId !== null) {
-      lines.push(`Controlled by: Faction #${ownership.ownerId}`);
-    }
-
-    return lines;
-  }
-
-  /**
-   * Get settlement size category based on population.
-   */
-  private getSettlementSize(population: number): string {
-    if (population < 100) return 'Hamlet';
-    if (population < 1000) return 'Village';
-    if (population < 5000) return 'Town';
-    if (population < 25000) return 'City';
-    if (population < 100000) return 'Large City';
-    return 'Metropolis';
-  }
-
-  /**
-   * Render geography section.
-   */
-  private renderGeography(entityId: EntityId, context: RenderContext): string[] {
-    const { world } = context;
-    const lines: string[] = [];
-
-    // Get position
     const position = world.hasStore('Position')
-      ? world.getComponent(entityId, 'Position') as { x?: number; y?: number; z?: number } | undefined
+      ? world.getComponent(entityId, 'Position') as { x?: number; y?: number } | undefined
       : undefined;
-
-    // Get biome
+    const history = world.hasStore('History')
+      ? world.getComponent(entityId, 'History') as { foundingDate?: number } | undefined
+      : undefined;
     const biome = world.hasStore('Biome')
       ? world.getComponent(entityId, 'Biome') as { biomeType?: string; fertility?: number; moisture?: number } | undefined
       : undefined;
 
-    // Get climate
-    const climate = world.hasStore('Climate')
-      ? world.getComponent(entityId, 'Climate') as { temperature?: number; rainfall?: number; seasonality?: number } | undefined
-      : undefined;
-
-    if (position !== undefined) {
-      const x = position.x ?? 0;
-      const y = position.y ?? 0;
-      lines.push(`Coordinates: (${x}, ${y})`);
-    }
-
-    if (biome !== undefined) {
-      if (biome.biomeType !== undefined) {
-        lines.push(`Biome: ${biome.biomeType}`);
-      }
-      if (biome.fertility !== undefined) {
-        const bar = this.renderBar(biome.fertility, 100);
-        lines.push(`Fertility: ${bar} ${biome.fertility}%`);
-      }
-      if (biome.moisture !== undefined) {
-        const bar = this.renderBar(biome.moisture, 100);
-        lines.push(`Moisture: ${bar} ${biome.moisture}%`);
+    // Settlement size prose
+    if (population?.count !== undefined) {
+      const sizeCategory = getSettlementSize(population.count);
+      const sizeProse = SETTLEMENT_SIZE_PROSE[sizeCategory];
+      if (sizeProse !== undefined) {
+        lines.push(`${sizeProse}.`);
+        lines.push('');
       }
     }
 
-    if (climate !== undefined) {
-      if (climate.temperature !== undefined) {
-        lines.push(`Temperature: ${climate.temperature}°`);
+    // Biome context
+    if (biome?.biomeType !== undefined) {
+      lines.push(`The settlement sits amid ${biome.biomeType.toLowerCase()} terrain.`);
+    }
+
+    // Founding prose
+    if (history?.foundingDate !== undefined) {
+      const foundingYear = tickToYear(history.foundingDate);
+      const currentYear = tickToYear(context.clock.currentTick);
+      const age = currentYear - foundingYear;
+      lines.push(`Founded in Year ${foundingYear}${age > 0 ? ` (${age} years ago)` : ''}.`);
+    }
+
+    lines.push('');
+
+    // Structured data
+    if (population?.count !== undefined) {
+      const sizeCategory = getSettlementSize(population.count);
+      lines.push(`Population: ${population.count.toLocaleString()} (${sizeCategory})`);
+
+      if (population.growthRate !== undefined) {
+        const growthPct = (population.growthRate * 100).toFixed(1);
+        const growthSign = population.growthRate >= 0 ? '+' : '';
+        lines.push(`Growth: ${growthSign}${growthPct}%`);
       }
-      if (climate.rainfall !== undefined) {
-        lines.push(`Rainfall: ${climate.rainfall} mm/yr`);
-      }
+    }
+
+    if (ownership?.ownerId !== undefined && ownership.ownerId !== null) {
+      const factionName = this.resolveEntityName(ownership.ownerId as unknown as EntityId, context);
+      lines.push(`Ruling Faction: ${renderEntityName(factionName)}`);
+    }
+
+    if (position !== undefined && position.x !== undefined && position.y !== undefined) {
+      lines.push(`Coordinates: (${position.x}, ${position.y})`);
     }
 
     if (lines.length === 0) {
-      lines.push('No geographic data');
+      lines.push(`{${DIM_COLOR}-fg}No information available about this location.{/}`);
     }
 
     return lines;
   }
 
-  /**
-   * Render demographics section.
-   */
-  private renderDemographics(entityId: EntityId, context: RenderContext): string[] {
+  // ─── Section 2: People & Peoples ──────────────────────────────────
+
+  private renderPeoplePeoples(entityId: EntityId, context: RenderContext): string[] {
     const { world } = context;
     const lines: string[] = [];
 
@@ -259,109 +308,65 @@ export class LocationInspector {
         } | undefined
       : undefined;
 
+    // Race distribution
     if (demographics?.raceDistribution !== undefined && demographics.raceDistribution.size > 0) {
-      lines.push('Population by Race:');
       const total = [...demographics.raceDistribution.values()].reduce((a, b) => a + b, 0);
+
+      // Find dominant race
+      let dominantRace = '';
+      let dominantPct = 0;
       for (const [race, count] of demographics.raceDistribution) {
         const pct = total > 0 ? Math.round((count / total) * 100) : 0;
-        lines.push(`  ${race}: ${pct}%`);
+        if (pct > dominantPct) {
+          dominantPct = pct;
+          dominantRace = race;
+        }
       }
-    }
 
-    if (demographics?.ageDistribution !== undefined && demographics.ageDistribution.size > 0) {
-      lines.push('');
-      lines.push('Age Distribution:');
-      const total = [...demographics.ageDistribution.values()].reduce((a, b) => a + b, 0);
-      for (const [age, count] of demographics.ageDistribution) {
+      if (dominantRace.length > 0) {
+        lines.push(`The population is predominantly ${dominantRace.toLowerCase()}.`);
+        lines.push('');
+      }
+
+      lines.push('Population by Race:');
+      for (const [race, count] of demographics.raceDistribution) {
         const pct = total > 0 ? Math.round((count / total) * 100) : 0;
-        lines.push(`  ${age}: ${pct}%`);
+        const bar = renderBar(pct, 100);
+        lines.push(`  ${race}: ${bar} ${pct}%`);
       }
+      lines.push('');
     }
 
+    // Culture
     if (culture !== undefined) {
-      if (culture.languageId !== undefined && culture.languageId !== null) {
-        lines.push('');
-        lines.push(`Primary Language: #${culture.languageId}`);
-      }
-
       if (culture.traditions !== undefined && culture.traditions.length > 0) {
-        lines.push('');
         lines.push('Traditions:');
         for (const tradition of culture.traditions) {
-          lines.push(`  • ${tradition}`);
+          lines.push(`  * ${tradition}`);
         }
+        lines.push('');
       }
 
       if (culture.values !== undefined && culture.values.length > 0) {
-        lines.push('');
-        lines.push('Cultural Values:');
-        for (const value of culture.values) {
-          lines.push(`  • ${value}`);
-        }
+        lines.push(`Cultural Values: ${culture.values.join(' | ')}`);
+      }
+
+      if (culture.languageId !== undefined && culture.languageId !== null) {
+        const langName = this.resolveEntityName(culture.languageId as unknown as EntityId, context);
+        lines.push(`Language: ${renderEntityName(langName)}`);
       }
     }
 
     if (lines.length === 0) {
-      lines.push('No demographic data');
+      lines.push(`{${DIM_COLOR}-fg}No demographic data available.{/}`);
     }
 
     return lines;
   }
 
-  /**
-   * Render economy section.
-   */
-  private renderEconomy(entityId: EntityId, context: RenderContext): string[] {
-    const { world } = context;
-    const lines: string[] = [];
+  // ─── Section 3: Power & Governance ────────────────────────────────
 
-    const economy = world.hasStore('Economy')
-      ? world.getComponent(entityId, 'Economy') as {
-          wealth?: number;
-          tradeVolume?: number;
-          industries?: string[];
-        } | undefined
-      : undefined;
-
-    const resources = world.hasStore('Resource')
-      ? world.getComponent(entityId, 'Resource') as { resources?: Map<string, number> } | undefined
-      : undefined;
-
-    if (economy !== undefined) {
-      if (economy.wealth !== undefined) {
-        lines.push(`Wealth: ${economy.wealth.toLocaleString()}`);
-      }
-      if (economy.tradeVolume !== undefined) {
-        lines.push(`Trade Volume: ${economy.tradeVolume.toLocaleString()}`);
-      }
-      if (economy.industries !== undefined && economy.industries.length > 0) {
-        lines.push('');
-        lines.push('Industries:');
-        for (const industry of economy.industries) {
-          lines.push(`  • ${industry}`);
-        }
-      }
-    }
-
-    if (resources?.resources !== undefined && resources.resources.size > 0) {
-      lines.push('');
-      lines.push('Resources:');
-      for (const [resource, amount] of resources.resources) {
-        lines.push(`  ${resource}: ${amount}`);
-      }
-    }
-
-    if (lines.length === 0) {
-      lines.push('No economic data');
-    }
-
-    return lines;
-  }
-
-  /**
-   * Render governance section.
-   */
-  private renderGovernance(entityId: EntityId, context: RenderContext): string[] {
+  private renderPowerGovernance(entityId: EntityId, context: RenderContext): string[] {
     const { world } = context;
     const lines: string[] = [];
 
@@ -377,42 +382,107 @@ export class LocationInspector {
       ? world.getComponent(entityId, 'Ownership') as { ownerId?: number | null; claimStrength?: number } | undefined
       : undefined;
 
+    // Prose introduction
+    if (government?.governmentType !== undefined && ownership?.ownerId !== undefined && ownership.ownerId !== null) {
+      const factionName = this.resolveEntityName(ownership.ownerId as unknown as EntityId, context);
+      lines.push(`Governed as part of ${renderEntityName(factionName)} under a ${government.governmentType} system.`);
+      lines.push('');
+    }
+
     if (government !== undefined) {
       if (government.governmentType !== undefined) {
-        lines.push(`Government Type: ${government.governmentType}`);
+        lines.push(`Government: ${government.governmentType}`);
       }
       if (government.stability !== undefined) {
-        const bar = this.renderBar(government.stability, 100);
+        const bar = renderBar(government.stability, 100);
         lines.push(`Stability: ${bar} ${government.stability}%`);
       }
       if (government.legitimacy !== undefined) {
-        const bar = this.renderBar(government.legitimacy, 100);
+        const bar = renderBar(government.legitimacy, 100);
         lines.push(`Legitimacy: ${bar} ${government.legitimacy}%`);
       }
     }
 
     if (ownership !== undefined) {
       if (ownership.ownerId !== undefined && ownership.ownerId !== null) {
-        lines.push('');
-        lines.push(`Ruling Faction: #${ownership.ownerId}`);
+        const factionName = this.resolveEntityName(ownership.ownerId as unknown as EntityId, context);
+        lines.push(`Ruling Faction: & ${renderEntityName(factionName)}`);
       }
       if (ownership.claimStrength !== undefined) {
-        const bar = this.renderBar(ownership.claimStrength, 100);
+        const bar = renderBar(ownership.claimStrength, 100);
         lines.push(`Claim Strength: ${bar} ${ownership.claimStrength}%`);
       }
     }
 
     if (lines.length === 0) {
-      lines.push('No governance data');
+      lines.push(`{${DIM_COLOR}-fg}No governance data available.{/}`);
     }
 
     return lines;
   }
 
-  /**
-   * Render military section.
-   */
-  private renderMilitary(entityId: EntityId, context: RenderContext): string[] {
+  // ─── Section 4: Trade & Industry ──────────────────────────────────
+
+  private renderTradeIndustry(entityId: EntityId, context: RenderContext): string[] {
+    const { world } = context;
+    const lines: string[] = [];
+
+    const economy = world.hasStore('Economy')
+      ? world.getComponent(entityId, 'Economy') as {
+          wealth?: number;
+          tradeVolume?: number;
+          industries?: string[];
+        } | undefined
+      : undefined;
+
+    const resources = world.hasStore('Resource')
+      ? world.getComponent(entityId, 'Resource') as { resources?: Map<string, number> } | undefined
+      : undefined;
+
+    // Economic prose
+    if (economy?.wealth !== undefined) {
+      const state = getEconomicState(economy.wealth);
+      const prose = ECONOMIC_PROSE[state];
+      if (prose !== undefined) {
+        lines.push(prose + '.');
+        lines.push('');
+      }
+    }
+
+    if (economy !== undefined) {
+      if (economy.wealth !== undefined) {
+        lines.push(`Treasury: ${economy.wealth.toLocaleString()}`);
+      }
+      if (economy.tradeVolume !== undefined) {
+        lines.push(`Trade Volume: ${economy.tradeVolume.toLocaleString()}`);
+      }
+      if (economy.industries !== undefined && economy.industries.length > 0) {
+        lines.push('');
+        lines.push('Industries:');
+        for (const industry of economy.industries) {
+          lines.push(`  * ${industry}`);
+        }
+      }
+    }
+
+    if (resources?.resources !== undefined && resources.resources.size > 0) {
+      lines.push('');
+      lines.push('Resources:');
+      for (const [resource, amount] of resources.resources) {
+        lines.push(`  ${resource}: ${amount}`);
+      }
+    }
+
+    if (lines.length === 0) {
+      lines.push(`{${DIM_COLOR}-fg}No economic data available.{/}`);
+    }
+
+    return lines;
+  }
+
+  // ─── Section 5: Walls & Works ─────────────────────────────────────
+
+  private renderWallsWorks(entityId: EntityId, context: RenderContext): string[] {
     const { world } = context;
     const lines: string[] = [];
 
@@ -425,94 +495,123 @@ export class LocationInspector {
       : undefined;
 
     const structures = world.hasStore('Structures')
-      ? world.getComponent(entityId, 'Structures') as { fortificationLevel?: number } | undefined
-      : undefined;
-
-    if (military !== undefined) {
-      if (military.strength !== undefined) {
-        lines.push(`Garrison Strength: ${military.strength}`);
-      }
-      if (military.morale !== undefined) {
-        const bar = this.renderBar(military.morale, 100);
-        lines.push(`Morale: ${bar} ${military.morale}%`);
-      }
-      if (military.training !== undefined) {
-        const bar = this.renderBar(military.training, 100);
-        lines.push(`Training: ${bar} ${military.training}%`);
-      }
-    }
-
-    if (structures?.fortificationLevel !== undefined) {
-      lines.push('');
-      const fortLevel = structures.fortificationLevel;
-      const fortName = this.getFortificationName(fortLevel);
-      lines.push(`Fortifications: ${fortName} (Level ${fortLevel})`);
-    }
-
-    if (lines.length === 0) {
-      lines.push('No military data');
-    }
-
-    return lines;
-  }
-
-  /**
-   * Get fortification name based on level.
-   */
-  private getFortificationName(level: number): string {
-    if (level <= 0) return 'None';
-    if (level <= 1) return 'Palisade';
-    if (level <= 2) return 'Wooden Walls';
-    if (level <= 3) return 'Stone Walls';
-    if (level <= 4) return 'Fortified Walls';
-    return 'Castle';
-  }
-
-  /**
-   * Render structures section.
-   */
-  private renderStructures(entityId: EntityId, context: RenderContext): string[] {
-    const { world } = context;
-    const lines: string[] = [];
-
-    const structures = world.hasStore('Structures')
-      ? world.getComponent(entityId, 'Structures') as { buildings?: string[] } | undefined
+      ? world.getComponent(entityId, 'Structures') as { fortificationLevel?: number; buildings?: string[] } | undefined
       : undefined;
 
     const condition = world.hasStore('Condition')
       ? world.getComponent(entityId, 'Condition') as { durability?: number; maintenanceLevel?: number } | undefined
       : undefined;
 
-    if (structures?.buildings !== undefined && structures.buildings.length > 0) {
-      lines.push('Buildings:');
-      for (const building of structures.buildings) {
-        lines.push(`  • ${building}`);
+    // Fortification prose
+    if (structures?.fortificationLevel !== undefined) {
+      const fortName = this.getFortificationName(structures.fortificationLevel);
+      const fortProse = FORTIFICATION_PROSE[fortName];
+      if (fortProse !== undefined) {
+        lines.push(`${fortProse}.`);
+        lines.push('');
+      }
+      lines.push(`Fortifications: ${fortName} (Level ${structures.fortificationLevel})`);
+    }
+
+    // Military garrison
+    if (military !== undefined) {
+      if (military.strength !== undefined) {
+        lines.push(`Garrison: ${military.strength.toLocaleString()} soldiers`);
+      }
+      if (military.morale !== undefined) {
+        const bar = renderBar(military.morale, 100);
+        lines.push(`Morale: ${bar} ${military.morale}%`);
+      }
+      if (military.training !== undefined) {
+        const bar = renderBar(military.training, 100);
+        lines.push(`Training: ${bar} ${military.training}%`);
       }
     }
 
+    // Buildings
+    if (structures?.buildings !== undefined && structures.buildings.length > 0) {
+      lines.push('');
+      lines.push('Notable Buildings:');
+      for (const building of structures.buildings) {
+        lines.push(`  * ${building}`);
+      }
+    }
+
+    // Condition
     if (condition !== undefined) {
       lines.push('');
       if (condition.durability !== undefined) {
-        const bar = this.renderBar(condition.durability, 100);
+        const bar = renderBar(condition.durability, 100);
         lines.push(`Durability: ${bar} ${condition.durability}%`);
       }
       if (condition.maintenanceLevel !== undefined) {
-        const bar = this.renderBar(condition.maintenanceLevel, 100);
+        const bar = renderBar(condition.maintenanceLevel, 100);
         lines.push(`Maintenance: ${bar} ${condition.maintenanceLevel}%`);
       }
     }
 
     if (lines.length === 0) {
-      lines.push('No structure data');
+      lines.push(`{${DIM_COLOR}-fg}No structural or military data available.{/}`);
     }
 
     return lines;
   }
 
-  /**
-   * Render history section.
-   */
-  private renderHistory(entityId: EntityId, context: RenderContext): string[] {
+  // ─── Section 6: Notable Souls ─────────────────────────────────────
+
+  private renderNotableSouls(entityId: EntityId, context: RenderContext): string[] {
+    const { world } = context;
+    const lines: string[] = [];
+
+    // Find characters at this location
+    const position = world.hasStore('Position')
+      ? world.getComponent(entityId, 'Position') as { x?: number; y?: number } | undefined
+      : undefined;
+
+    if (position?.x !== undefined && position.y !== undefined) {
+      const posStore = world.hasStore('Position')
+        ? world.getStore('Position') as unknown as { getAll: () => Map<EntityId, { x?: number; y?: number }> } | undefined
+        : undefined;
+
+      if (posStore !== undefined) {
+        const characters: Array<[EntityId, string]> = [];
+
+        for (const [eid, ePos] of posStore.getAll()) {
+          if (eid !== entityId && ePos.x === position.x && ePos.y === position.y) {
+            // Check if this is a character (has Attribute component)
+            if (world.hasStore('Attribute') && world.getComponent(eid, 'Attribute') !== undefined) {
+              const name = this.resolveEntityName(eid, context);
+              characters.push([eid, name]);
+            }
+          }
+        }
+
+        if (characters.length > 0) {
+          lines.push(`${characters.length} figure${characters.length > 1 ? 's' : ''} of note reside${characters.length === 1 ? 's' : ''} here:`);
+          lines.push('');
+
+          const toShow = characters.slice(0, 10);
+          for (const [_eid, name] of toShow) {
+            lines.push(`  @ ${renderEntityName(name)}`);
+          }
+
+          if (characters.length > 10) {
+            lines.push(`  {${DIM_COLOR}-fg}And ${characters.length - 10} others of lesser renown.{/}`);
+          }
+        }
+      }
+    }
+
+    if (lines.length === 0) {
+      lines.push(`{${DIM_COLOR}-fg}No notable inhabitants recorded.{/}`);
+    }
+
+    return lines;
+  }
+
+  // ─── Section 7: The Annals ────────────────────────────────────────
+
+  private renderTheAnnals(entityId: EntityId, context: RenderContext): string[] {
     const { world, eventLog } = context;
     const lines: string[] = [];
 
@@ -521,52 +620,42 @@ export class LocationInspector {
       : undefined;
 
     if (history?.foundingDate !== undefined) {
-      const year = Math.floor(history.foundingDate / 360) + 1;
+      const year = tickToYear(history.foundingDate);
       lines.push(`Founded: Year ${year}`);
+      lines.push('');
     }
 
-    // Get recent events
+    // Recent events
     const events = eventLog.getByEntity(entityId);
     if (events.length > 0) {
-      lines.push('');
-      lines.push('Recent Events:');
+      lines.push('Defining moments:');
 
-      const sorted = [...events].sort((a, b) => b.timestamp - a.timestamp);
-      const toShow = sorted.slice(0, 10);
+      const sorted = [...events].sort((a, b) => b.significance - a.significance);
+      const toShow = sorted.slice(0, 5);
 
       for (const event of toShow) {
-        const year = Math.floor(event.timestamp / 360) + 1;
-        const desc = (event.data as Record<string, unknown>)['description'] ?? event.subtype;
-        lines.push(`  Y${year}: ${desc}`);
+        const year = tickToYear(event.timestamp);
+        const desc = (event.data as Record<string, unknown>)['description'];
+        const description = typeof desc === 'string' ? desc : event.subtype.replace(/[._]/g, ' ');
+        lines.push(`  ! Y${year} ${description}`);
       }
 
-      if (sorted.length > 10) {
-        lines.push(`  ... and ${sorted.length - 10} more events`);
+      if (events.length > toShow.length) {
+        lines.push('');
+        lines.push(`{${DIM_COLOR}-fg}And ${events.length - toShow.length} more recorded events.{/}`);
       }
     } else {
-      lines.push('No recorded events');
+      lines.push(`{${DIM_COLOR}-fg}No recorded events for this location.{/}`);
     }
 
     return lines;
   }
 
-  /**
-   * Render an ASCII bar.
-   */
-  private renderBar(value: number, maxValue: number): string {
-    const normalized = Math.max(0, Math.min(1, value / maxValue));
-    const filledCount = Math.round(normalized * BAR_WIDTH);
-    const emptyCount = BAR_WIDTH - filledCount;
+  // ─── Mode renderers ───────────────────────────────────────────────
 
-    return FILLED_BLOCK.repeat(filledCount) + EMPTY_BLOCK.repeat(emptyCount);
-  }
-
-  /**
-   * Render trade routes (relationships mode).
-   */
   private renderTradeRoutes(entityId: EntityId, context: RenderContext): string[] {
     const lines: string[] = [];
-    lines.push('═══ Trade & Relations ═══');
+    lines.push('=== Trade & Relations ===');
     lines.push('');
 
     const { world } = context;
@@ -581,8 +670,9 @@ export class LocationInspector {
     if (diplomacy?.relations !== undefined && diplomacy.relations.size > 0) {
       lines.push('Relations with other settlements:');
       for (const [otherId, relation] of diplomacy.relations) {
+        const name = this.resolveEntityName(otherId as unknown as EntityId, context);
         const relLabel = relation > 50 ? 'Friendly' : relation > 0 ? 'Neutral' : 'Hostile';
-        lines.push(`  #${otherId}: ${relLabel} (${relation})`);
+        lines.push(`  # ${renderEntityName(name)}: ${relLabel} (${relation})`);
       }
     }
 
@@ -590,64 +680,94 @@ export class LocationInspector {
       lines.push('');
       lines.push('Trade Agreements:');
       for (const treaty of diplomacy.treaties) {
-        lines.push(`  • ${treaty}`);
+        lines.push(`  * ${treaty}`);
       }
     }
 
     if (lines.length <= 2) {
-      lines.push('No trade relations recorded');
+      lines.push(`{${DIM_COLOR}-fg}No trade relations recorded.{/}`);
     }
 
     return lines;
   }
 
-  /**
-   * Render full timeline mode.
-   */
   private renderTimelineMode(entityId: EntityId, context: RenderContext): string[] {
     const lines: string[] = [];
-    lines.push('═══ Settlement Timeline ═══');
+    lines.push('=== Settlement Timeline ===');
     lines.push('');
 
     const { eventLog } = context;
     const events = eventLog.getByEntity(entityId);
 
     if (events.length === 0) {
-      lines.push('No events recorded');
+      lines.push(`{${DIM_COLOR}-fg}No events recorded.{/}`);
       return lines;
     }
 
     const sorted = [...events].sort((a, b) => a.timestamp - b.timestamp);
 
     for (const event of sorted) {
-      const year = Math.floor(event.timestamp / 360) + 1;
-      const day = (event.timestamp % 360) + 1;
+      const year = tickToYear(event.timestamp);
+      const season = tickToSeason(event.timestamp);
       const desc = (event.data as Record<string, unknown>)['description'] ?? event.subtype;
-      lines.push(`Y${year}D${day}: ${desc}`);
-      lines.push(`  Category: ${event.category}, Significance: ${event.significance}`);
+      const sigLabel = getSignificanceLabel(event.significance);
+      lines.push(`Y${year} ${season}: ${desc}`);
+      lines.push(`  {${DIM_COLOR}-fg}${event.category} | ${sigLabel} (${event.significance}){/}`);
       lines.push('');
     }
 
     return lines;
   }
 
-  /**
-   * Render full details mode.
-   */
   private renderDetailsMode(entityId: EntityId, context: RenderContext): string[] {
     const lines: string[] = [];
-    lines.push('═══ Full Details ═══');
+    lines.push('=== Full Settlement Details ===');
     lines.push('');
 
-    const allSections = ['overview', 'geography', 'demographics', 'economy', 'governance', 'military', 'structures', 'history'];
+    const allSections = [
+      'living-portrait', 'people-peoples', 'power-governance',
+      'trade-industry', 'walls-works', 'notable-souls', 'the-annals',
+    ];
+
+    const sectionTitles: Record<string, string> = {
+      'living-portrait': 'A Living Portrait',
+      'people-peoples': 'People & Peoples',
+      'power-governance': 'Power & Governance',
+      'trade-industry': 'Trade & Industry',
+      'walls-works': 'Walls & Works',
+      'notable-souls': 'Notable Souls',
+      'the-annals': 'The Annals',
+    };
 
     for (const sectionId of allSections) {
-      const title = sectionId.charAt(0).toUpperCase() + sectionId.slice(1);
-      lines.push(`─── ${title} ───`);
+      const title = sectionTitles[sectionId] ?? sectionId;
+      lines.push(`--- ${title} ---`);
       lines.push(...this.renderSection(sectionId, entityId, context));
       lines.push('');
     }
 
     return lines;
+  }
+
+  // ─── Helpers ──────────────────────────────────────────────────────
+
+  private getFortificationName(level: number): string {
+    if (level <= 0) return 'None';
+    if (level <= 1) return 'Palisade';
+    if (level <= 2) return 'Wooden Walls';
+    if (level <= 3) return 'Stone Walls';
+    if (level <= 4) return 'Fortified Walls';
+    return 'Castle';
+  }
+
+  private resolveEntityName(entityId: EntityId, context: RenderContext): string {
+    const { world } = context;
+    if (world.hasStore('Status')) {
+      const status = world.getComponent(entityId, 'Status') as { titles?: string[] } | undefined;
+      if (status?.titles !== undefined && status.titles.length > 0 && status.titles[0] !== undefined) {
+        return status.titles[0];
+      }
+    }
+    return `#${entityId}`;
   }
 }

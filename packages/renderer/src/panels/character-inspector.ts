@@ -1,37 +1,129 @@
 /**
- * Character Inspector - renders detailed character information.
- * Provides 8 sections: header, attributes, personality, goals, relationships, memories, possessions, timeline.
+ * Character Inspector - renders detailed character information with prose-first design.
+ * Provides 7 sections: The Story So Far, Strengths & Flaws, Bonds & Rivalries,
+ * Worldly Standing, Heart & Mind, Remembered Things, Possessions & Treasures.
  */
 
 import type { EntityId } from '@fws/core';
 import type { RenderContext } from '../types.js';
 import type { InspectorSection, InspectorMode } from './inspector-panel.js';
+import {
+  DIM_COLOR,
+  NEGATIVE_COLOR,
+  HEALTH_PROSE,
+  renderEntityName,
+  renderBar,
+  renderDottedLeader,
+  getHealthState,
+  getPersonalityDescriptor,
+  getSignificanceLabel,
+  tickToYear,
+  tickToSeason,
+  wrapText,
+  createEntitySpanMap,
+} from './inspector-prose.js';
+import type { EntitySpanMap } from './inspector-prose.js';
 
 /**
- * Attribute bar configuration.
- */
-const ATTRIBUTE_BAR_WIDTH = 20;
-const FILLED_BLOCK = '█';
-const EMPTY_BLOCK = '░';
-
-/**
- * Character inspector sub-component.
+ * Character inspector sub-component with prose-first rendering.
  */
 export class CharacterInspector {
+  private entitySpans: EntitySpanMap = createEntitySpanMap();
+
   /**
    * Get available sections for character inspection.
    */
-  getSections(): InspectorSection[] {
+  getSections(entityId?: EntityId, context?: RenderContext): InspectorSection[] {
+    let eventCount = 0;
+    let relationCount = 0;
+    let memoryCount = 0;
+    let topTrait = '';
+    let topGoal = '';
+    let wealthSummary = '';
+
+    if (entityId !== undefined && context !== undefined) {
+      // Count events
+      const events = context.eventLog.getByEntity(entityId);
+      eventCount = events.length;
+
+      // Count relationships
+      const { world } = context;
+      if (world.hasStore('Relationship')) {
+        const rel = world.getComponent(entityId, 'Relationship') as {
+          relationships?: Map<number, string>;
+        } | undefined;
+        relationCount = rel?.relationships?.size ?? 0;
+      }
+      if (world.hasStore('Grudges')) {
+        const grudges = world.getComponent(entityId, 'Grudges') as {
+          grudges?: Map<number, string>;
+        } | undefined;
+        relationCount += grudges?.grudges?.size ?? 0;
+      }
+
+      // Count memories
+      if (world.hasStore('Memory')) {
+        const memory = world.getComponent(entityId, 'Memory') as {
+          memories?: Array<{ eventId: number; importance: number; distortion: number }>;
+        } | undefined;
+        memoryCount = memory?.memories?.length ?? 0;
+      }
+
+      // Top trait
+      if (world.hasStore('Traits')) {
+        const traits = world.getComponent(entityId, 'Traits') as {
+          traits?: string[];
+        } | undefined;
+        if (traits?.traits !== undefined && traits.traits.length > 0 && traits.traits[0] !== undefined) {
+          topTrait = traits.traits[0].charAt(0).toUpperCase() + traits.traits[0].slice(1);
+        }
+      }
+
+      // Top goal
+      if (world.hasStore('Goal')) {
+        const goals = world.getComponent(entityId, 'Goal') as {
+          objectives?: string[];
+          priorities?: Map<string, number>;
+        } | undefined;
+        if (goals?.objectives !== undefined && goals.objectives.length > 0) {
+          const sorted = [...goals.objectives].sort((a, b) => {
+            const pa = goals.priorities?.get(a) ?? 50;
+            const pb = goals.priorities?.get(b) ?? 50;
+            return pb - pa;
+          });
+          if (sorted[0] !== undefined) {
+            topGoal = sorted[0].length > 20 ? sorted[0].slice(0, 20) + '...' : sorted[0];
+          }
+        }
+      }
+
+      // Wealth summary
+      if (world.hasStore('Wealth')) {
+        const wealth = world.getComponent(entityId, 'Wealth') as {
+          coins?: number;
+        } | undefined;
+        if (wealth?.coins !== undefined) {
+          wealthSummary = `${wealth.coins.toLocaleString()} gold`;
+        }
+      }
+    }
+
     return [
-      { id: 'header', title: 'Overview', collapsed: false },
-      { id: 'attributes', title: 'Attributes', collapsed: false },
-      { id: 'personality', title: 'Personality', collapsed: false },
-      { id: 'goals', title: 'Goals', collapsed: true },
-      { id: 'relationships', title: 'Relationships', collapsed: true },
-      { id: 'memories', title: 'Memories', collapsed: true },
-      { id: 'possessions', title: 'Possessions', collapsed: true },
-      { id: 'timeline', title: 'Timeline', collapsed: true },
+      { id: 'story-so-far', title: 'The Story So Far', collapsed: false, ...(eventCount > 0 ? { summaryHint: `${eventCount} events` } : {}) },
+      { id: 'strengths-flaws', title: 'Strengths & Flaws', collapsed: false, ...(topTrait.length > 0 ? { summaryHint: topTrait } : {}) },
+      { id: 'bonds-rivalries', title: 'Bonds & Rivalries', collapsed: true, ...(relationCount > 0 ? { summaryHint: `${relationCount} relations` } : {}) },
+      { id: 'worldly-standing', title: 'Worldly Standing', collapsed: true },
+      { id: 'heart-mind', title: 'Heart & Mind', collapsed: true, ...(topGoal.length > 0 ? { summaryHint: topGoal } : {}) },
+      { id: 'remembered-things', title: 'Remembered Things', collapsed: true, ...(memoryCount > 0 ? { summaryHint: `${memoryCount} memories` } : {}) },
+      { id: 'possessions-treasures', title: 'Possessions & Treasures', collapsed: true, ...(wealthSummary.length > 0 ? { summaryHint: wealthSummary } : {}) },
     ];
+  }
+
+  /**
+   * Get entity span map for click detection.
+   */
+  getEntitySpans(): EntitySpanMap {
+    return this.entitySpans;
   }
 
   /**
@@ -43,9 +135,9 @@ export class CharacterInspector {
     sections: readonly InspectorSection[],
     mode: InspectorMode
   ): string[] {
+    this.entitySpans = createEntitySpanMap();
     const lines: string[] = [];
 
-    // Render based on mode
     switch (mode) {
       case 'overview':
         lines.push(...this.renderOverview(entityId, context, sections));
@@ -57,7 +149,7 @@ export class CharacterInspector {
         lines.push(...this.renderTimelineMode(entityId, context));
         break;
       case 'details':
-        lines.push(...this.renderDetailsMode(entityId, context, sections));
+        lines.push(...this.renderDetailsMode(entityId, context));
         break;
     }
 
@@ -78,13 +170,14 @@ export class CharacterInspector {
       const section = sections[i];
       if (section === undefined) continue;
 
-      const indicator = section.collapsed ? '▶' : '▼';
+      const indicator = section.collapsed ? '>' : 'v';
       const num = i + 1;
-      lines.push(`${indicator} [${num}] ${section.title}`);
+      const hint = section.summaryHint !== undefined ? `  {${DIM_COLOR}-fg}${section.summaryHint}{/}` : '';
+      lines.push(`  ${indicator} [${num}] ${section.title}${hint}`);
 
       if (!section.collapsed) {
         const content = this.renderSection(section.id, entityId, context);
-        lines.push(...content.map(line => `  ${line}`));
+        lines.push(...content.map(line => `    ${line}`));
         lines.push('');
       }
     }
@@ -97,100 +190,123 @@ export class CharacterInspector {
    */
   private renderSection(sectionId: string, entityId: EntityId, context: RenderContext): string[] {
     switch (sectionId) {
-      case 'header':
-        return this.renderHeader(entityId, context);
-      case 'attributes':
-        return this.renderAttributes(entityId, context);
-      case 'personality':
-        return this.renderPersonality(entityId, context);
-      case 'goals':
-        return this.renderGoals(entityId, context);
-      case 'relationships':
-        return this.renderRelationships(entityId, context);
-      case 'memories':
-        return this.renderMemories(entityId, context);
-      case 'possessions':
-        return this.renderPossessions(entityId, context);
-      case 'timeline':
-        return this.renderTimeline(entityId, context);
+      case 'story-so-far':
+        return this.renderStorySoFar(entityId, context);
+      case 'strengths-flaws':
+        return this.renderStrengthsFlaws(entityId, context);
+      case 'bonds-rivalries':
+        return this.renderBondsRivalries(entityId, context);
+      case 'worldly-standing':
+        return this.renderWorldlyStanding(entityId, context);
+      case 'heart-mind':
+        return this.renderHeartMind(entityId, context);
+      case 'remembered-things':
+        return this.renderRememberedThings(entityId, context);
+      case 'possessions-treasures':
+        return this.renderPossessionsTreasures(entityId, context);
       default:
         return ['Unknown section'];
     }
   }
 
-  /**
-   * Render header section with basic info.
-   */
-  private renderHeader(entityId: EntityId, context: RenderContext): string[] {
-    const { world } = context;
+  // ─── Section 1: The Story So Far ──────────────────────────────────
+
+  private renderStorySoFar(entityId: EntityId, context: RenderContext): string[] {
     const lines: string[] = [];
+    const { world, eventLog } = context;
 
-    // Get status component for name/titles
+    // Get character info for narrative
     const status = world.hasStore('Status')
-      ? world.getComponent(entityId, 'Status') as { titles?: string[]; socialClass?: string; conditions?: string[] } | undefined
+      ? world.getComponent(entityId, 'Status') as { titles?: string[]; socialClass?: string } | undefined
       : undefined;
+    const name = (status?.titles !== undefined && status.titles.length > 0 && status.titles[0] !== undefined)
+      ? status.titles[0] : `Entity #${entityId}`;
 
-    // Get health component
+    // Health prose
     const health = world.hasStore('Health')
-      ? world.getComponent(entityId, 'Health') as { current?: number; maximum?: number; injuries?: string[]; diseases?: string[] } | undefined
+      ? world.getComponent(entityId, 'Health') as { current?: number; maximum?: number } | undefined
       : undefined;
-
-    // Get membership for faction info
-    const membership = world.hasStore('Membership')
-      ? world.getComponent(entityId, 'Membership') as { factionId?: number | null; rank?: string } | undefined
-      : undefined;
-
-    // Name/title
-    if (status?.titles !== undefined && status.titles.length > 0) {
-      lines.push(`Name: ${status.titles[0] ?? 'Unknown'}`);
-      if (status.titles.length > 1) {
-        lines.push(`Titles: ${status.titles.slice(1).join(', ')}`);
-      }
-    } else {
-      lines.push(`ID: #${entityId}`);
-    }
-
-    // Social class
-    if (status?.socialClass !== undefined) {
-      lines.push(`Class: ${status.socialClass}`);
-    }
-
-    // Health status
     if (health !== undefined) {
       const current = health.current ?? 100;
       const maximum = health.maximum ?? 100;
-      const healthPct = Math.round((current / maximum) * 100);
-      lines.push(`Health: ${current}/${maximum} (${healthPct}%)`);
-
-      if (health.injuries !== undefined && health.injuries.length > 0) {
-        lines.push(`Injuries: ${health.injuries.join(', ')}`);
-      }
-      if (health.diseases !== undefined && health.diseases.length > 0) {
-        lines.push(`Diseases: ${health.diseases.join(', ')}`);
+      const healthKey = getHealthState(current, maximum);
+      const healthText = HEALTH_PROSE[healthKey];
+      if (healthText !== undefined) {
+        lines.push(`${name} ${healthText}.`);
+        lines.push('');
       }
     }
 
-    // Conditions
-    if (status?.conditions !== undefined && status.conditions.length > 0) {
-      lines.push(`Conditions: ${status.conditions.join(', ')}`);
+    // Get events for this character
+    const events = eventLog.getByEntity(entityId);
+
+    if (events.length === 0) {
+      lines.push(`{${DIM_COLOR}-fg}The story of ${name} has yet to be written.{/}`);
+      return lines;
     }
 
-    // Faction membership
-    if (membership?.factionId !== undefined && membership.factionId !== null) {
-      const rankStr = membership.rank !== undefined ? ` (${membership.rank})` : '';
-      lines.push(`Faction: #${membership.factionId}${rankStr}`);
+    // Sort by timestamp ascending, filter significant events
+    const sorted = [...events].sort((a, b) => a.timestamp - b.timestamp);
+    const significant = sorted.filter(e => e.significance >= 50);
+    const keyEvents = significant.length > 0 ? significant : sorted.slice(0, 3);
+
+    // Generate life narrative summary
+    if (keyEvents.length > 0) {
+      const firstEvent = keyEvents[0];
+      const lastEvent = keyEvents[keyEvents.length - 1];
+      if (firstEvent !== undefined && lastEvent !== undefined) {
+        const firstYear = tickToYear(firstEvent.timestamp);
+        const lastYear = tickToYear(lastEvent.timestamp);
+        if (firstYear === lastYear) {
+          lines.push(`In Year ${firstYear}, events shaped the course of ${name}'s life.`);
+        } else {
+          lines.push(`From Year ${firstYear} to Year ${lastYear}, a chain of events shaped ${name}'s fate.`);
+        }
+        lines.push('');
+      }
+    }
+
+    // Key moments
+    lines.push('Key moments:');
+    const toShow = keyEvents.slice(0, 5);
+    for (const event of toShow) {
+      const year = tickToYear(event.timestamp);
+      const desc = (event.data as Record<string, unknown>)['description'];
+      const description = typeof desc === 'string' ? desc : event.subtype.replace(/[._]/g, ' ');
+      lines.push(`  ! Y${year} ${description}`);
+    }
+
+    if (events.length > toShow.length) {
+      lines.push('');
+      lines.push(`{${DIM_COLOR}-fg}(${events.length} events total -- press 't' for full timeline){/}`);
     }
 
     return lines;
   }
 
-  /**
-   * Render attributes section with ASCII bar charts.
-   */
-  private renderAttributes(entityId: EntityId, context: RenderContext): string[] {
+  // ─── Section 2: Strengths & Flaws ─────────────────────────────────
+
+  private renderStrengthsFlaws(entityId: EntityId, context: RenderContext): string[] {
     const { world } = context;
     const lines: string[] = [];
 
+    // Personality prose (Big Five)
+    const personality = world.hasStore('Personality')
+      ? world.getComponent(entityId, 'Personality') as {
+          openness?: number;
+          conscientiousness?: number;
+          extraversion?: number;
+          agreeableness?: number;
+          neuroticism?: number;
+        } | undefined
+      : undefined;
+
+    // Traits
+    const traits = world.hasStore('Traits')
+      ? world.getComponent(entityId, 'Traits') as { traits?: string[]; intensities?: Map<string, number> } | undefined
+      : undefined;
+
+    // Attributes
     const attr = world.hasStore('Attribute')
       ? world.getComponent(entityId, 'Attribute') as {
           strength?: number;
@@ -202,125 +318,67 @@ export class CharacterInspector {
         } | undefined
       : undefined;
 
-    if (attr === undefined) {
-      lines.push('No attribute data');
-      return lines;
-    }
-
-    // Render each attribute as a bar
-    const attributes: Array<[string, number | undefined]> = [
-      ['STR', attr.strength],
-      ['AGI', attr.agility],
-      ['END', attr.endurance],
-      ['INT', attr.intelligence],
-      ['WIS', attr.wisdom],
-      ['CHA', attr.charisma],
-    ];
-
-    for (const [name, value] of attributes) {
-      const v = value ?? 10;
-      const bar = this.renderAttributeBar(v, 20); // Max 20 for attributes
-      lines.push(`${name}: ${bar} ${v}`);
-    }
-
-    return lines;
-  }
-
-  /**
-   * Render an ASCII attribute bar.
-   */
-  private renderAttributeBar(value: number, maxValue: number): string {
-    const normalized = Math.max(0, Math.min(1, value / maxValue));
-    const filledCount = Math.round(normalized * ATTRIBUTE_BAR_WIDTH);
-    const emptyCount = ATTRIBUTE_BAR_WIDTH - filledCount;
-
-    return FILLED_BLOCK.repeat(filledCount) + EMPTY_BLOCK.repeat(emptyCount);
-  }
-
-  /**
-   * Render personality section.
-   */
-  private renderPersonality(entityId: EntityId, context: RenderContext): string[] {
-    const { world } = context;
-    const lines: string[] = [];
-
-    // Big Five personality traits
-    const personality = world.hasStore('Personality')
-      ? world.getComponent(entityId, 'Personality') as {
-          openness?: number;
-          conscientiousness?: number;
-          extraversion?: number;
-          agreeableness?: number;
-          neuroticism?: number;
-        } | undefined
-      : undefined;
-
-    // Character traits
-    const traits = world.hasStore('Traits')
-      ? world.getComponent(entityId, 'Traits') as { traits?: string[]; intensities?: Map<string, number> } | undefined
-      : undefined;
-
+    // Generate prose from personality
     if (personality !== undefined) {
-      lines.push('Big Five:');
-      const bigFive: Array<[string, number | undefined]> = [
-        ['Openness', personality.openness],
-        ['Conscientiousness', personality.conscientiousness],
-        ['Extraversion', personality.extraversion],
-        ['Agreeableness', personality.agreeableness],
-        ['Neuroticism', personality.neuroticism],
+      const descriptors: string[] = [];
+      for (const [axis, value] of Object.entries(personality) as Array<[string, number | undefined]>) {
+        if (value === undefined) continue;
+        const desc = getPersonalityDescriptor(axis, value);
+        if (desc !== null) {
+          descriptors.push(desc);
+        }
+      }
+
+      if (descriptors.length > 0) {
+        const proseText = descriptors.join(', and ');
+        const wrapped = wrapText(`This individual is ${proseText}.`, 50);
+        lines.push(...wrapped);
+        lines.push('');
+      } else {
+        lines.push(`{${DIM_COLOR}-fg}A moderate temperament with no extreme tendencies.{/}`);
+        lines.push('');
+      }
+    }
+
+    // Attribute bars (secondary, beneath prose)
+    if (attr !== undefined) {
+      lines.push('Attributes:');
+      const attributes: Array<[string, number | undefined]> = [
+        ['STR', attr.strength],
+        ['AGI', attr.agility],
+        ['END', attr.endurance],
+        ['INT', attr.intelligence],
+        ['WIS', attr.wisdom],
+        ['CHA', attr.charisma],
       ];
 
-      for (const [name, value] of bigFive) {
-        const v = value ?? 50;
-        const bar = this.renderAttributeBar(v, 100);
-        lines.push(`  ${name.slice(0, 4)}: ${bar} ${v}`);
+      for (const [name, value] of attributes) {
+        const v = value ?? 10;
+        const bar = renderBar(v, 20);
+        lines.push(`  ${name}: ${bar} ${v}`);
       }
+      lines.push('');
     }
 
+    // Traits as compact tags
     if (traits?.traits !== undefined && traits.traits.length > 0) {
-      lines.push('');
-      lines.push('Traits:');
-      for (const trait of traits.traits) {
-        const intensity = traits.intensities?.get(trait) ?? 50;
-        lines.push(`  • ${trait} (${intensity})`);
-      }
+      const traitList = traits.traits.map(t => {
+        const intensity = traits.intensities?.get(t) ?? 50;
+        return intensity >= 70 ? `{bold}${t}{/bold}` : t;
+      });
+      lines.push(`Traits: ${traitList.join('  |  ')}`);
     }
 
     if (lines.length === 0) {
-      lines.push('No personality data');
+      lines.push(`{${DIM_COLOR}-fg}No personality data available.{/}`);
     }
 
     return lines;
   }
 
-  /**
-   * Render goals section.
-   */
-  private renderGoals(entityId: EntityId, context: RenderContext): string[] {
-    const { world } = context;
-    const lines: string[] = [];
+  // ─── Section 3: Bonds & Rivalries ─────────────────────────────────
 
-    const goals = world.hasStore('Goal')
-      ? world.getComponent(entityId, 'Goal') as { objectives?: string[]; priorities?: Map<string, number> } | undefined
-      : undefined;
-
-    if (goals?.objectives !== undefined && goals.objectives.length > 0) {
-      for (const objective of goals.objectives) {
-        const priority = goals.priorities?.get(objective) ?? 50;
-        const priorityLabel = priority >= 80 ? '!!!' : priority >= 50 ? '!!' : '!';
-        lines.push(`${priorityLabel} ${objective}`);
-      }
-    } else {
-      lines.push('No active goals');
-    }
-
-    return lines;
-  }
-
-  /**
-   * Render relationships section.
-   */
-  private renderRelationships(entityId: EntityId, context: RenderContext): string[] {
+  private renderBondsRivalries(entityId: EntityId, context: RenderContext): string[] {
     const { world } = context;
     const lines: string[] = [];
 
@@ -338,40 +396,191 @@ export class CharacterInspector {
         } | undefined
       : undefined;
 
-    if (relationships?.relationships !== undefined) {
-      const relMap = relationships.relationships;
+    // Faction membership
+    const membership = world.hasStore('Membership')
+      ? world.getComponent(entityId, 'Membership') as { factionId?: number | null; rank?: string } | undefined
+      : undefined;
+
+    if (membership?.factionId !== undefined && membership.factionId !== null) {
+      const factionName = this.resolveEntityName(membership.factionId as unknown as EntityId, context);
+      const rankStr = membership.rank !== undefined ? ` (${membership.rank})` : '';
+      lines.push(`ALLEGIANCE:`);
+      lines.push(`  & ${renderEntityName(factionName)}${rankStr}`);
+      lines.push('');
+    }
+
+    if (relationships?.relationships !== undefined && relationships.relationships.size > 0) {
       const affMap = relationships.affinity ?? new Map<number, number>();
 
-      if (relMap.size > 0) {
-        lines.push('Relations:');
-        for (const [targetId, relType] of relMap) {
-          const affinity = affMap.get(targetId) ?? 0;
-          const affinityStr = affinity >= 0 ? `+${affinity}` : `${affinity}`;
-          lines.push(`  #${targetId}: ${relType} [${affinityStr}]`);
+      // Categorize: allies (affinity > 0), rivals (affinity < 0)
+      const allies: Array<[number, string, number]> = [];
+      const rivals: Array<[number, string, number]> = [];
+
+      for (const [targetId, relType] of relationships.relationships) {
+        const affinity = affMap.get(targetId) ?? 0;
+        if (affinity >= 0) {
+          allies.push([targetId, relType, affinity]);
+        } else {
+          rivals.push([targetId, relType, affinity]);
         }
+      }
+
+      // Sort allies by affinity descending, rivals by affinity ascending
+      allies.sort((a, b) => b[2] - a[2]);
+      rivals.sort((a, b) => a[2] - b[2]);
+
+      if (allies.length > 0) {
+        lines.push('ALLIES:');
+        for (const [targetId, relType, affinity] of allies.slice(0, 5)) {
+          const name = this.resolveEntityName(targetId as unknown as EntityId, context);
+          const leader = renderDottedLeader(`@ ${name}`, `${relType} [+${affinity}]`, 45);
+          lines.push(`  ${leader}`);
+        }
+        if (allies.length > 5) {
+          lines.push(`  {${DIM_COLOR}-fg}... and ${allies.length - 5} more allies{/}`);
+        }
+        lines.push('');
+      }
+
+      if (rivals.length > 0) {
+        lines.push('RIVALS:');
+        for (const [targetId, relType, affinity] of rivals.slice(0, 5)) {
+          const name = this.resolveEntityName(targetId as unknown as EntityId, context);
+          const leader = renderDottedLeader(`@ ${name}`, `${relType} [${affinity}]`, 45);
+          lines.push(`  ${leader}`);
+        }
+        if (rivals.length > 5) {
+          lines.push(`  {${DIM_COLOR}-fg}... and ${rivals.length - 5} more rivals{/}`);
+        }
+        lines.push('');
       }
     }
 
     if (grudges?.grudges !== undefined && grudges.grudges.size > 0) {
-      lines.push('');
-      lines.push('Grudges:');
+      lines.push(`${grudges.grudges.size} grudge${grudges.grudges.size > 1 ? 's' : ''} burn in memory:`);
       for (const [targetId, reason] of grudges.grudges) {
         const severity = grudges.severity?.get(targetId) ?? 50;
-        lines.push(`  #${targetId}: ${reason} (severity: ${severity})`);
+        const name = this.resolveEntityName(targetId as unknown as EntityId, context);
+        lines.push(`  ${renderEntityName(name)}: ${reason} (severity: ${severity})`);
       }
     }
 
     if (lines.length === 0) {
-      lines.push('No known relationships');
+      lines.push(`{${DIM_COLOR}-fg}No known relationships or rivalries.{/}`);
     }
 
     return lines;
   }
 
-  /**
-   * Render memories section.
-   */
-  private renderMemories(entityId: EntityId, context: RenderContext): string[] {
+  // ─── Section 4: Worldly Standing ──────────────────────────────────
+
+  private renderWorldlyStanding(entityId: EntityId, context: RenderContext): string[] {
+    const { world } = context;
+    const lines: string[] = [];
+
+    const status = world.hasStore('Status')
+      ? world.getComponent(entityId, 'Status') as { titles?: string[]; socialClass?: string; conditions?: string[] } | undefined
+      : undefined;
+
+    const membership = world.hasStore('Membership')
+      ? world.getComponent(entityId, 'Membership') as { factionId?: number | null; rank?: string } | undefined
+      : undefined;
+
+    const wealth = world.hasStore('Wealth')
+      ? world.getComponent(entityId, 'Wealth') as { coins?: number; propertyValue?: number; debts?: number } | undefined
+      : undefined;
+
+    // Generate prose
+    const parts: string[] = [];
+
+    if (membership?.rank !== undefined && membership.factionId !== undefined && membership.factionId !== null) {
+      const factionName = this.resolveEntityName(membership.factionId as unknown as EntityId, context);
+      parts.push(`holds the rank of ${membership.rank} within the ${renderEntityName(factionName)}`);
+    }
+
+    if (status?.socialClass !== undefined) {
+      parts.push(`of the ${status.socialClass} class`);
+    }
+
+    if (parts.length > 0) {
+      const name = (status?.titles !== undefined && status.titles.length > 0 && status.titles[0] !== undefined)
+        ? status.titles[0] : 'This individual';
+      lines.push(`${name} ${parts.join(', ')}.`);
+      lines.push('');
+    }
+
+    // Wealth data
+    if (wealth !== undefined) {
+      if (wealth.coins !== undefined) {
+        lines.push(`Wealth: ${wealth.coins.toLocaleString()} gold`);
+      }
+      if (wealth.propertyValue !== undefined) {
+        lines.push(`Property: ${wealth.propertyValue.toLocaleString()}`);
+      }
+      if (wealth.debts !== undefined && wealth.debts > 0) {
+        lines.push(`{${NEGATIVE_COLOR}-fg}Debts: ${wealth.debts.toLocaleString()}{/}`);
+      }
+    }
+
+    // Titles
+    if (status?.titles !== undefined && status.titles.length > 1) {
+      lines.push('');
+      lines.push('Titles:');
+      for (const title of status.titles.slice(1)) {
+        lines.push(`  * ${title}`);
+      }
+    }
+
+    // Conditions
+    if (status?.conditions !== undefined && status.conditions.length > 0) {
+      lines.push('');
+      lines.push(`Conditions: ${status.conditions.join(', ')}`);
+    }
+
+    if (lines.length === 0) {
+      lines.push(`{${DIM_COLOR}-fg}No worldly standing recorded.{/}`);
+    }
+
+    return lines;
+  }
+
+  // ─── Section 5: Heart & Mind ──────────────────────────────────────
+
+  private renderHeartMind(entityId: EntityId, context: RenderContext): string[] {
+    const { world } = context;
+    const lines: string[] = [];
+
+    const goals = world.hasStore('Goal')
+      ? world.getComponent(entityId, 'Goal') as { objectives?: string[]; priorities?: Map<string, number> } | undefined
+      : undefined;
+
+    if (goals?.objectives !== undefined && goals.objectives.length > 0) {
+      // Sort by priority
+      const sorted = [...goals.objectives].sort((a, b) => {
+        const pa = goals.priorities?.get(a) ?? 50;
+        const pb = goals.priorities?.get(b) ?? 50;
+        return pb - pa;
+      });
+
+      const count = sorted.length;
+      lines.push(`${count} ambition${count > 1 ? 's' : ''} drive${count === 1 ? 's' : ''} this soul forward:`);
+      lines.push('');
+
+      for (const objective of sorted) {
+        const priority = goals.priorities?.get(objective) ?? 50;
+        const urgency = priority >= 80 ? '!!!' : priority >= 50 ? '!!' : '!';
+        lines.push(`${urgency} ${objective}  {${DIM_COLOR}-fg}(priority: ${priority}){/}`);
+      }
+    } else {
+      lines.push(`{${DIM_COLOR}-fg}No active goals or ambitions recorded.{/}`);
+    }
+
+    return lines;
+  }
+
+  // ─── Section 6: Remembered Things ─────────────────────────────────
+
+  private renderRememberedThings(entityId: EntityId, context: RenderContext): string[] {
     const { world } = context;
     const lines: string[] = [];
 
@@ -383,31 +592,49 @@ export class CharacterInspector {
       : undefined;
 
     if (memory?.memories !== undefined && memory.memories.length > 0) {
-      lines.push(`Memories (${memory.memories.length}/${memory.capacity ?? '?'}):`);
+      const total = memory.memories.length;
+      const distortedCount = memory.memories.filter(m => m.distortion > 50).length;
+      const fadedCount = memory.memories.filter(m => m.importance < 20).length;
 
-      // Sort by importance, show top 10
+      lines.push(`Carries ${total} memories${distortedCount > 0 ? `, ${distortedCount} distorted with time` : ''}.`);
+      lines.push('');
+
+      // Sort by importance, show strongest
       const sorted = [...memory.memories].sort((a, b) => b.importance - a.importance);
-      const toShow = sorted.slice(0, 10);
+      const toShow = sorted.slice(0, 5);
 
+      lines.push('Strongest memories:');
       for (const mem of toShow) {
         const distortionLabel = mem.distortion > 50 ? ' (distorted)' : '';
-        lines.push(`  Event #${mem.eventId} [imp: ${mem.importance}]${distortionLabel}`);
+        // Try to resolve event description
+        const event = context.eventLog.getById(mem.eventId as unknown as EntityId as unknown as import('@fws/core').EventId);
+        if (event !== undefined) {
+          const desc = (event.data as Record<string, unknown>)['description'];
+          const description = typeof desc === 'string' ? desc : event.subtype.replace(/[._]/g, ' ');
+          lines.push(`  ! ${description} {${DIM_COLOR}-fg}[imp: ${mem.importance}]${distortionLabel}{/}`);
+        } else {
+          lines.push(`  ! Event #${mem.eventId} {${DIM_COLOR}-fg}[imp: ${mem.importance}]${distortionLabel}{/}`);
+        }
       }
 
-      if (sorted.length > 10) {
-        lines.push(`  ... and ${sorted.length - 10} more`);
+      if (fadedCount > 0) {
+        lines.push('');
+        lines.push(`{${DIM_COLOR}-fg}${fadedCount} memories have faded beyond recognition.{/}`);
+      }
+
+      if (sorted.length > 5) {
+        lines.push(`{${DIM_COLOR}-fg}... and ${sorted.length - 5} more memories{/}`);
       }
     } else {
-      lines.push('No memories recorded');
+      lines.push(`{${DIM_COLOR}-fg}No memories recorded.{/}`);
     }
 
     return lines;
   }
 
-  /**
-   * Render possessions section.
-   */
-  private renderPossessions(entityId: EntityId, context: RenderContext): string[] {
+  // ─── Section 7: Possessions & Treasures ───────────────────────────
+
+  private renderPossessionsTreasures(entityId: EntityId, context: RenderContext): string[] {
     const { world } = context;
     const lines: string[] = [];
 
@@ -427,129 +654,121 @@ export class CharacterInspector {
       : undefined;
 
     if (wealth !== undefined) {
-      lines.push('Wealth:');
-      if (wealth.coins !== undefined) lines.push(`  Coins: ${wealth.coins}`);
-      if (wealth.propertyValue !== undefined) lines.push(`  Property: ${wealth.propertyValue}`);
-      if (wealth.debts !== undefined && wealth.debts > 0) lines.push(`  Debts: ${wealth.debts}`);
+      const parts: string[] = [];
+      if (wealth.coins !== undefined) parts.push(`${wealth.coins.toLocaleString()} gold in coin`);
+      if (wealth.propertyValue !== undefined) parts.push(`property valued at ${wealth.propertyValue.toLocaleString()}`);
+
+      if (parts.length > 0) {
+        lines.push(`Wealth: ${parts.join(', ')}.`);
+      }
+
+      if (wealth.debts !== undefined && wealth.debts > 0) {
+        lines.push(`{${NEGATIVE_COLOR}-fg}Outstanding debts of ${wealth.debts.toLocaleString()}.{/}`);
+      }
       lines.push('');
     }
 
     if (possessions?.itemIds !== undefined && possessions.itemIds.length > 0) {
-      lines.push('Items:');
       const equipped = new Set(possessions.equippedIds ?? []);
+      const total = possessions.itemIds.length;
 
-      for (const itemId of possessions.itemIds) {
-        const equippedLabel = equipped.has(itemId) ? ' [E]' : '';
-        lines.push(`  Item #${itemId}${equippedLabel}`);
+      lines.push(`Carries ${total} item${total > 1 ? 's' : ''}:`);
+      for (const itemId of possessions.itemIds.slice(0, 10)) {
+        const equippedLabel = equipped.has(itemId) ? ' {bold}[E]{/bold}' : '';
+        const itemName = this.resolveEntityName(itemId as unknown as EntityId, context);
+        lines.push(`  * ${renderEntityName(itemName)}${equippedLabel}`);
       }
-    } else {
-      if (wealth === undefined) {
-        lines.push('No possessions');
+
+      if (possessions.itemIds.length > 10) {
+        lines.push(`  {${DIM_COLOR}-fg}... and ${possessions.itemIds.length - 10} more items{/}`);
       }
+    } else if (wealth === undefined) {
+      lines.push(`{${DIM_COLOR}-fg}No possessions of note.{/}`);
     }
 
     return lines;
   }
 
-  /**
-   * Render timeline section.
-   */
-  private renderTimeline(entityId: EntityId, context: RenderContext): string[] {
-    const { eventLog } = context;
-    const lines: string[] = [];
+  // ─── Mode renderers ───────────────────────────────────────────────
 
-    // Get events involving this character
-    const events = eventLog.getByEntity(entityId);
-
-    if (events.length === 0) {
-      lines.push('No events recorded');
-      return lines;
-    }
-
-    // Sort by timestamp descending (most recent first)
-    const sorted = [...events].sort((a, b) => b.timestamp - a.timestamp);
-    const toShow = sorted.slice(0, 15);
-
-    for (const event of toShow) {
-      const year = Math.floor(event.timestamp / 360) + 1;
-      const day = (event.timestamp % 360) + 1;
-      const desc = (event.data as Record<string, unknown>)['description'] ?? event.subtype;
-      lines.push(`Y${year}D${day}: ${desc}`);
-    }
-
-    if (sorted.length > 15) {
-      lines.push(`... and ${sorted.length - 15} more events`);
-    }
-
-    return lines;
-  }
-
-  /**
-   * Render relationships mode (full relationship view).
-   */
   private renderRelationshipsMode(entityId: EntityId, context: RenderContext): string[] {
     const lines: string[] = [];
-    lines.push('═══ Relationships ═══');
+    lines.push('=== Bonds & Rivalries ===');
     lines.push('');
-    lines.push(...this.renderRelationships(entityId, context));
+    lines.push(...this.renderBondsRivalries(entityId, context));
     return lines;
   }
 
-  /**
-   * Render timeline mode (full event history).
-   */
   private renderTimelineMode(entityId: EntityId, context: RenderContext): string[] {
     const lines: string[] = [];
-    lines.push('═══ Timeline ═══');
+    lines.push('=== Timeline ===');
     lines.push('');
 
     const { eventLog } = context;
     const events = eventLog.getByEntity(entityId);
 
     if (events.length === 0) {
-      lines.push('No events recorded');
+      lines.push(`{${DIM_COLOR}-fg}No events recorded.{/}`);
       return lines;
     }
 
-    // Sort by timestamp
+    // Sort by timestamp ascending
     const sorted = [...events].sort((a, b) => a.timestamp - b.timestamp);
 
     for (const event of sorted) {
-      const year = Math.floor(event.timestamp / 360) + 1;
-      const day = (event.timestamp % 360) + 1;
+      const year = tickToYear(event.timestamp);
+      const season = tickToSeason(event.timestamp);
       const desc = (event.data as Record<string, unknown>)['description'] ?? event.subtype;
-      lines.push(`Y${year}D${day}: ${desc}`);
-      lines.push(`  Category: ${event.category}`);
-      lines.push(`  Significance: ${event.significance}`);
+      const sigLabel = getSignificanceLabel(event.significance);
+      lines.push(`Y${year} ${season}: ${desc}`);
+      lines.push(`  {${DIM_COLOR}-fg}${event.category} | ${sigLabel} (${event.significance}){/}`);
       lines.push('');
     }
 
     return lines;
   }
 
-  /**
-   * Render details mode (all sections expanded).
-   */
-  private renderDetailsMode(
-    entityId: EntityId,
-    context: RenderContext,
-    _sections: readonly InspectorSection[]
-  ): string[] {
+  private renderDetailsMode(entityId: EntityId, context: RenderContext): string[] {
     const lines: string[] = [];
-
-    lines.push('═══ Full Details ═══');
+    lines.push('=== Full Character Details ===');
     lines.push('');
 
-    // Render all sections
-    const allSections = ['header', 'attributes', 'personality', 'goals', 'relationships', 'memories', 'possessions', 'timeline'];
+    const allSections = [
+      'story-so-far', 'strengths-flaws', 'bonds-rivalries',
+      'worldly-standing', 'heart-mind', 'remembered-things',
+      'possessions-treasures',
+    ];
+
+    const sectionTitles: Record<string, string> = {
+      'story-so-far': 'The Story So Far',
+      'strengths-flaws': 'Strengths & Flaws',
+      'bonds-rivalries': 'Bonds & Rivalries',
+      'worldly-standing': 'Worldly Standing',
+      'heart-mind': 'Heart & Mind',
+      'remembered-things': 'Remembered Things',
+      'possessions-treasures': 'Possessions & Treasures',
+    };
 
     for (const sectionId of allSections) {
-      const title = sectionId.charAt(0).toUpperCase() + sectionId.slice(1);
-      lines.push(`─── ${title} ───`);
+      const title = sectionTitles[sectionId] ?? sectionId;
+      lines.push(`--- ${title} ---`);
       lines.push(...this.renderSection(sectionId, entityId, context));
       lines.push('');
     }
 
     return lines;
+  }
+
+  // ─── Helpers ──────────────────────────────────────────────────────
+
+  private resolveEntityName(entityId: EntityId, context: RenderContext): string {
+    const { world } = context;
+    if (world.hasStore('Status')) {
+      const status = world.getComponent(entityId, 'Status') as { titles?: string[] } | undefined;
+      if (status?.titles !== undefined && status.titles.length > 0 && status.titles[0] !== undefined) {
+        return status.titles[0];
+      }
+    }
+    return `#${entityId}`;
   }
 }

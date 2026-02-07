@@ -703,6 +703,40 @@ function launchTerminalUI(
         name: entity.name,
       });
     }
+
+    // Also update the inspector panel with the region data
+    if (tile !== null) {
+      inspectorPanel.inspectRegion(x, y, tile, context);
+    }
+  });
+
+  // =========================================================================
+  // Wire click-to-inspect handlers between panels
+  // =========================================================================
+
+  // EventLogPanel -> InspectorPanel: clicking entity names opens the entity inspector
+  eventLogPanel.setInspectEntityHandler((entityId) => {
+    inspectorPanel.inspect(entityId, context);
+  });
+
+  // EventLogPanel -> InspectorPanel: pressing Enter on selected event opens event inspector
+  eventLogPanel.setInspectEventHandler((eventId) => {
+    inspectorPanel.inspectEvent(eventId, context);
+  });
+
+  // InspectorPanel -> InspectorPanel: clicking entity names within the inspector navigates
+  inspectorPanel.setInspectHandler((entityId) => {
+    inspectorPanel.inspect(entityId, context);
+  });
+
+  // RelationshipsPanel -> InspectorPanel: clicking entity names opens entity inspector
+  relationshipsPanel.setInspectHandler((entityId) => {
+    inspectorPanel.inspect(entityId, context);
+  });
+
+  // TimelinePanel -> InspectorPanel: clicking events opens event inspector
+  timelinePanel.setInspectHandler((eventId) => {
+    inspectorPanel.inspectEvent(eventId, context);
   });
 
   // =========================================================================

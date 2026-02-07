@@ -1,0 +1,36 @@
+{
+  "mcpServers": {
+    "memory": {
+      "command": "cmd",
+      "args": ["/c", "npx", "-y", "@modelcontextprotocol/server-memory"]
+    },
+    "sequential-thinking": {
+      "command": "cmd",
+      "args": ["/c", "npx", "-y", "@modelcontextprotocol/server-sequential-thinking"]
+    },
+    "filesystem": {
+      "command": "cmd",
+      "args": ["/c", "npx", "-y", "@modelcontextprotocol/server-filesystem", "./packages", "./data", "./docs"]
+    },
+    "context7": {
+      "command": "cmd",
+      "args": ["/c", "npx", "-y", "@upstash/context7-mcp@latest"]
+    },
+    "eslint": {
+      "command": "cmd",
+      "args": ["/c", "npx", "@eslint/mcp@latest", "--stdio"]
+    },
+    "vitest": {
+      "command": "cmd",
+      "args": ["/c", "npx", "-y", "@anthropic-ai/vitest-mcp@latest"]
+    },
+    "sqlite": {
+      "command": "cmd",
+      "args": ["/c", "npx", "-y", "@anthropic-ai/mcp-server-sqlite", "--db-path", "./data/world.db"]
+    },
+    "playwright": {
+      "command": "cmd",
+      "args": ["/c", "npx", "-y", "@anthropic-ai/mcp-server-playwright"]
+    }
+  }
+}
