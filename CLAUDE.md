@@ -76,12 +76,17 @@ When delegating complex tasks to subagents, prefer:
   - 6 prose lookup tables (HEALTH_PROSE, PERSONALITY_AXIS, SETTLEMENT_SIZE_PROSE, etc.)
   - UX architecture: `docs/plans/context-view-ux-architecture.md`
   - Layout spec: `docs/plans/context-view-layout-spec.md`, `context-view-mockups.md`
+- **Chronicle View Transformation (8.9-8.11):**
+  - Event aggregation system (batches events <60 significance by category + participant)
+  - 4 chronicle modes: Prose (aggregated), Compact (timeline), Story Arcs (cascade tree), Domain Focus
+  - Region-contextual filtering (toggle 'r' key, spatial distance-based)
+  - Prose-first rendering with significance indicators (✦★◆•·)
+  - Temporal headers (year/season/month separators)
+  - Enhanced right pane with causal chains and multiple perspectives
+  - 30 category-specific prose templates for aggregated summaries
 
 **Remaining:**
-- 8.9: Chronicle narrative-primary view (temporal grouping, period headers)
-- 8.10: Event aggregation (time-window batching, two-threshold system)
-- 8.11: Story threads (cascade connectors, arc headers, color-coding)
-- 8.12: Polish (tone affects layout, progressive tips)
+- 8.12: Polish (tone affects layout, progressive tips, dynamic map overlays)
 
 **Previous Phases (Complete):**
 - Phase 1-2: ECS foundation, world generation pipeline
@@ -91,7 +96,7 @@ When delegating complex tasks to subagents, prefer:
 - Phase 6: Simulation controls, influence system (17 actions, 3 categories, IP economy)
 - Phase 7: World fingerprint, timeline branching, save/load, heraldry, dreaming, introspection
 
-**Test Count:** 2847 passing
+**Test Count:** 2902 passing
 
 ## Key Architectural Decisions
 
