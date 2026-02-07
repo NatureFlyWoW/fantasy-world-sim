@@ -84,9 +84,17 @@ When delegating complex tasks to subagents, prefer:
   - Temporal headers (year/season/month separators)
   - Enhanced right pane with causal chains and multiple perspectives
   - 30 category-specific prose templates for aggregated summaries
+- **Dynamic Map Overlays (Living World):**
+  - MapOverlayBridge connects ECS world state to rendering
+  - 6 cached layers: Settlements, Territory, Military, Trade, Magic, Entity Markers
+  - 7 overlay presets: None, Political, Military, Economic, Arcane, Climate, Full
+  - Territory flood-fill from faction capitals with border detection
+  - Trade route tracing between economic hubs
+  - Event-driven dirty tracking with per-layer refresh intervals
+  - Multi-layer compositing with priority rules
 
 **Remaining:**
-- 8.12: Polish (tone affects layout, progressive tips, dynamic map overlays)
+- 8.12: Final Polish (progressive tips, tutorial hints, performance tuning)
 
 **Previous Phases (Complete):**
 - Phase 1-2: ECS foundation, world generation pipeline
@@ -96,7 +104,7 @@ When delegating complex tasks to subagents, prefer:
 - Phase 6: Simulation controls, influence system (17 actions, 3 categories, IP economy)
 - Phase 7: World fingerprint, timeline branching, save/load, heraldry, dreaming, introspection
 
-**Test Count:** 2902 passing
+**Test Count:** 2955 passing
 
 ## Key Architectural Decisions
 
