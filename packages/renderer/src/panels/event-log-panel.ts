@@ -129,6 +129,10 @@ export class EventLogPanel extends BasePanel {
   // Cascade tree for cause-effect view
   private cascadeRoot: CascadeNode | null = null;
 
+  // Entity name spans in right pane for click detection
+  // Maps row (relative to right pane) → array of { startCol, endCol, entityId }
+  private rightPaneEntitySpans: Map<number, Array<{ startCol: number; endCol: number; entityId: EntityId }>> = new Map();
+
   // Narrative engine
   private narrativeEngine: NarrativeEngine;
   private currentTone: NarrativeTone = NarrativeTone.EpicHistorical;
@@ -718,14 +722,67 @@ export class EventLogPanel extends BasePanel {
     lines.push(...wrappedBody);
     lines.push('');
 
-    // Significance word label (plain text — color applied by boxDrawLine caller)
+    // ── Context section ──
+    // Participants (with entity span tracking for click detection)
+    this.rightPaneEntitySpans.clear();
+    if (event.participants.length > 0) {
+      const prefix = 'Participants: ';
+      let col = prefix.length;
+      const rowIdx = lines.length; // Row index in content array
+      const spans: Array<{ startCol: number; endCol: number; entityId: EntityId }> = [];
+      const nameParts: string[] = [];
+      for (let pi = 0; pi < event.participants.length; pi++) {
+        const id = event.participants[pi]!;
+        const name = this.formatter.resolveEntityIdToName(id as unknown as number);
+        const displayName = name ?? `Entity #${id}`;
+        spans.push({ startCol: col, endCol: col + displayName.length, entityId: id });
+        nameParts.push(displayName);
+        col += displayName.length;
+        if (pi < event.participants.length - 1) {
+          col += 2; // ", "
+        }
+      }
+      // Store spans at the right-pane row (content row + 3 for border/title/divider)
+      this.rightPaneEntitySpans.set(rowIdx + 3, spans);
+      lines.push(`${prefix}${nameParts.join(', ')}`);
+    }
+
+    // Location
+    if (event.location !== undefined) {
+      const locName = this.formatter.resolveEntityIdToName(event.location as unknown as number);
+      if (locName !== null) {
+        lines.push(`Location: ${locName}`);
+      }
+    }
+
+    // Consequences
+    if (event.consequences.length > 0) {
+      const consequenceDescs: string[] = [];
+      for (const cId of event.consequences.slice(0, 3)) {
+        const cEvent = context.eventLog.getById(cId);
+        if (cEvent !== undefined) {
+          consequenceDescs.push(this.formatter.getShortNarrative(cEvent));
+        }
+      }
+      if (consequenceDescs.length > 0) {
+        lines.push('');
+        lines.push('Consequences:');
+        for (const cd of consequenceDescs) {
+          lines.push(`  \u2192 ${cd}`);
+        }
+      }
+    }
+
+    lines.push('');
+
+    // Significance word label
     const sigLabel = this.formatter.getSignificanceLabel(event.significance);
     lines.push(`${sigLabel} event`);
 
     // Check for vignette trigger
     this.checkVignetteTrigger(event, context);
 
-    // If there's a vignette, show indicator (plain text — color applied later)
+    // If there's a vignette, show indicator
     if (this.currentVignette !== null && this.currentVignette.eventId === event.id) {
       lines.push('');
       lines.push('\u2605 Vignette Available');
@@ -961,6 +1018,21 @@ export class EventLogPanel extends BasePanel {
         this.autoScroll = false;
         this.updateSelectedEvent();
         return true;
+      }
+    }
+
+    // Click in right pane — check for entity name spans
+    if (x > leftWidth + 1 && this.onInspectEntity !== null) {
+      const rightPaneX = x - leftWidth - 1; // Subtract divider
+      const contentCol = rightPaneX - 2; // Subtract box border "║ "
+      const spans = this.rightPaneEntitySpans.get(y);
+      if (spans !== undefined) {
+        for (const span of spans) {
+          if (contentCol >= span.startCol && contentCol < span.endCol) {
+            this.onInspectEntity(span.entityId);
+            return true;
+          }
+        }
       }
     }
 

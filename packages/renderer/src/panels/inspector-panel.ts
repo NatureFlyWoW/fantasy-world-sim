@@ -146,6 +146,7 @@ export class InspectorPanel extends BasePanel {
 
   // Welcome screen data (pre-simulation)
   private welcomeData: WelcomeData | null = null;
+  private welcomeDismissed = false;
 
   // Event handlers
   private inspectHandler: ((entityId: EntityId) => void) | null = null;
@@ -389,6 +390,13 @@ export class InspectorPanel extends BasePanel {
   }
 
   /**
+   * Dismiss the welcome screen (called when simulation starts).
+   */
+  dismissWelcome(): void {
+    this.welcomeDismissed = true;
+  }
+
+  /**
    * Set handler for navigating to locations.
    */
   setGoToLocationHandler(handler: (x: number, y: number) => void): void {
@@ -546,9 +554,8 @@ export class InspectorPanel extends BasePanel {
     const { width } = this.getInnerDimensions();
     const barWidth = Math.max(10, Math.min(20, width - 20));
 
-    // Pre-simulation welcome screen
-    const hasEvents = context.eventLog.getAll().length > 0;
-    if (!hasEvents && this.welcomeData !== null) {
+    // Pre-simulation welcome screen (shown until player presses Space)
+    if (!this.welcomeDismissed && this.welcomeData !== null) {
       this.renderWelcomeScreen(lines, width);
       const { height } = this.getInnerDimensions();
       const visibleLines = lines.slice(this.dashboardScrollOffset, this.dashboardScrollOffset + height);
@@ -570,6 +577,24 @@ export class InspectorPanel extends BasePanel {
         const bar = '\u2588'.repeat(filled) + '\u2591'.repeat(empty);
         lines.push(`  ${bar} ${prose}`);
       }
+
+      // Synthesized narrative paragraph combining top 2-3 domain themes
+      lines.push('');
+      const domainValues: Array<[string, number]> = [];
+      for (const domain of FINGERPRINT_DOMAINS) {
+        const v = fingerprint.domainBalance.get(domain) ?? 0;
+        domainValues.push([domain, v]);
+      }
+      domainValues.sort((a, b) => b[1] - a[1]);
+      const top = domainValues.slice(0, 2);
+      const bottom = domainValues.slice(-1);
+      if (top.length >= 2 && top[0] !== undefined && top[1] !== undefined) {
+        const topProse0 = getDomainProse(top[0][0], top[0][1]).toLowerCase();
+        const topProse1 = getDomainProse(top[1][0], top[1][1]).toLowerCase();
+        const bottomProse = bottom[0] !== undefined ? getDomainProse(bottom[0][0], bottom[0][1]).toLowerCase() : '';
+        const summary = `  {#aaaaaa-fg}This is an age where ${topProse0}, and ${topProse1}. Meanwhile, ${bottomProse}.{/}`;
+        lines.push(summary);
+      }
     } catch {
       lines.push('  {#888888-fg}The world awaits its first events...{/}');
     }
@@ -582,8 +607,8 @@ export class InspectorPanel extends BasePanel {
 
     const factionEntries = this.getTopFactions(context, 5);
     if (factionEntries.length === 0) {
-      lines.push('  {#888888-fg}The peoples of this land have yet to rally');
-      lines.push('  under great banners.{/}');
+      lines.push('  {#888888-fg}The peoples of this land have yet to rally{/}');
+      lines.push('  {#888888-fg}under great banners.{/}');
     } else {
       for (const entry of factionEntries) {
         const popStr = entry.population > 0 ? ` \u2014 ${entry.population.toLocaleString()} souls` : '';
@@ -603,8 +628,9 @@ export class InspectorPanel extends BasePanel {
     } else {
       for (const tension of tensions) {
         const icon = CATEGORY_ICONS[tension.category];
-        const desc = tension.description.slice(0, Math.max(1, width - 6));
-        lines.push(`  ${icon} ${desc}`);
+        // Use formatter to resolve participant names in description
+        const desc = this.formatter.getEventDescription(tension.event);
+        lines.push(`  ${icon} ${desc.slice(0, Math.max(1, width - 6))}`);
       }
     }
 
@@ -628,7 +654,12 @@ export class InspectorPanel extends BasePanel {
           const baseNarrative = this.formatter.getShortNarrative(item.event);
           desc = `${baseNarrative} (${item.count} recent)`;
         } else {
-          desc = this.formatter.getShortNarrative(item.event);
+          // Prepend primary participant name for richer context
+          const participantName = item.event.participants.length > 0
+            ? this.formatter.resolveEntityIdToName(item.event.participants[0] as unknown as number)
+            : null;
+          const narrative = this.formatter.getShortNarrative(item.event);
+          desc = participantName !== null ? `${participantName}: ${narrative}` : narrative;
         }
         lines.push(`  {${sigColor}-fg}${sigChar}{/} ${desc.slice(0, Math.max(1, width - 6))}`);
       }
@@ -653,26 +684,31 @@ export class InspectorPanel extends BasePanel {
 
     lines.push('');
     lines.push(`  {bold}\u2552${sep}\u2555{/bold}`);
-    lines.push(`  {bold}     \u00C6TERNUM — THE STORY SO FAR{/bold}`);
+    lines.push(`  {bold}     AETERNUM — THE STORY SO FAR{/bold}`);
     lines.push(`  {bold}\u2558${sep}\u255B{/bold}`);
     lines.push('');
-    lines.push(`  Seed: ${w.seed}  |  World Size: ${w.worldSize}`);
-    lines.push('');
-    lines.push(`  {bold}Civilizations:{/bold}`);
-    lines.push(`    ${w.factionCount} factions  |  ${w.settlementCount} settlements  |  ${w.characterCount} characters`);
+
+    // Narrative summary paragraph
+    const factionWord = w.factionCount <= 3 ? 'A handful of' : w.factionCount <= 6 ? 'Several' : 'Many';
+    const sizeWord = w.worldSize === 'small' ? 'modest' : w.worldSize === 'large' ? 'vast' : 'broad';
+    lines.push(`  ${factionWord} great powers vie for dominance across a`);
+    lines.push(`  ${sizeWord} realm of ${w.settlementCount} settlements. ${w.characterCount} souls`);
+    lines.push('  of note shape the course of history.');
     lines.push('');
 
     if (w.tensions.length > 0) {
-      lines.push(`  {bold}Initial Tensions:{/bold}`);
+      lines.push(`  {bold}Currents of Conflict:{/bold}`);
       for (const tension of w.tensions) {
-        lines.push(`    \u2022 ${tension}`);
+        const truncated = tension.slice(0, Math.max(1, width - 8));
+        lines.push(`    \u2022 ${truncated}`);
       }
       lines.push('');
     }
 
-    lines.push('  The world has been shaped by millennia of pre-history.');
-    lines.push('  Ancient ruins dot the landscape, and old grudges simmer');
-    lines.push('  beneath the surface of fragile alliances.');
+    lines.push('  {#888888-fg}Ancient ruins dot the landscape, and old grudges{/}');
+    lines.push('  {#888888-fg}simmer beneath fragile alliances.{/}');
+    lines.push('');
+    lines.push(`  {#666666-fg}Seed: ${w.seed}  |  World Size: ${w.worldSize}{/}`);
     lines.push('');
     lines.push(`  {bold}Press Space to watch history unfold.{/bold}`);
     lines.push('');
@@ -716,9 +752,10 @@ export class InspectorPanel extends BasePanel {
 
   /**
    * Get active tensions from recent high-significance Political/Military events.
+   * Returns the actual events so the formatter can resolve participant names.
    */
-  private getActiveTensions(context: RenderContext, limit: number): Array<{ description: string; category: EventCategory }> {
-    const tensions: Array<{ description: string; category: EventCategory }> = [];
+  private getActiveTensions(context: RenderContext, limit: number): Array<{ event: WorldEvent; category: EventCategory }> {
+    const tensions: Array<{ event: WorldEvent; category: EventCategory }> = [];
     const all = context.eventLog.getAll();
 
     // Look at last 500 events for tension-related events
@@ -727,22 +764,16 @@ export class InspectorPanel extends BasePanel {
     for (const event of recentEvents) {
       if (event.significance < 60) continue;
       if (event.category !== EventCategory.Political && event.category !== EventCategory.Military) continue;
-
-      const data = event.data as Record<string, unknown>;
-      const desc = typeof data['description'] === 'string'
-        ? data['description']
-        : event.subtype.split('.').slice(1).join(' ').replace(/_/g, ' ');
-
-      tensions.push({ description: desc, category: event.category });
+      tensions.push({ event, category: event.category });
     }
 
-    // Deduplicate by description and return most recent
+    // Deduplicate by subtype and return most recent
     const seen = new Set<string>();
-    const unique: Array<{ description: string; category: EventCategory }> = [];
+    const unique: Array<{ event: WorldEvent; category: EventCategory }> = [];
     for (let i = tensions.length - 1; i >= 0 && unique.length < limit; i--) {
       const t = tensions[i];
-      if (t !== undefined && !seen.has(t.description)) {
-        seen.add(t.description);
+      if (t !== undefined && !seen.has(t.event.subtype)) {
+        seen.add(t.event.subtype);
         unique.push(t);
       }
     }

@@ -99,10 +99,19 @@ const UPDATE_COOLDOWN_MS = 200;
 /**
  * RegionDetailPanel displays atmospheric prose about the terrain at cursor location.
  */
+/**
+ * Optional settlement/faction data for the current tile.
+ */
+export interface RegionOverlayData {
+  readonly controllingFaction?: string;
+  readonly nearbySettlements?: readonly { name: string; distance: number }[];
+}
+
 export class RegionDetailPanel extends BasePanel {
   private currentX = -1;
   private currentY = -1;
   private currentTile: RenderableTile | null = null;
+  private currentOverlay: RegionOverlayData | null = null;
   private lastUpdateTime = 0;
   private lines: string[] = [];
   private scrollOffset = 0;
@@ -120,7 +129,7 @@ export class RegionDetailPanel extends BasePanel {
    * Update location from cursor movement.
    * Throttled to avoid excessive re-rendering during rapid movement.
    */
-  updateLocation(x: number, y: number, tile: RenderableTile | null, _entityId?: unknown): void {
+  updateLocation(x: number, y: number, tile: RenderableTile | null, _entityId?: unknown, overlay?: RegionOverlayData): void {
     const now = Date.now();
     if (now - this.lastUpdateTime < UPDATE_COOLDOWN_MS && this.currentX === x && this.currentY === y) {
       return;
@@ -129,6 +138,7 @@ export class RegionDetailPanel extends BasePanel {
     this.currentX = x;
     this.currentY = y;
     this.currentTile = tile;
+    this.currentOverlay = overlay ?? null;
     this.lastUpdateTime = now;
     this.scrollOffset = 0;
     this.lines = this.buildContent();
@@ -186,12 +196,12 @@ export class RegionDetailPanel extends BasePanel {
 
     if (this.currentTile === null) {
       lines.push('');
-      lines.push('  {#888888-fg}Move the cursor across the map');
-      lines.push('  to explore the world.{/}');
+      lines.push('  {#888888-fg}Move the cursor across the map{/}');
+      lines.push('  {#888888-fg}to explore the world.{/}');
       lines.push('');
-      lines.push('  {#888888-fg}Each region tells its own story \u2014');
-      lines.push('  of land, weather, and the marks');
-      lines.push('  left by those who came before.{/}');
+      lines.push('  {#888888-fg}Each region tells its own story \u2014{/}');
+      lines.push('  {#888888-fg}of land, weather, and the marks{/}');
+      lines.push('  {#888888-fg}left by those who came before.{/}');
       return lines;
     }
 
@@ -256,6 +266,24 @@ export class RegionDetailPanel extends BasePanel {
         }
       }
       lines.push('');
+    }
+
+    // Settlement & faction overlay
+    if (this.currentOverlay !== null) {
+      if (this.currentOverlay.controllingFaction !== undefined) {
+        lines.push(`{bold}  Dominion:{/bold}`);
+        lines.push(`  \u269C ${this.currentOverlay.controllingFaction} holds this land`);
+        lines.push('');
+      }
+
+      if (this.currentOverlay.nearbySettlements !== undefined && this.currentOverlay.nearbySettlements.length > 0) {
+        lines.push(`{bold}  Nearby Settlements:{/bold}`);
+        for (const s of this.currentOverlay.nearbySettlements) {
+          const distWord = s.distance <= 3 ? 'adjacent' : s.distance <= 10 ? 'near' : 'distant';
+          lines.push(`  \u25CB ${s.name} (${distWord})`);
+        }
+        lines.push('');
+      }
     }
 
     return lines;

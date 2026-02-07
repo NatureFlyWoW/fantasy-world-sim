@@ -149,3 +149,4 @@ export {
   describeTemperature,
   describeRainfall,
 } from './region-detail-panel.js';
+export type { RegionOverlayData } from './region-detail-panel.js';

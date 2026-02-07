@@ -317,6 +317,11 @@ export class Application {
       // Start simulation loop on first unpause
       if (!this.simulationStarted) {
         this.simulationStarted = true;
+        // Dismiss welcome screen on any inspector panel
+        const inspector = this.panels.get(PanelId.Inspector);
+        if (inspector !== undefined && 'dismissWelcome' in inspector) {
+          (inspector as { dismissWelcome: () => void }).dismissWelcome();
+        }
         this.startSimulationLoop();
       }
     } else {
@@ -499,14 +504,14 @@ export class Application {
 
     const itemProvider: MenuBarItemProvider = (_panelId: PanelId) => {
       return [
-        { label: 'Map', key: '1', action: () => this.focusPanel(PanelId.Map) },
-        { label: 'Events', key: '2', action: () => this.focusPanel(PanelId.EventLog) },
-        { label: 'Inspector', key: '3', action: () => this.focusPanel(PanelId.Inspector) },
-        { label: 'Relations', key: '4', action: () => this.focusPanel(PanelId.RelationshipGraph) },
-        { label: 'Timeline', key: '5', action: () => this.focusPanel(PanelId.Timeline) },
-        { label: 'Stats', key: '6', action: () => this.focusPanel(PanelId.Statistics) },
-        { label: 'Fingerprint', key: '7', action: () => this.focusPanel(PanelId.Fingerprint) },
-        { label: 'Region', key: '8', action: () => this.focusPanel(PanelId.RegionDetail) },
+        { label: 'Map', key: '1', panelId: PanelId.Map, action: () => this.focusPanel(PanelId.Map) },
+        { label: 'Events', key: '2', panelId: PanelId.EventLog, action: () => this.focusPanel(PanelId.EventLog) },
+        { label: 'Inspector', key: '3', panelId: PanelId.Inspector, action: () => this.focusPanel(PanelId.Inspector) },
+        { label: 'Relations', key: '4', panelId: PanelId.RelationshipGraph, action: () => this.focusPanel(PanelId.RelationshipGraph) },
+        { label: 'Timeline', key: '5', panelId: PanelId.Timeline, action: () => this.focusPanel(PanelId.Timeline) },
+        { label: 'Stats', key: '6', panelId: PanelId.Statistics, action: () => this.focusPanel(PanelId.Statistics) },
+        { label: 'Fingerprint', key: '7', panelId: PanelId.Fingerprint, action: () => this.focusPanel(PanelId.Fingerprint) },
+        { label: 'Region', key: '8', panelId: PanelId.RegionDetail, action: () => this.focusPanel(PanelId.RegionDetail) },
       ];
     };
 

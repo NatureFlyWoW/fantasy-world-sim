@@ -16,6 +16,7 @@ import { THEME } from './theme.js';
 export interface MenuBarItem {
   readonly label: string;
   readonly key?: string;
+  readonly panelId?: PanelId;
   readonly action: () => void;
 }
 
@@ -32,6 +33,7 @@ export class MenuBar {
   private readonly box: blessed.Widgets.BoxElement;
   private items: readonly MenuBarItem[] = [];
   private selectedIndex = 0;
+  private activePanelId: PanelId = PanelId.Map;
   private currentPanelId: PanelId = PanelId.Map;
   private readonly itemProvider: MenuBarItemProvider;
 
@@ -71,9 +73,26 @@ export class MenuBar {
    */
   updateForPanel(panelId: PanelId): void {
     this.currentPanelId = panelId;
+    this.activePanelId = panelId;
     this.items = this.itemProvider(panelId);
-    this.selectedIndex = 0;
+    // Set selectedIndex to match the active panel item
+    let activeIdx = 0;
+    for (let i = 0; i < this.items.length; i++) {
+      const item = this.items[i];
+      if (item !== undefined && item.panelId === panelId) {
+        activeIdx = i;
+        break;
+      }
+    }
+    this.selectedIndex = activeIdx;
     this.render();
+  }
+
+  /**
+   * Get the active panel ID (the focused panel, not the keyboard-selected item).
+   */
+  getActivePanelId(): PanelId {
+    return this.activePanelId;
   }
 
   /**
@@ -162,12 +181,20 @@ export class MenuBar {
 
   /**
    * Render the menu bar content.
+   * Active panel item gets inverse style; keyboard-selected gets bold highlight.
    */
   private render(): void {
     const parts: string[] = [];
     for (let i = 0; i < this.items.length; i++) {
       const item = this.items[i]!;
-      if (i === this.selectedIndex) {
+      const isActive = item.panelId !== undefined && item.panelId === this.activePanelId;
+      const isSelected = i === this.selectedIndex;
+
+      if (isActive) {
+        // Active panel: inverse colors (light bg, dark fg)
+        parts.push(`{${THEME.ui.menuItemActive}-bg}{#000000-fg}{bold} ${item.label} {/bold}{/}`);
+      } else if (isSelected) {
+        // Keyboard cursor: bold + active color
         parts.push(`{${THEME.ui.menuItemActive}-fg}{bold} ${item.label} {/bold}{/}`);
       } else {
         parts.push(` ${item.label} `);

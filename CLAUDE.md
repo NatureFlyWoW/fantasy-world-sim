@@ -83,7 +83,7 @@ small to warrant delegation.
 
 
 ## Current Phase
-Phase 8: UX Overhaul (In Progress — Tier 1-3 complete, Tier 4 remaining)
+Phase 8: UX Overhaul (In Progress — Tier 1-4 complete, Tier 5 remaining)
 
 ### Phase 8 Tasks — IN PROGRESS
 UX overhaul: "Names Not Numbers" entity resolution in event log, world dashboard
@@ -91,8 +91,13 @@ replacing empty inspector, click handling for menu bar and event log, context-se
 status bar hints, auto-pause on legendary events (sig 95+), pre-simulation welcome screen,
 narrative-first UI with character AI templates, prose event descriptions, significance
 word labels, narrative dashboard, region detail panel with biome prose.
-Tier 4 remaining: Chronicle narrative-primary view, event aggregation, story threads,
-interactive entity names in prose, tone-affects-layout.
+Tier 4 UI redesign: rendering bug fixes (blessed tag balancing, ASCII title encoding),
+menu bar active panel indicator, entity resolution World-based fallback, welcome screen
+30-tick warmup, dashboard narrative synthesis, right-pane narrative context (participants/
+location/consequences), region settlement overlay, chronicle-first layout, clickable
+entity names in prose.
+Tier 5 remaining: Chronicle narrative-primary view, event aggregation, story threads,
+tone-affects-layout.
 - [x] 8.1 — Names Not Numbers (EventFormatter wired to EntityResolver, SUBTYPE_VERB_MAP with ~50 verb patterns, resolves entity IDs to character/faction/site/artifact names, ENTITY_NAME_COLOR for clickable names; 17 new tests)
 - [x] 8.2 — World Dashboard (Inspector empty state replaced with live dashboard: World Pulse domain balance bars via WorldFingerprintCalculator, Top Factions from Territory components, Active Tensions from sig 60+ Political/Military events, Recent Notable Events; dashboard scrolling; 12 new tests)
 - [x] 8.3 — Click Handling (MenuBar.handleClick(x) coordinate-to-item mapping, EventLogPanel.handleClick(x,y) click-to-select events, Application menu bar click routing at y=0; 6 new tests)
@@ -100,10 +105,11 @@ interactive entity names in prose, tone-affects-layout.
 - [x] 8.5 — Auto-Pause on Legendary Events (SimulationTimeControls legendaryPauseThreshold=95, immediate pause with 'auto-pause-legendary' reason, getLastLegendaryEvent() accessor; 9 new tests)
 - [x] 8.6 — Story So Far Welcome Screen (WelcomeData interface, renderWelcomeScreen with seed/factions/settlements/tensions, shown before simulation starts; CLI builds welcomeData from generatedData; 3 new tests)
 - [x] 8.7 — Narrative-First UI Overhaul (66 Character AI templates for 22 subtypes x 3 significance tiers in character-actions.ts, 281 total templates; SHORT_NARRATIVE_MAP ~70 subtype-to-prose entries + getShortNarrative() + getSignificanceLabel() in EventFormatter; significance displayed as colored word labels not numbers; DOMAIN_PROSE 6 domains x 5 thresholds for narrative dashboard; event aggregation in dashboard; RegionDetailPanel with 17 biome prose descriptions, 8-tier elevation/temperature/7-tier rainfall descriptors, 13 resource descriptions; 'narrative' 4-quadrant layout preset as default; panel key 8 + menu bar Region item; MapPanel selection handler wires cursor to region detail)
-- [ ] 8.8 — Chronicle Narrative-Primary View (full-width prose as default, temporal grouping with period headers, significance-tiered display, chronicler identity header)
-- [ ] 8.9 — Event Aggregation (time-window batching of sub-threshold events, expand-on-demand, two-threshold system)
-- [ ] 8.10 — Story Threads (inline cascade connectors, arc progress headers, thread color-coding)
-- [ ] 8.11 — Interactive Entity Names & Polish (clickable entity names in prose, tone affects layout, progressive tips)
+- [x] 8.8 — UI Redesign (rendering bug fixes: blessed tag balancing in region/inspector panels, ASCII-safe title encoding; menu bar active panel indicator with inverse styling; entity resolution World-based fallback for runtime entities; welcome screen 30-tick warmup with narrative prose; dashboard narrative synthesis paragraph + resolved names in tensions/tidings; right-pane narrative context with participants/location/consequences; region panel settlement/faction overlay via RegionOverlayData; chronicle-first layout: EventLog 60% full-height left, Map+Inspector/Region right; clickable entity names in prose via rightPaneEntitySpans tracking)
+- [ ] 8.9 — Chronicle Narrative-Primary View (temporal grouping with period headers, significance-tiered display, chronicler identity header)
+- [ ] 8.10 — Event Aggregation (time-window batching of sub-threshold events, expand-on-demand, two-threshold system)
+- [ ] 8.11 — Story Threads (inline cascade connectors, arc progress headers, thread color-coding)
+- [ ] 8.12 — Polish (tone affects layout, progressive tips)
 
 ### Phase 7 Tasks — COMPLETE
 Extended systems: World DNA Fingerprint (6-domain radial chart), Timeline Branching
@@ -468,6 +474,35 @@ Deterministic from seed. 9 configurable parameters with named presets.
   'narrative' as default layout. LAYOUT_ORDER updated to cycle narrative→default→
   map-focus→log-focus→split. PANEL_INDEX extended to 8 panels. Menu bar includes
   Region item. Context hints for RegionDetail panel. 2776 tests passing.
+
+- 2026: UI Redesign (Phase 8 Tier 4). 11 fixes across renderer and CLI:
+  (1) Region panel blessed tag fix: tags must close on every line (blessed processes
+  per-line); fixed empty state and inspector "Great Powers" empty state.
+  (2) Inspector title: \u00C6 → AETERNUM (ASCII-safe for mintty/MSYS2).
+  (3) Menu bar active panel indicator: added activePanelId field separate from
+  selectedIndex; three-tier render style (active=inverse bg, keyboard-selected=bold,
+  normal=plain). MenuBarItem extended with optional panelId field. app.ts itemProvider
+  includes panelId on each item.
+  (4) Entity resolution World-based fallback: buildEntityResolver() now accepts World
+  parameter; resolveFromWorld() reads Status component for runtime entities (armies,
+  institutions, artifacts) not in static generator snapshot.
+  (5) Welcome screen 30-tick warmup: CLI runs 30 engine ticks silently before building
+  welcome data; tensions built from actual event log (sig 50+ Political/Military);
+  welcome text is narrative prose; dismissWelcome() flag set on first Space press.
+  (6) Dashboard narrative depth: synthesized World Pulse paragraph combining top/bottom
+  domain values; getActiveTensions() returns full WorldEvent objects; Winds of Conflict
+  uses formatter.getEventDescription() with resolved names; Recent Tidings prepends
+  primary participant name.
+  (7) Right-pane narrative enrichment: buildNarrativeContent() adds Participants
+  (resolved names), Location, Consequences (up to 3 cascade events with short narratives).
+  (8) Region settlement/faction overlay: RegionOverlayData interface with
+  controllingFaction and nearbySettlements; wired from CLI using Position/Population/
+  Allegiance component queries.
+  (9) Chronicle-first layout: narrative preset redesigned — EventLog 60% width full-height
+  left column, Map upper-right 40%x50%, Inspector/Region lower-right 40%x50%.
+  (10) Clickable entity names: rightPaneEntitySpans Map tracks entity name positions
+  per line in right pane; handleClick() maps right-pane clicks to entity spans and
+  calls onInspectEntity(). 2776 tests passing.
 
 ## Known Issues
 - EventCategory.Exploratory has no system producing events (by design — no exploration

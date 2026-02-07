@@ -131,43 +131,41 @@ export function calculateDefaultLayout(screen: ScreenDimensions): LayoutConfigur
 
 /**
  * Calculate the narrative layout.
- * 4-quadrant split: Map + Region Detail on left, Event Log + Inspector on right.
- * Map: upper-left (40% width, 55% height)
- * RegionDetail: lower-left (40% width, 45% height)
- * EventLog: upper-right (60% width, 50% height)
- * Inspector: lower-right (60% width, 50% height)
+ * Event chronicle is the star — largest panel on the left (60% width, full height).
+ * Map (upper-right, 40% width, 50% height) + context sidebar (lower-right: Inspector
+ * when entity selected, Region when browsing map, Dashboard when idle).
+ *
+ *  ┌──────────────────────┬──────────────┐
+ *  │                      │     Map      │
+ *  │    Event Chronicle   │   (40%x50%)  │
+ *  │     (60% x 100%)     ├──────────────┤
+ *  │                      │  Inspector / │
+ *  │                      │  Region /    │
+ *  │                      │  Dashboard   │
+ *  └──────────────────────┴──────────────┘
  */
 export function calculateNarrativeLayout(screen: ScreenDimensions): LayoutConfiguration {
   const panels = new Map<PanelId, PanelLayout>();
 
   const usableHeight = screen.height - STATUS_BAR_HEIGHT - MENU_BAR_HEIGHT;
-  const leftWidth = Math.floor(screen.width * 0.4);
+  const leftWidth = Math.floor(screen.width * 0.6);
   const rightWidth = screen.width - leftWidth;
-  const leftTopHeight = Math.floor(usableHeight * 0.55);
-  const leftBottomHeight = usableHeight - leftTopHeight;
   const rightTopHeight = Math.floor(usableHeight * 0.5);
   const rightBottomHeight = usableHeight - rightTopHeight;
 
-  panels.set(PanelId.Map, {
-    id: PanelId.Map,
+  // Event log takes the full left column — the primary reading experience
+  panels.set(PanelId.EventLog, {
+    id: PanelId.EventLog,
     x: 0,
     y: MENU_BAR_HEIGHT,
     width: leftWidth,
-    height: leftTopHeight,
+    height: usableHeight,
     focused: true,
   });
 
-  panels.set(PanelId.RegionDetail, {
-    id: PanelId.RegionDetail,
-    x: 0,
-    y: MENU_BAR_HEIGHT + leftTopHeight,
-    width: leftWidth,
-    height: leftBottomHeight,
-    focused: false,
-  });
-
-  panels.set(PanelId.EventLog, {
-    id: PanelId.EventLog,
+  // Map: upper-right
+  panels.set(PanelId.Map, {
+    id: PanelId.Map,
     x: leftWidth,
     y: MENU_BAR_HEIGHT,
     width: rightWidth,
@@ -175,8 +173,19 @@ export function calculateNarrativeLayout(screen: ScreenDimensions): LayoutConfig
     focused: false,
   });
 
+  // Inspector/Region/Dashboard: lower-right context sidebar
   panels.set(PanelId.Inspector, {
     id: PanelId.Inspector,
+    x: leftWidth,
+    y: MENU_BAR_HEIGHT + rightTopHeight,
+    width: rightWidth,
+    height: rightBottomHeight,
+    focused: false,
+  });
+
+  // Region detail shares the lower-right space (hidden by default, shown when browsing map)
+  panels.set(PanelId.RegionDetail, {
+    id: PanelId.RegionDetail,
     x: leftWidth,
     y: MENU_BAR_HEIGHT + rightTopHeight,
     width: rightWidth,

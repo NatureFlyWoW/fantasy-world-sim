@@ -306,12 +306,15 @@ function createSimulationEngine(
 }
 
 /**
- * Build an EntityResolver from generated data.
- * This allows the narrative engine to resolve entity IDs to names.
+ * Build an EntityResolver from generated data with World-based fallback.
+ * The static maps capture initial entities. The World fallback resolves
+ * entities created at runtime (armies, institutions, artifacts, etc.)
+ * by reading their Status/Attribute/Territory components.
  */
 function buildEntityResolver(
   generatedData: ReturnType<typeof generateWorld>,
-  populationResult: ReturnType<typeof populateWorldFromGenerated>
+  populationResult: ReturnType<typeof populateWorldFromGenerated>,
+  world: World
 ): EntityResolver {
   // Build character ID → data maps
   const characterData = new Map<number, ResolvedEntity>();
@@ -362,19 +365,36 @@ function buildEntityResolver(
   for (let i = 0; i < generatedData.pantheon.gods.length; i++) {
     const deity = generatedData.pantheon.gods[i];
     if (deity === undefined) continue;
-    // Deities don't have separate entity IDs in current implementation,
-    // but we add them using their array index as a fallback
     deityData.set(i, {
       name: deity.name,
       title: deity.title,
     });
   }
 
+  /**
+   * World-based fallback: resolve any entity ID by reading ECS components.
+   * Tries Status.titles for name, then detects type from Attribute/Territory.
+   */
+  function resolveFromWorld(id: number): ResolvedEntity | undefined {
+    const entityId = id as unknown as EntityId;
+    // Try Status component for a name
+    if (world.hasStore('Status')) {
+      const status = world.getComponent(entityId, 'Status');
+      if (status !== undefined) {
+        const titles = (status as { titles?: string[] }).titles;
+        if (titles !== undefined && titles.length > 0 && titles[0] !== undefined) {
+          return { name: titles[0] };
+        }
+      }
+    }
+    return undefined;
+  }
+
   return {
-    resolveCharacter: (id: number) => characterData.get(id),
-    resolveFaction: (id: number) => factionData.get(id),
-    resolveSite: (id: number) => siteData.get(id),
-    resolveArtifact: (_id: number) => undefined, // Not yet populated
+    resolveCharacter: (id: number) => characterData.get(id) ?? resolveFromWorld(id),
+    resolveFaction: (id: number) => factionData.get(id) ?? resolveFromWorld(id),
+    resolveSite: (id: number) => siteData.get(id) ?? resolveFromWorld(id),
+    resolveArtifact: (id: number) => resolveFromWorld(id),
     resolveDeity: (id: number) => deityData.get(id),
   };
 }
@@ -619,7 +639,61 @@ function launchTerminalUI(
   mapPanel.setSelectionHandler((entity, x, y) => {
     // Update region detail with tile data at cursor position
     const tile = context.tileLookup !== undefined ? context.tileLookup(x, y) : null;
-    regionDetailPanel.updateLocation(x, y, tile);
+
+    // Build overlay data: controlling faction and nearby settlements
+    let overlay = undefined;
+    try {
+      const nearbySettlements = [];
+      let controllingFaction = undefined;
+
+      if (ecsWorld.hasStore('Position') && ecsWorld.hasStore('Population')) {
+        for (const [eid] of ecsWorld.getStore('Position').getAll()) {
+          const pop = ecsWorld.getComponent(eid, 'Population');
+          if (pop === undefined) continue; // Not a settlement
+
+          const pos = ecsWorld.getComponent(eid, 'Position');
+          if (pos === undefined) continue;
+          const px = (pos as { x: number }).x;
+          const py = (pos as { y: number }).y;
+          const dist = Math.abs(px - x) + Math.abs(py - y);
+          if (dist > 15) continue;
+
+          // Get settlement name
+          let sName = `Settlement #${eid}`;
+          const resolved = entityResolver.resolveSite(eid as unknown as number);
+          if (resolved !== undefined) sName = resolved.name;
+
+          nearbySettlements.push({ name: sName, distance: dist });
+
+          // If settlement is ON this tile, find its faction
+          if (dist === 0 && controllingFaction === undefined) {
+            // Check if this settlement belongs to a faction via Allegiance component
+            if (ecsWorld.hasStore('Allegiance')) {
+              const allegiance = ecsWorld.getComponent(eid, 'Allegiance');
+              if (allegiance !== undefined) {
+                const fId = (allegiance as { factionId?: unknown }).factionId;
+                if (fId !== undefined) {
+                  const fResolved = entityResolver.resolveFaction(fId as number);
+                  if (fResolved !== undefined) controllingFaction = fResolved.name;
+                }
+              }
+            }
+          }
+        }
+      }
+
+      nearbySettlements.sort((a, b) => a.distance - b.distance);
+      if (nearbySettlements.length > 0 || controllingFaction !== undefined) {
+        overlay = {
+          controllingFaction,
+          nearbySettlements: nearbySettlements.slice(0, 4),
+        };
+      }
+    } catch {
+      // Overlay is optional; silently ignore errors
+    }
+
+    regionDetailPanel.updateLocation(x, y, tile, undefined, overlay);
 
     // Update entity selection for inspector
     if (entity !== null && entity.name !== undefined) {
@@ -860,16 +934,35 @@ async function main(): Promise<void> {
       lodManager,
     };
 
-    // Build entity resolver for narrative generation
-    const entityResolver = buildEntityResolver(generatedData, populationResult);
+    // Build entity resolver for narrative generation (with World fallback for runtime entities)
+    const entityResolver = buildEntityResolver(generatedData, populationResult, ecsWorld);
 
-    // Build welcome data for pre-simulation screen
+    // Auto-run 30 ticks to populate events before displaying the welcome screen.
+    // This gives the narrative engine real events to work with.
+    const WARMUP_TICKS = 30;
+    console.log(`Running ${WARMUP_TICKS}-tick warmup...`);
+    engine.run(WARMUP_TICKS);
+    console.log(`Warmup complete: ${eventLog.getAll().length} events generated\n`);
+
+    // Build welcome data from the now-populated event log
+    const recentEvents = eventLog.getAll();
+    const tensionEvents = recentEvents
+      .filter(e => (e.category === EventCategory.Political || e.category === EventCategory.Military) && e.significance >= 50)
+      .slice(-5);
+    const tensionDescriptions = tensionEvents.map(e => {
+      const data = e.data as Record<string, unknown>;
+      if (typeof data['description'] === 'string') return data['description'];
+      return e.subtype.split('.').slice(1).join(' ').replace(/_/g, ' ');
+    });
+
     const welcomeData = {
       seed,
       factionCount: generatedData.factions.length,
       characterCount: generatedData.rulers.length + generatedData.notables.length,
       settlementCount: generatedData.settlements.length,
-      tensions: generatedData.tensions.slice(0, 5).map(t => t.description),
+      tensions: tensionDescriptions.length > 0
+        ? tensionDescriptions
+        : generatedData.tensions.slice(0, 5).map(t => t.description),
       worldSize: generatedData.config.worldSize,
     };
 
