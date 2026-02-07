@@ -31,14 +31,29 @@
 - Tests need `getStore` in MockWorldOverrides when inspectors query stores
 - EventLogPanel autoScroll selects last event on addEvent -- test double-click with 2+ events
 
+## MapOverlayBridge Architecture
+- `overlay-bridge.ts`: ECS-to-overlay data bridge with 6 cached layers
+- Layers: Settlements, Territory, Military, Trade, Magic, EntityMarkers
+- Cache key: `"x,y"` string for O(1) tile lookup
+- Hybrid update: event-driven dirty flags + tick-interval refresh per layer
+- Territory: diamond flood-fill (Manhattan dist) from capitals, detectBorders via orthogonal neighbors
+- Trade: Bresenham line between top-10 wealthy settlement pairs within 50 tiles
+- Faction colors/capitals injected from generator data (not in ECS components)
+- `overlay.ts` extended: OverlayPreset system (7 presets), renderAllAt() for multi-layer compositing
+- CLI wiring: bridge created in launchTerminalUI, lookups wired to overlay classes
+- `noUnusedLocals: true` catches private fields -- cannot store unused params even with underscore prefix. Use `void param;` instead.
+
 ## Test Counts
 - 2776 -> 2844 (Phase 8 inspector system rewrite)
 - 2844 -> 2847 (integration wiring tests)
+- 2847 -> 2955 (MapOverlayBridge: +53 bridge tests, +55 other changes)
+- overlay-bridge.test.ts: 53 tests
+- overlay.test.ts: 44 tests (all backward-compatible)
 - sub-inspectors.test.ts: 51 tests (Location: 20, Faction: 19, Artifact: 12)
 - character-inspector.test.ts: 33 tests
 - event-inspector.test.ts: 19 tests
 - region-inspector.test.ts: 24 tests
-- event-log-panel.test.ts: 62 tests
+- event-log-panel.test.ts: 82 tests
 
 ## Remaining Work (Phase 8)
 - ArtifactInspector prose-first rewrite (not yet started)

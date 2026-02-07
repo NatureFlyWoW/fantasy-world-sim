@@ -393,10 +393,15 @@ export class MapPanel extends BasePanel {
   }
 
   /**
-   * Cycle through overlays.
+   * Cycle through overlay presets.
    */
   private cycleOverlay(): void {
-    this.overlayManager.cycleOverlay();
+    const label = this.overlayManager.cyclePreset();
+    if (label === 'Terrain') {
+      this.setTitle('World Map');
+    } else {
+      this.setTitle(`World Map - ${label}`);
+    }
     this.invalidateCache();
   }
 
@@ -475,8 +480,8 @@ export class MapPanel extends BasePanel {
       cell = compositeEntityOnTile(cell, marker);
     }
 
-    // Apply overlay modification
-    const overlayMod = this.overlayManager.renderAt(wx, wy, context);
+    // Apply overlay modification (multi-layer compositing)
+    const overlayMod = this.overlayManager.renderAllAt(wx, wy, context);
     if (overlayMod !== null) {
       cell = this.applyOverlay(cell, overlayMod);
     }

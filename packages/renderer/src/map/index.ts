@@ -32,10 +32,12 @@ export {
   MagicOverlay,
   ClimateOverlay,
   OverlayManager,
+  OVERLAY_PRESETS,
 } from './overlay.js';
 export type {
   OverlayModification,
   OverlayRenderer,
+  OverlayPreset,
   TerritoryData,
   TerritoryLookup,
   ResourceData,
@@ -49,6 +51,25 @@ export type {
   ClimateData,
   ClimateLookup,
 } from './overlay.js';
+
+// Overlay bridge (ECS -> overlay data)
+export {
+  MapOverlayBridge,
+  OverlayLayer,
+  DEFAULT_BRIDGE_CONFIG,
+} from './overlay-bridge.js';
+export type {
+  SettlementOverlayEntry,
+  TerritoryOverlayEntry,
+  MilitaryOverlayEntry,
+  TradeOverlayEntry,
+  MagicOverlayEntry,
+  EntityMarkerEntry,
+  OverlayBridgeStats,
+  OverlayBridgeConfig,
+  FactionColorMap,
+  FactionCapitalMap,
+} from './overlay-bridge.js';
 
 // Minimap
 export {

@@ -511,12 +511,57 @@ export class ClimateOverlay extends BaseOverlay {
   }
 }
 
+// ============================================================================
+// Overlay presets
+// ============================================================================
+
+/**
+ * Named overlay preset. Each preset activates a sensible combination
+ * of overlay layers. The player cycles through presets with the 'o' key
+ * rather than toggling individual layers.
+ */
+export interface OverlayPreset {
+  readonly name: string;
+  readonly label: string;
+  readonly layers: readonly OverlayType[];
+}
+
+/**
+ * Ordered list of overlay presets the player can cycle through.
+ */
+export const OVERLAY_PRESETS: readonly OverlayPreset[] = [
+  { name: 'none',      label: 'Terrain',    layers: [] },
+  { name: 'political', label: 'Political',  layers: [OverlayType.Political] },
+  { name: 'military',  label: 'Military',   layers: [OverlayType.Political, OverlayType.Military] },
+  { name: 'economic',  label: 'Economic',   layers: [OverlayType.Trade, OverlayType.Resources] },
+  { name: 'arcane',    label: 'Arcane',     layers: [OverlayType.Magic] },
+  { name: 'climate',   label: 'Climate',    layers: [OverlayType.Climate] },
+  { name: 'full',      label: 'Full',       layers: [OverlayType.Political, OverlayType.Military, OverlayType.Trade, OverlayType.Magic] },
+];
+
+/**
+ * Layer compositing priority (lowest to highest). Layers with higher
+ * priority override char/fg from lower-priority layers. All bg
+ * modifications are blended in priority order.
+ */
+const LAYER_PRIORITY: readonly OverlayType[] = [
+  OverlayType.Climate,
+  OverlayType.Resources,
+  OverlayType.Magic,
+  OverlayType.Trade,
+  OverlayType.Political,
+  OverlayType.Military,
+];
+
 /**
  * Overlay manager handles multiple overlays and their state.
  */
 export class OverlayManager {
   private overlays: Map<OverlayType, OverlayRenderer> = new Map();
   private activeOverlay: OverlayType = OverlayType.None;
+
+  // Preset state
+  private currentPresetIndex = 0;
 
   constructor() {
     // Create default overlays
@@ -537,6 +582,7 @@ export class OverlayManager {
 
   /**
    * Set the active overlay (only one can be active at a time).
+   * This is the legacy single-overlay mode.
    */
   setActiveOverlay(type: OverlayType): void {
     // Deactivate current overlay
@@ -559,14 +605,14 @@ export class OverlayManager {
   }
 
   /**
-   * Get the currently active overlay type.
+   * Get the currently active overlay type (legacy single-overlay mode).
    */
   getActiveOverlayType(): OverlayType {
     return this.activeOverlay;
   }
 
   /**
-   * Cycle to the next overlay.
+   * Cycle to the next overlay (legacy single-overlay mode).
    */
   cycleOverlay(): OverlayType {
     const types = [
@@ -587,8 +633,74 @@ export class OverlayManager {
     return nextType;
   }
 
+  // ========================================================================
+  // Preset API
+  // ========================================================================
+
   /**
-   * Render the active overlay at a position.
+   * Set the active preset by name. Activates all layers in the preset
+   * and deactivates all others.
+   */
+  setPreset(presetName: string): void {
+    const idx = OVERLAY_PRESETS.findIndex(p => p.name === presetName);
+    if (idx === -1) return;
+
+    this.currentPresetIndex = idx;
+    this.applyPreset();
+  }
+
+  /**
+   * Get the current preset name.
+   */
+  getPresetName(): string {
+    const preset = OVERLAY_PRESETS[this.currentPresetIndex];
+    return preset !== undefined ? preset.label : 'Terrain';
+  }
+
+  /**
+   * Cycle to the next preset and return its label.
+   */
+  cyclePreset(): string {
+    this.currentPresetIndex = (this.currentPresetIndex + 1) % OVERLAY_PRESETS.length;
+    this.applyPreset();
+    return this.getPresetName();
+  }
+
+  /**
+   * Get the current preset index (for testing).
+   */
+  getPresetIndex(): number {
+    return this.currentPresetIndex;
+  }
+
+  /**
+   * Apply the current preset by activating/deactivating overlays.
+   */
+  private applyPreset(): void {
+    const preset = OVERLAY_PRESETS[this.currentPresetIndex];
+    if (preset === undefined) return;
+
+    const activeLayers = new Set(preset.layers);
+
+    // Activate/deactivate each overlay according to the preset
+    for (const [type, overlay] of this.overlays) {
+      overlay.setActive(activeLayers.has(type));
+    }
+
+    // Update legacy single-overlay tracking
+    // Set to the highest-priority active overlay, or None
+    this.activeOverlay = OverlayType.None;
+    for (const layer of preset.layers) {
+      this.activeOverlay = layer;
+    }
+  }
+
+  // ========================================================================
+  // Rendering
+  // ========================================================================
+
+  /**
+   * Render the active overlay at a position (legacy single-overlay mode).
    */
   renderAt(x: number, y: number, context: RenderContext): OverlayModification | null {
     if (this.activeOverlay === OverlayType.None) return null;
@@ -597,5 +709,51 @@ export class OverlayManager {
     if (overlay === undefined || !overlay.isActive()) return null;
 
     return overlay.renderAt(x, y, context);
+  }
+
+  /**
+   * Render ALL active overlays at a position, compositing results.
+   *
+   * Layers are applied in priority order (lowest first). Each layer can
+   * contribute char, fg, or bg modifications. Higher-priority layers
+   * override char and fg from lower-priority layers. All bg modifications
+   * are blended cumulatively.
+   */
+  renderAllAt(x: number, y: number, context: RenderContext): OverlayModification | null {
+    let resultChar: string | undefined;
+    let resultFg: string | undefined;
+    let resultBg: string | undefined;
+    let hasAnyMod = false;
+
+    for (const layerType of LAYER_PRIORITY) {
+      const overlay = this.overlays.get(layerType);
+      if (overlay === undefined || !overlay.isActive()) continue;
+
+      const mod = overlay.renderAt(x, y, context);
+      if (mod === null) continue;
+
+      hasAnyMod = true;
+
+      // Higher-priority layers override char and fg
+      if (mod.char !== undefined) resultChar = mod.char;
+      if (mod.fg !== undefined) resultFg = mod.fg;
+
+      // Background modifications are blended cumulatively
+      if (mod.bg !== undefined) {
+        if (resultBg !== undefined) {
+          resultBg = blendColors(resultBg, mod.bg, 0.5);
+        } else {
+          resultBg = mod.bg;
+        }
+      }
+    }
+
+    if (!hasAnyMod) return null;
+
+    return {
+      ...(resultChar !== undefined ? { char: resultChar } : {}),
+      ...(resultFg !== undefined ? { fg: resultFg } : {}),
+      ...(resultBg !== undefined ? { bg: resultBg } : {}),
+    };
   }
 }

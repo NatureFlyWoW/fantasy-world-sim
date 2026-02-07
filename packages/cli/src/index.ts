@@ -68,8 +68,11 @@ import {
   StatisticsPanel,
   FingerprintPanel,
   RegionDetailPanel,
+  MapOverlayBridge,
+  OverlayType,
 } from '@fws/renderer';
 import type { RenderContext, PanelLayout } from '@fws/renderer';
+import type { PoliticalOverlay, ResourceOverlay, MilitaryOverlay, TradeOverlay, MagicOverlay, ClimateOverlay } from '@fws/renderer';
 import type * as blessed from 'blessed';
 import { createRequire } from 'node:module';
 const cliRequire = createRequire(import.meta.url);
@@ -471,7 +474,9 @@ function launchTerminalUI(
   worldMapWidth: number,
   worldMapHeight: number,
   entityResolver: EntityResolver,
-  welcomeData: { seed: number; factionCount: number; characterCount: number; settlementCount: number; tensions: string[]; worldSize: string }
+  welcomeData: { seed: number; factionCount: number; characterCount: number; settlementCount: number; tensions: string[]; worldSize: string },
+  generatedData: ReturnType<typeof generateWorld>,
+  populationResult: ReturnType<typeof populateWorldFromGenerated>,
 ): void {
   console.log('\n');
   printBox([
@@ -634,6 +639,76 @@ function launchTerminalUI(
   app.registerPanel(statsPanel, PanelId.Statistics);
   app.registerPanel(fingerprintPanel, PanelId.Fingerprint);
   app.registerPanel(regionDetailPanel, PanelId.RegionDetail);
+
+  // =========================================================================
+  // Map Overlay Bridge: connect ECS world state to overlay rendering
+  // =========================================================================
+
+  const overlayBridge = new MapOverlayBridge(context.world, context.spatialIndex);
+
+  // Provide tile lookup for ley line / climate / resource data
+  if (context.tileLookup !== undefined) {
+    overlayBridge.setTileLookup(context.tileLookup);
+  }
+
+  // Provide viewport for viewport-scoped magic queries
+  overlayBridge.setViewport(mapPanel.getViewport());
+
+  // Build faction color and capital maps from generated data
+  const factionColorMap = new Map<number, string>();
+  const factionCapitalMap = new Map<number, number>();
+  for (let fi = 0; fi < generatedData.factions.length; fi++) {
+    const faction = generatedData.factions[fi];
+    const factionId = populationResult.factionIds.get(fi);
+    if (faction === undefined || factionId === undefined) continue;
+    factionColorMap.set(factionId as unknown as number, faction.color);
+    // Map faction ID -> capital settlement entity ID
+    const capitalSiteId = populationResult.settlementIds.get(faction.capitalIndex);
+    if (capitalSiteId !== undefined) {
+      factionCapitalMap.set(factionId as unknown as number, capitalSiteId as unknown as number);
+    }
+  }
+  overlayBridge.setFactionColors(factionColorMap);
+  overlayBridge.setFactionCapitals(factionCapitalMap);
+
+  // Wire entity lookup (shows settlements, armies, etc. on map)
+  mapPanel.setEntityLookup(overlayBridge.getEntityLookup());
+
+  // Wire overlay data lookup functions to existing overlay classes
+  const overlayManager = mapPanel.getOverlayManager();
+  const politicalOvl = overlayManager.getOverlay<PoliticalOverlay>(OverlayType.Political);
+  if (politicalOvl !== undefined) {
+    politicalOvl.setTerritoryLookup(overlayBridge.getTerritoryLookup());
+  }
+  const resourceOvl = overlayManager.getOverlay<ResourceOverlay>(OverlayType.Resources);
+  if (resourceOvl !== undefined) {
+    resourceOvl.setResourceLookup(overlayBridge.getResourceLookup());
+  }
+  const militaryOvl = overlayManager.getOverlay<MilitaryOverlay>(OverlayType.Military);
+  if (militaryOvl !== undefined) {
+    militaryOvl.setMilitaryLookup(overlayBridge.getMilitaryLookup());
+  }
+  const tradeOvl = overlayManager.getOverlay<TradeOverlay>(OverlayType.Trade);
+  if (tradeOvl !== undefined) {
+    tradeOvl.setTradeLookup(overlayBridge.getTradeLookup());
+  }
+  const magicOvl = overlayManager.getOverlay<MagicOverlay>(OverlayType.Magic);
+  if (magicOvl !== undefined) {
+    magicOvl.setMagicLookup(overlayBridge.getMagicLookup());
+  }
+  const climateOvl = overlayManager.getOverlay<ClimateOverlay>(OverlayType.Climate);
+  if (climateOvl !== undefined) {
+    climateOvl.setClimateLookup(overlayBridge.getClimateLookup());
+  }
+
+  // Subscribe to simulation events for dirty tracking
+  overlayBridge.subscribeToEvents(context.eventBus);
+
+  // Set default overlay preset (political map with settlements)
+  overlayManager.setPreset('political');
+
+  // Force initial data population
+  overlayBridge.forceRefreshAll(context.clock.currentTick);
 
   // Wire map cursor movement to region detail panel
   mapPanel.setSelectionHandler((entity, x, y) => {
@@ -1006,7 +1081,9 @@ async function main(): Promise<void> {
       generatedData.worldMap.getWidth(),
       generatedData.worldMap.getHeight(),
       entityResolver,
-      welcomeData
+      welcomeData,
+      generatedData,
+      populationResult,
     );
   }
 }
