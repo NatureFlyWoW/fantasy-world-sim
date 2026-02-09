@@ -1,0 +1,48 @@
+/**
+ * Map tooltip — appears on 300ms hover over a tile.
+ * Design doc Section 6.8: BG2 background, N0 border, no radius, no shadow.
+ */
+.map-tooltip {
+  position: fixed;
+  pointer-events: none;
+  z-index: 1000;
+  background: var(--bg2);
+  border: 1px solid var(--border-default);
+  padding: var(--space-md) 10px;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  max-width: 280px;
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+
+.map-tooltip.visible {
+  opacity: 1;
+}
+
+.map-tooltip__biome {
+  color: var(--text-primary);
+  margin-bottom: var(--space-xs);
+}
+
+.map-tooltip__coords {
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+}
+
+.map-tooltip__faction {
+  color: var(--text-secondary);
+  margin-top: var(--space-xs);
+}
+
+.map-tooltip__settlement {
+  color: var(--text-accent);
+  margin-top: var(--space-xs);
+}
+
+.map-tooltip__resources {
+  color: var(--text-secondary);
+  margin-top: var(--space-xs);
+  font-size: var(--text-xs);
+}

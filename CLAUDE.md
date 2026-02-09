@@ -38,7 +38,7 @@ Procedural fantasy world simulator inspired by Dwarf Fortress Legends Mode. Gene
 ## Commands
 ```bash
 pnpm run typecheck    # TypeScript validation (from workspace root)
-pnpm run test         # Run all tests (2955 passing)
+pnpm run test         # Run all tests (2909 passing)
 pnpm run start        # Generate world + terminal UI
 pnpm run start -- --seed 42 --headless --ticks 100  # Deterministic headless run
 pnpm run start:electron  # Launch Electron graphical UI
@@ -59,7 +59,7 @@ pnpm run start:electron  # Launch Electron graphical UI
 - **6**: Simulation controls, influence system (17 actions, 3 categories, IP economy)
 - **7**: World fingerprint, timeline branching, save/load, heraldry, dreaming
 - **8 (COMPLETE)**: UX Overhaul — prose-first chronicle (4 modes, aggregation, region filter), 6 polymorphic inspectors (Character/Faction/Site/Artifact/Event/Region), dynamic map overlays (6 layers, 7 presets, territory flood-fill, trade routes), click-to-inspect navigation
-- **9 (IN PROGRESS)**: Graphics Overhaul — Electron + PixiJS frontend. Phase 0 foundation: package structure, IPC bridge, CSS Grid layout, PixiJS canvas mount
+- **9 (IN PROGRESS)**: Graphics Overhaul — Electron + PixiJS frontend. Phase 0: package structure, IPC bridge, CSS Grid layout, PixiJS canvas mount. Phase 1: glyph atlas, biome tilemap rendering, viewport pan/zoom, overlays (Political/Climate), tooltips, entity markers
 
 ## Common Pitfalls
 - `TerrainTile` has NO `freshwater` — use `tile.riverId !== undefined`

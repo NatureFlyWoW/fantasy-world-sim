@@ -445,7 +445,7 @@ export class SimulationRunner {
   private serializeEvents(events: readonly WorldEvent[]): SerializedEvent[] {
     return events.map(e => ({
       id: e.id as unknown as number,
-      tick: e.tick,
+      tick: e.timestamp as unknown as number,
       category: e.category,
       subtype: e.subtype,
       significance: e.significance,

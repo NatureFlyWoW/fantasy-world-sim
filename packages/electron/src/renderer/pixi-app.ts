@@ -3,6 +3,7 @@
  *
  * Phase 0: mounts a dark background canvas. Map rendering added in Phase 1.
  */
+import 'pixi.js/unsafe-eval';
 import { Application } from 'pixi.js';
 
 let pixiApp: Application | null = null;

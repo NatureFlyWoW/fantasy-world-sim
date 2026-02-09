@@ -1,11 +1,15 @@
 /**
  * Renderer process entry point.
  *
- * Initializes PixiJS, connects IPC, wires controls, and maintains
- * an FPS counter.
+ * Initializes PixiJS, connects IPC, wires map rendering + controls,
+ * and maintains an FPS counter.
  */
 import { initPixiApp } from './pixi-app.js';
 import { createIpcClient } from './ipc-client.js';
+import { TilemapRenderer } from './map/tilemap-renderer.js';
+import { MapTooltip } from './map/map-tooltip.js';
+import { OverlayManager } from './map/overlay-manager.js';
+import { bindMapInput } from './map/input-handler.js';
 import type { TickDelta, WorldSnapshot } from '../shared/types.js';
 
 // ── State ────────────────────────────────────────────────────────────────────
@@ -20,6 +24,11 @@ let speed = 1;
 let frameCount = 0;
 let lastFpsTime = performance.now();
 
+// Map
+const tilemap = new TilemapRenderer();
+const tooltip = new MapTooltip();
+const overlayManager = new OverlayManager();
+
 // ── DOM refs ─────────────────────────────────────────────────────────────────
 
 const tickEl = document.getElementById('status-tick')!;
@@ -30,6 +39,7 @@ const dateEl = document.getElementById('date-display')!;
 const btnPause = document.getElementById('btn-pause')!;
 const btnPlay = document.getElementById('btn-play')!;
 const btnFast = document.getElementById('btn-fast')!;
+const overlayEl = document.getElementById('status-overlay');
 
 // ── IPC ──────────────────────────────────────────────────────────────────────
 
@@ -47,11 +57,18 @@ function updateSpeedButtons(): void {
   btnFast.classList.toggle('active', !paused && speed > 1);
 }
 
+function updateOverlayStatus(): void {
+  if (overlayEl !== null) {
+    overlayEl.textContent = `Overlay: ${overlayManager.activeOverlay}`;
+  }
+}
+
 function handleTickDelta(delta: TickDelta): void {
   totalTicks = delta.tick;
   totalEvents += delta.events.length;
   dateEl.textContent = `Year ${delta.time.year}, Month ${delta.time.month}, Day ${delta.time.day}`;
   updateStatusBar();
+  tilemap.handleTickDelta(delta);
 }
 
 // ── Controls ─────────────────────────────────────────────────────────────────
@@ -78,7 +95,7 @@ btnFast.addEventListener('click', () => {
   updateSpeedButtons();
 });
 
-// Keyboard shortcuts
+// Keyboard: space to pause/resume
 document.addEventListener('keydown', (e) => {
   if (e.code === 'Space') {
     e.preventDefault();
@@ -90,9 +107,9 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
-// ── FPS counter ──────────────────────────────────────────────────────────────
+// ── Render loop ──────────────────────────────────────────────────────────────
 
-function fpsLoop(): void {
+function renderLoop(): void {
   frameCount++;
   const now = performance.now();
   if (now - lastFpsTime >= 1000) {
@@ -100,16 +117,23 @@ function fpsLoop(): void {
     frameCount = 0;
     lastFpsTime = now;
   }
-  requestAnimationFrame(fpsLoop);
+
+  tilemap.render();
+
+  requestAnimationFrame(renderLoop);
 }
 
 // ── Init ─────────────────────────────────────────────────────────────────────
 
 async function init(): Promise<void> {
-  // Initialize PixiJS canvas
   const canvas = document.getElementById('pixi-canvas') as HTMLCanvasElement;
   const container = document.getElementById('map-container')!;
-  await initPixiApp(canvas, container);
+
+  // Initialize PixiJS
+  const app = await initPixiApp(canvas, container);
+
+  // Add tilemap to stage
+  app.stage.addChild(tilemap.getContainer());
 
   // Subscribe to tick deltas
   ipc.onTickDelta(handleTickDelta);
@@ -122,13 +146,51 @@ async function init(): Promise<void> {
   totalEntities = snapshot.entities.length;
   totalEvents = snapshot.events.length;
 
-  console.log(`[renderer] World loaded: ${snapshot.mapWidth}x${snapshot.mapHeight}`);
+  console.log(`[renderer] World loaded: ${snapshot.mapWidth}x${snapshot.mapHeight}, ${snapshot.entities.length} entities`);
+
+  // Build faction color map for overlays
+  const factionColors = new Map<number, string>();
+  for (const f of snapshot.factions) {
+    factionColors.set(f.id, f.color);
+  }
+
+  // Initialize overlay manager
+  overlayManager.buildTerritoryCache(snapshot.entities, factionColors);
+  tilemap.setOverlayManager(overlayManager);
+
+  // Initialize map
+  tilemap.init(snapshot);
+  tilemap.resize(app.screen.width, app.screen.height);
+
+  // Bind input
+  bindMapInput(tilemap.getViewport(), canvas, {
+    onDirty: () => tilemap.markDirty(),
+    onCycleOverlay: () => {
+      overlayManager.cycle();
+      tilemap.markDirty();
+      updateOverlayStatus();
+    },
+  });
+
+  // Bind tooltip
+  tooltip.setData(
+    tilemap.getViewport(), snapshot.tiles, [...snapshot.entities],
+    [...snapshot.factions], snapshot.mapWidth, snapshot.mapHeight,
+  );
+  tooltip.bind(canvas);
+
+  // Handle canvas resize
+  const resizeObserver = new ResizeObserver(() => {
+    tilemap.resize(app.screen.width, app.screen.height);
+  });
+  resizeObserver.observe(container);
 
   updateStatusBar();
   updateSpeedButtons();
+  updateOverlayStatus();
 
-  // Start FPS loop
-  requestAnimationFrame(fpsLoop);
+  // Start render loop
+  requestAnimationFrame(renderLoop);
 }
 
 init().catch((err) => {
