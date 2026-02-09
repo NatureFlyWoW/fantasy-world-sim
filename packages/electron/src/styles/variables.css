@@ -1,0 +1,94 @@
+/**
+ * CSS Custom Properties — 28-color Caves of Qud-inspired palette.
+ * Source: design docs section 13.7
+ */
+:root {
+  /* ===== MASTER PALETTE (28 colors) ===== */
+
+  /* Backgrounds */
+  --bg0: #0c0c14;
+  --bg1: #16161e;
+  --bg2: #22222c;
+  --bg3: #2e2e38;
+
+  /* Neutrals */
+  --n0: #3a3a44;
+  --n1: #585860;
+  --n2: #8a8a90;
+  --n3: #c8c8cc;
+
+  /* Chrome */
+  --au0: #6b4e0a;
+  --au1: #8b6914;
+  --au2: #c9a84c;
+
+  /* Parchment */
+  --pa0: #8a7856;
+  --pa1: #c9b896;
+
+  /* World - Terrain */
+  --tw: #1a3860;
+  --ts: #2868a0;
+  --tg: #4a7c3e;
+  --tf: #2a5c34;
+  --tm: #6a7080;
+  --td: #c8a060;
+
+  /* World - Features */
+  --fs: #d0d8e8;
+  --fl: #e04020;
+  --fm: #9040cc;
+
+  /* Semantic - Categories */
+  --cp: #d4a832;
+  --cm: #c44040;
+  --ce: #3aad6a;
+  --cs: #6888c8;
+  --cr: #b87acc;
+  --cc: #40b0c8;
+
+  /* ===== SEMANTIC ALIASES ===== */
+  --text-primary: var(--n3);
+  --text-secondary: var(--n2);
+  --text-tertiary: var(--n1);
+  --text-disabled: var(--n0);
+  --text-accent: var(--pa1);
+  --text-link: var(--cs);
+  --text-danger: var(--cm);
+  --text-success: var(--ce);
+
+  --border-default: var(--n0);
+  --border-strong: var(--n1);
+  --border-ornament: var(--au1);
+
+  --bg-panel: var(--bg1);
+  --bg-card: var(--bg2);
+  --bg-hover: var(--bg3);
+
+  /* ===== TYPOGRAPHY ===== */
+  --font-display: 'Cinzel', 'Palatino Linotype', serif;
+  --font-body: 'Source Sans 3', 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Consolas', monospace;
+
+  --text-xs: 10px;
+  --text-sm: 11px;
+  --text-base: 13px;
+  --text-md: 14px;
+  --text-lg: 16px;
+  --text-xl: 18px;
+  --text-2xl: 22px;
+
+  /* ===== SPACING ===== */
+  --space-xs: 2px;
+  --space-sm: 4px;
+  --space-md: 8px;
+  --space-lg: 12px;
+  --space-xl: 16px;
+  --space-2xl: 24px;
+
+  /* ===== TRANSITIONS ===== */
+  --transition-fast: 100ms ease;
+  --transition-normal: 150ms ease;
+  --transition-slow: 250ms ease;
+  --transition-panel: 200ms ease-out;
+}

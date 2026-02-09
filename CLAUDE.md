@@ -25,6 +25,7 @@ Procedural fantasy world simulator inspired by Dwarf Fortress Legends Mode. Gene
 - `@fws/renderer` — Terminal ASCII UI (blessed): 8 panels, 5 layouts, 30fps
 - `@fws/narrative` — 281 templates, 5 tones, chronicler system, vignettes
 - `@fws/cli` — Entry point, controls, influence system, save/load
+- `@fws/electron` — Electron + PixiJS graphical frontend (Phase 9, in progress)
 
 ## Conventions
 - **TypeScript**: Strict mode, no `any`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, `verbatimModuleSyntax`
@@ -40,6 +41,7 @@ pnpm run typecheck    # TypeScript validation (from workspace root)
 pnpm run test         # Run all tests (2955 passing)
 pnpm run start        # Generate world + terminal UI
 pnpm run start -- --seed 42 --headless --ticks 100  # Deterministic headless run
+pnpm run start:electron  # Launch Electron graphical UI
 ```
 
 ## Subagent Routing
@@ -57,6 +59,7 @@ pnpm run start -- --seed 42 --headless --ticks 100  # Deterministic headless run
 - **6**: Simulation controls, influence system (17 actions, 3 categories, IP economy)
 - **7**: World fingerprint, timeline branching, save/load, heraldry, dreaming
 - **8 (COMPLETE)**: UX Overhaul — prose-first chronicle (4 modes, aggregation, region filter), 6 polymorphic inspectors (Character/Faction/Site/Artifact/Event/Region), dynamic map overlays (6 layers, 7 presets, territory flood-fill, trade routes), click-to-inspect navigation
+- **9 (IN PROGRESS)**: Graphics Overhaul — Electron + PixiJS frontend. Phase 0 foundation: package structure, IPC bridge, CSS Grid layout, PixiJS canvas mount
 
 ## Common Pitfalls
 - `TerrainTile` has NO `freshwater` — use `tile.riverId !== undefined`

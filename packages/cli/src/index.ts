@@ -43,8 +43,10 @@ import {
   CulturalEvolutionSystem,
   EcologySystem,
   OralTraditionSystem,
+  DreamingSystem,
+  CharacterMemoryStore,
 } from '@fws/core';
-import type { WorldEvent, EntityId } from '@fws/core';
+import type { WorldEvent, EntityId, CharacterId, SiteId } from '@fws/core';
 
 // Controls imports
 import {
@@ -276,8 +278,9 @@ function createSimulationEngine(
   world: World,
   clock: WorldClock,
   eventBus: EventBus,
-  eventLog: EventLog
-): SimulationEngine {
+  eventLog: EventLog,
+  seed: number
+): { engine: SimulationEngine; dreamingSystem: DreamingSystem } {
   const cascadeEngine = new CascadeEngine(eventBus, eventLog, {
     maxCascadeDepth: 10,
   });
@@ -287,7 +290,8 @@ function createSimulationEngine(
   const reputationSystem = new ReputationSystem();
   const grudgeSystem = new GrudgeSystem();
 
-  // Register the 9 main simulation systems
+  // Register the 10 main simulation systems
+  const dreamingSystem = new DreamingSystem(undefined, seed);
   systemRegistry.register(new CharacterAISystem());
   systemRegistry.register(new FactionPoliticalSystem(reputationSystem, grudgeSystem));
   systemRegistry.register(new EconomicSystem());
@@ -297,8 +301,9 @@ function createSimulationEngine(
   systemRegistry.register(new CulturalEvolutionSystem());
   systemRegistry.register(new EcologySystem());
   systemRegistry.register(new OralTraditionSystem());
+  systemRegistry.register(dreamingSystem);
 
-  return new SimulationEngine(
+  const engine = new SimulationEngine(
     world,
     clock,
     eventBus,
@@ -306,6 +311,8 @@ function createSimulationEngine(
     systemRegistry,
     cascadeEngine
   );
+
+  return { engine, dreamingSystem };
 }
 
 /**
@@ -996,7 +1003,38 @@ async function main(): Promise<void> {
   const clock = new WorldClock();
   const eventBus = new EventBus();
   const eventLog = new EventLog();
-  const engine = createSimulationEngine(ecsWorld, clock, eventBus, eventLog);
+  const { engine, dreamingSystem } = createSimulationEngine(ecsWorld, clock, eventBus, eventLog, seed);
+
+  // Initialize DreamingSystem with character data from populated world
+  // Build settlement name → SiteId lookup for character location registration
+  const settlementNameToId = new Map<string, SiteId>();
+  for (let si = 0; si < generatedData.settlements.length; si++) {
+    const settlement = generatedData.settlements[si];
+    const siteId = populationResult.settlementIds.get(si);
+    if (settlement !== undefined && siteId !== undefined) {
+      settlementNameToId.set(settlement.name, siteId);
+    }
+  }
+
+  const allChars = [...generatedData.rulers, ...generatedData.notables];
+  for (const [charName, charId] of populationResult.characterIds) {
+    const store = new CharacterMemoryStore(charId);
+    dreamingSystem.registerMemoryStore(charId, store);
+
+    // Find character data for goals and location
+    const charData = allChars.find(c => c.name === charName);
+    if (charData !== undefined) {
+      dreamingSystem.registerGoalCount(charId, charData.goals.length);
+
+      // Register character location from their settlement
+      if (charData.position.settlementName !== undefined) {
+        const siteId = settlementNameToId.get(charData.position.settlementName);
+        if (siteId !== undefined) {
+          dreamingSystem.registerCharacterLocation(charId, siteId);
+        }
+      }
+    }
+  }
 
   // Create spatial index
   const spatialIndex = new SpatialIndex(

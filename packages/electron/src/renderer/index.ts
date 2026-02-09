@@ -1,0 +1,136 @@
+/**
+ * Renderer process entry point.
+ *
+ * Initializes PixiJS, connects IPC, wires controls, and maintains
+ * an FPS counter.
+ */
+import { initPixiApp } from './pixi-app.js';
+import { createIpcClient } from './ipc-client.js';
+import type { TickDelta, WorldSnapshot } from '../shared/types.js';
+
+// ── State ────────────────────────────────────────────────────────────────────
+
+let totalTicks = 0;
+let totalEntities = 0;
+let totalEvents = 0;
+let paused = true;
+let speed = 1;
+
+// FPS tracking
+let frameCount = 0;
+let lastFpsTime = performance.now();
+
+// ── DOM refs ─────────────────────────────────────────────────────────────────
+
+const tickEl = document.getElementById('status-tick')!;
+const entitiesEl = document.getElementById('status-entities')!;
+const eventsEl = document.getElementById('status-events')!;
+const fpsEl = document.getElementById('status-fps')!;
+const dateEl = document.getElementById('date-display')!;
+const btnPause = document.getElementById('btn-pause')!;
+const btnPlay = document.getElementById('btn-play')!;
+const btnFast = document.getElementById('btn-fast')!;
+
+// ── IPC ──────────────────────────────────────────────────────────────────────
+
+const ipc = createIpcClient();
+
+function updateStatusBar(): void {
+  tickEl.textContent = `Tick: ${totalTicks}`;
+  entitiesEl.textContent = `Entities: ${totalEntities}`;
+  eventsEl.textContent = `Events: ${totalEvents}`;
+}
+
+function updateSpeedButtons(): void {
+  btnPause.classList.toggle('active', paused);
+  btnPlay.classList.toggle('active', !paused && speed === 1);
+  btnFast.classList.toggle('active', !paused && speed > 1);
+}
+
+function handleTickDelta(delta: TickDelta): void {
+  totalTicks = delta.tick;
+  totalEvents += delta.events.length;
+  dateEl.textContent = `Year ${delta.time.year}, Month ${delta.time.month}, Day ${delta.time.day}`;
+  updateStatusBar();
+}
+
+// ── Controls ─────────────────────────────────────────────────────────────────
+
+btnPause.addEventListener('click', () => {
+  paused = true;
+  ipc.sendCommand({ type: 'pause' });
+  updateSpeedButtons();
+});
+
+btnPlay.addEventListener('click', () => {
+  paused = false;
+  speed = 1;
+  ipc.sendCommand({ type: 'resume' });
+  ipc.sendCommand({ type: 'set-speed', ticksPerSecond: 1 });
+  updateSpeedButtons();
+});
+
+btnFast.addEventListener('click', () => {
+  paused = false;
+  speed = 7;
+  ipc.sendCommand({ type: 'resume' });
+  ipc.sendCommand({ type: 'set-speed', ticksPerSecond: 7 });
+  updateSpeedButtons();
+});
+
+// Keyboard shortcuts
+document.addEventListener('keydown', (e) => {
+  if (e.code === 'Space') {
+    e.preventDefault();
+    if (paused) {
+      btnPlay.click();
+    } else {
+      btnPause.click();
+    }
+  }
+});
+
+// ── FPS counter ──────────────────────────────────────────────────────────────
+
+function fpsLoop(): void {
+  frameCount++;
+  const now = performance.now();
+  if (now - lastFpsTime >= 1000) {
+    fpsEl.textContent = `FPS: ${frameCount}`;
+    frameCount = 0;
+    lastFpsTime = now;
+  }
+  requestAnimationFrame(fpsLoop);
+}
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+
+async function init(): Promise<void> {
+  // Initialize PixiJS canvas
+  const canvas = document.getElementById('pixi-canvas') as HTMLCanvasElement;
+  const container = document.getElementById('map-container')!;
+  await initPixiApp(canvas, container);
+
+  // Subscribe to tick deltas
+  ipc.onTickDelta(handleTickDelta);
+
+  // Load initial world snapshot
+  const snapshot: WorldSnapshot = await ipc.requestSnapshot();
+  totalTicks = snapshot.events.length > 0
+    ? snapshot.events[snapshot.events.length - 1]!.tick
+    : 0;
+  totalEntities = snapshot.entities.length;
+  totalEvents = snapshot.events.length;
+
+  console.log(`[renderer] World loaded: ${snapshot.mapWidth}x${snapshot.mapHeight}`);
+
+  updateStatusBar();
+  updateSpeedButtons();
+
+  // Start FPS loop
+  requestAnimationFrame(fpsLoop);
+}
+
+init().catch((err) => {
+  console.error('[renderer] Initialization failed:', err);
+});

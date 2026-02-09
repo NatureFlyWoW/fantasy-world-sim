@@ -12,6 +12,7 @@ export default defineConfig({
       '@fws/renderer': path.resolve(__dirname, 'packages/renderer/src/index.ts'),
       '@fws/narrative': path.resolve(__dirname, 'packages/narrative/src/index.ts'),
       '@fws/cli': path.resolve(__dirname, 'packages/cli/src/index.ts'),
+      '@fws/electron': path.resolve(__dirname, 'packages/electron/src/main/index.ts'),
     },
   },
   test: {

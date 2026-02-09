@@ -36,7 +36,9 @@
       "@fws/narrative": ["./packages/narrative/src/index.ts"],
       "@fws/narrative/*": ["./packages/narrative/src/*"],
       "@fws/cli": ["./packages/cli/src/index.ts"],
-      "@fws/cli/*": ["./packages/cli/src/*"]
+      "@fws/cli/*": ["./packages/cli/src/*"],
+      "@fws/electron": ["./packages/electron/src/main/index.ts"],
+      "@fws/electron/*": ["./packages/electron/src/*"]
     }
   },
   "exclude": ["node_modules", "dist", "coverage"]

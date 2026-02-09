@@ -84,15 +84,23 @@ export class DiscoveryActions {
   private readonly config: DiscoveryActionConfig;
   private readonly secretManager: SecretManager;
   private readonly skillProvider: (characterId: CharacterId) => DiscoverySkills;
+  private rngState: number;
 
   constructor(
     secretManager: SecretManager,
     skillProvider: (characterId: CharacterId) => DiscoverySkills,
     config: Partial<DiscoveryActionConfig> = {},
+    seed?: number,
   ) {
     this.secretManager = secretManager;
     this.skillProvider = skillProvider;
     this.config = { ...DEFAULT_DISCOVERY_CONFIG, ...config };
+    this.rngState = seed ?? 54321;
+  }
+
+  private nextRandom(): number {
+    this.rngState = ((this.rngState * 1103515245 + 12345) & 0x7fffffff) >>> 0;
+    return this.rngState / 0x80000000;
   }
 
   // ==========================================================================
@@ -139,7 +147,7 @@ export class DiscoveryActions {
 
     // Roll for each secret
     for (const secret of targetSecrets) {
-      const roll = Math.random();
+      const roll = this.nextRandom();
       const secretDifficulty = this.getSecretDifficulty(secret);
       const adjustedRate = successRate / secretDifficulty;
 
@@ -172,7 +180,7 @@ export class DiscoveryActions {
     }
 
     // Check if investigation was detected
-    const detectionRoll = Math.random();
+    const detectionRoll = this.nextRandom();
     const detectionChance =
       this.config.detectionChance * (1 - skills.cunning / 200);
     result.targetAware = detectionRoll < detectionChance;
@@ -248,7 +256,7 @@ export class DiscoveryActions {
 
     // Roll for each secret
     for (const secret of prisonerSecrets) {
-      const roll = Math.random();
+      const roll = this.nextRandom();
       const secretImportance = secret.significance / 100;
       const adjustedRate = successRate * (1 - secretImportance * 0.5);
 
@@ -378,7 +386,7 @@ export class DiscoveryActions {
       const clueBonus = totalWeight * 0.3;
 
       const successRate = Math.min(0.9, baseRate + skillBonus + clueBonus);
-      const roll = Math.random();
+      const roll = this.nextRandom();
 
       if (roll < successRate) {
         // Scholar deduces the truth

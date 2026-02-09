@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Source+Sans+3:wght@400;600&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../styles/index.css">
+  <title>AETERNUM</title>
+</head>
+<body>
+  <div id="app">
+    <!-- Top Bar -->
+    <header id="topbar">
+      <div class="topbar-logo">AETERNUM</div>
+      <div class="topbar-date" id="date-display">Year 1, Month 1, Day 1</div>
+      <div class="topbar-controls">
+        <button class="speed-btn" id="btn-pause" title="Pause">&#x23F8;</button>
+        <button class="speed-btn" id="btn-play" title="Play">&#x25B6;</button>
+        <button class="speed-btn" id="btn-fast" title="Fast (7x)">&#x23E9;</button>
+      </div>
+    </header>
+
+    <!-- Main content: Map + Panels -->
+    <main id="content">
+      <div id="map-container">
+        <canvas id="pixi-canvas"></canvas>
+      </div>
+      <aside id="panel-column">
+        <div class="panel" id="event-log-panel">
+          <div class="panel-titlebar">Chronicle</div>
+          <div class="panel-content">
+            <div class="panel-placeholder">Events will appear here...</div>
+          </div>
+        </div>
+        <div class="panel-divider" id="panel-divider"></div>
+        <div class="panel" id="inspector-panel">
+          <div class="panel-titlebar">Inspector</div>
+          <div class="panel-content">
+            <div class="panel-placeholder">Select an entity to inspect...</div>
+          </div>
+        </div>
+      </aside>
+    </main>
+
+    <!-- Status Bar -->
+    <footer id="statusbar">
+      <span class="status-item" id="status-tick">Tick: 0</span>
+      <span class="status-separator">|</span>
+      <span class="status-item" id="status-entities">Entities: 0</span>
+      <span class="status-separator">|</span>
+      <span class="status-item" id="status-events">Events: 0</span>
+      <span class="status-separator">|</span>
+      <span class="status-item" id="status-fps">FPS: --</span>
+    </footer>
+  </div>
+
+  <script type="module" src="./index.ts"></script>
+</body>
+</html>
