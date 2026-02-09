@@ -45,7 +45,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "echo '--- Git ---' && git status --short && echo '--- Phase ---' && grep -A1 'Phase History' CLAUDE.md 2>/dev/null || true"
+            "command": "echo '--- Git ---' && git status --short && echo '--- Phase ---' && grep -E '^- \\*\\*[0-9]' CLAUDE.md 2>/dev/null || true"
           }
         ]
       }
@@ -53,6 +53,7 @@
   },
   "enabledPlugins": {
     "context7@claude-plugins-official": true,
-    "playwright@claude-plugins-official": true
+    "playwright@claude-plugins-official": false,
+    "claude-mem@thedotmack": true
   }
 }

@@ -4,21 +4,9 @@
       "command": "cmd",
       "args": ["/c", "npx", "-y", "@modelcontextprotocol/server-sequential-thinking"]
     },
-    "context7": {
-      "command": "cmd",
-      "args": ["/c", "npx", "-y", "@upstash/context7-mcp@latest"]
-    },
     "eslint": {
       "command": "cmd",
       "args": ["/c", "npx", "@eslint/mcp@latest", "--stdio"]
-    },
-    "vitest": {
-      "command": "cmd",
-      "args": ["/c", "npx", "-y", "@anthropic-ai/vitest-mcp@latest"]
-    },
-    "playwright": {
-      "command": "cmd",
-      "args": ["/c", "npx", "-y", "@anthropic-ai/mcp-server-playwright"]
     }
   }
 }

@@ -1,7 +1,6 @@
 # Procgen Pixel Artist - Agent Memory
 
 ## Design Document
-- Full system spec: `docs/plans/procgen-pixel-art-system.md`
 - Created: 2026-02-07
 
 ## Key Design Decisions

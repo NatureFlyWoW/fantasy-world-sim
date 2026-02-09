@@ -3,7 +3,7 @@
 ## Active Design Documents
 
 ### Graphics & UI Remake (Rev 2.0, 2026-02-09) -- PRIMARY
-- File: `all_docs/graphics_ui_remake.md` (2453 lines)
+- Split into: `all_docs/graphics_ui/` (18 files, see `graphics_ui_index.md`)
 - Visual philosophy: Caves of Qud-inspired, fixed palette, tile grid
 - SUPERSEDES isometric approach from earlier mockups and hifi-ui-component-system.md
 - Technology-agnostic (visual/interaction design only)
@@ -62,9 +62,8 @@
 - Region: Leaf #48a048
 
 ## Key Reference Files
-- Remake design doc: `all_docs/graphics_ui_remake.md`
+- Remake design doc: `all_docs/graphics_ui/graphics_ui_index.md`
 - Old component spec: `docs/plans/hifi-ui-component-system.md`
-- Graphics remake plan: `all_docs/graphics-remake-plan.md`
 - Current theme: `packages/renderer/src/theme.ts`
 - Biome chars: `packages/renderer/src/themes/biome-chars.ts`
 - Context view mockups: `docs/plans/context-view-mockups.md`

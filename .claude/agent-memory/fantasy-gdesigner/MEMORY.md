@@ -3,7 +3,7 @@
 ## Key Design Decisions Made
 
 ### Game Design Document v3.0 (2026-02-09)
-- Wrote comprehensive GDD at `all_docs/game_design_new.md` (2319 lines)
+- Wrote comprehensive GDD, split into `all_docs/game_design/` (29 files, see `game_design_index.md`)
 - Split into 19 section files at `all_docs/game_design/` with `game_design_index.md`
 - 19 main sections + appendices (A-J): cascade anatomy, glossary, template categories, AI worked example
 - All data cross-referenced against source code (104 component types, 281 templates, 17 influence actions)
