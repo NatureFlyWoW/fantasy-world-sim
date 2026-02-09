@@ -5,12 +5,8 @@
       "Bash(npm run *)",
       "Bash(npx *)",
       "Bash(git *)",
-      "Bash(cat *)",
-      "Bash(head *)",
-      "Bash(tail *)",
       "Bash(wc *)",
-      "Bash(grep *)",
-      "Bash(find *)",
+      "Bash(node *)",
       "Read(*)",
       "Write(*)",
       "Edit(*)"
@@ -49,7 +45,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "echo '--- Git ---' && git status --short && echo '--- Phase ---' && grep -A1 'Current Phase' CLAUDE.md 2>/dev/null || true"
+            "command": "echo '--- Git ---' && git status --short && echo '--- Phase ---' && grep -A1 'Phase History' CLAUDE.md 2>/dev/null || true"
           }
         ]
       }

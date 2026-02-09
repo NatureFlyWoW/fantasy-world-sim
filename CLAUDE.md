@@ -4,165 +4,75 @@
 Procedural fantasy world simulator inspired by Dwarf Fortress Legends Mode. Generates living fantasy worlds and simulates their evolution across centuries. Players observe and lightly influence ("cultivate") a generated world through an ASCII terminal interface with dual event streams: raw logs + narrative prose.
 
 ## Design Pillars
-1. Emergent storytelling over scripted content — no hand-authored events
-2. Depth over breadth — fewer entities with rich interconnection
-3. Observation and cultivation — player nudges, never commands
-4. Believability through complexity — every event has traceable causation
+1. Emergent storytelling — no hand-authored events
+2. Depth over breadth — fewer entities, rich interconnection
+3. Observation and cultivation — nudges, never commands
+4. Believability — every event has traceable causation
 5. Layered interpretation — same events as data, logs, and literary prose
 
 ## Architecture
-- **ECS**: All world objects are entities with composable components
-- **Event-Driven**: Simulation produces events → systems react → narrative transforms
-- **Tick-Based**: 1 tick = 1 day. 6 frequency tiers: Daily/Weekly/Monthly/Seasonal/Annual/Decadal
-- **13-Step Tick Order**: Time → Environment → Economy → Politics → Social → Character AI → Magic → Religion → Military → Event Resolution → Narrative Generation → Cleanup/Indexing → Player Notification
-- **Level-of-Detail**: Full (50 tiles), Reduced (200 tiles), Abstract (beyond)
-- **Spatial Indexing**: Quadtree for map queries
-- **Memory & Reputation**: Persistent memories with decay/distortion, multi-dimensional reputation propagating through social networks
-- **Event Cascading**: Consequence chains across domains with dampening (max depth: 10)
+- **ECS**: Entities with composable components, Map-backed stores, monotonic IDs (branded types)
+- **Event-Driven**: Simulation → events → systems react → narrative transforms
+- **Tick-Based**: 1 tick = 1 day, 360 days/year. 6 frequency tiers: Daily/Weekly/Monthly/Seasonal/Annual/Decadal
+- **13-Step Tick Order**: Time → Environment → Economy → Politics → Social → Character AI → Magic → Religion → Military → Event Resolution → Narrative → Cleanup → Player Notification
+- **LoD**: Full (50 tiles), Reduced (200), Abstract (beyond). Significance override: 85
+- **Event Cascading**: Dampening `baseProbability × (1-dampening)^depth`, max depth 10
+- **Influence**: Processes BETWEEN ticks. Maps to existing event categories (Religious, Personal, Cultural, Economic, Disaster) — never a separate category
 
 ## Packages
 - `@fws/core` — ECS, simulation loop, time, events, LoD, spatial index, persistence
-- `@fws/generator` — Terrain, ecology, cosmology, races, names, pre-history, initialization
-- `@fws/renderer` — Terminal ASCII UI (blessed): 8 panels (map, event log, inspector, relationships, timeline, statistics, fingerprint, region detail)
-- `@fws/narrative` — Template engine (281 templates, 5 tones), chronicler system, vignettes
-- `@fws/cli` — Entry point, simulation controls, influence system, save/load UI
+- `@fws/generator` — Terrain, ecology, cosmology, races, names, pre-history
+- `@fws/renderer` — Terminal ASCII UI (blessed): 8 panels, 5 layouts, 30fps
+- `@fws/narrative` — 281 templates, 5 tones, chronicler system, vignettes
+- `@fws/cli` — Entry point, controls, influence system, save/load
 
 ## Conventions
-- **TypeScript**: Strict mode, no `any` types, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, `verbatimModuleSyntax`
-- **ESM**: `.js` extensions in import paths; `export type` for type-only exports
+- **TypeScript**: Strict mode, no `any`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, `verbatimModuleSyntax`
+- **ESM**: `.js` extensions in imports; `export type` for type-only exports
 - **Branded IDs**: EntityId, CharacterId, FactionId, SiteId, ArtifactId, EventId, DeityId, BookId, RegionId, WarId, InfluenceActionId
-- **Pure Functions**: Simulation logic is pure; classes only for entities/stores
-- **Events**: Immutable records; systems communicate ONLY through event queue and shared component state
-- **Influence System**: Maps to existing event categories (Religious, Personal, Cultural, Economic, Disaster) — never a separate 'Influence' category. Player actions feel like natural world events.
-- **Testing**: Vitest, tests alongside source (`*.test.ts`), test every system in isolation
-- **Context7**: Always use for library/API documentation, code generation, setup/configuration steps
+- **Events**: Immutable records; systems communicate ONLY through EventBus + components
+- **Testing**: Vitest, tests alongside source (`*.test.ts`)
+- **Context7**: Always use for library/API docs
 
 ## Commands
 ```bash
-pnpm run typecheck                   # TypeScript validation (from workspace root)
-pnpm run test                        # Run all tests
-pnpm run test:watch                  # Watch mode
-pnpm run start                       # Generate world and launch terminal UI
-pnpm run start -- --seed 42          # Deterministic generation
-pnpm run start -- --headless         # Run without UI (testing/CI)
-pnpm run start -- --ticks 100        # Run specific tick count (headless)
+pnpm run typecheck    # TypeScript validation (from workspace root)
+pnpm run test         # Run all tests (2955 passing)
+pnpm run start        # Generate world + terminal UI
+pnpm run start -- --seed 42 --headless --ticks 100  # Deterministic headless run
 ```
 
 ## Subagent Routing
-When delegating complex tasks to subagents, prefer:
-- Project-specific game design, player engagement systems, emergent narrative gameplay → `fantasy-gdesigner`
-- Frontend, Game UI, graphics, sprite design → `hifi-ui-designer` or `procgen-pixel-artist` or `voltagent-domains:frontend-developer`
-- Simulation and narrative systems, simulated entities, storytelling, ECS → `aeternum-sim-dev` or `comp-sim-lead` or `fantasy-story-narrative`
-- General game logic, game design → `voltagent-domains:game-developer`
-- Backend architecture, APIs → `voltagent-domains:backend-developer` or `fullstack-developer`
-- TypeScript, complex types, type-safe applications → `voltagent-lang:typescript-pro`
-- Knowledge synthesis, merging data sources → `voltagent-meta:knowledge-synthesizer`
-- Task organization, planning, priorities → `voltagent-meta:agent-organizer` or `fantasy-sim-story-worker`
+- Game design, engagement, emergent narrative → `fantasy-gdesigner`
+- UI, graphics, sprites → `hifi-ui-designer` / `procgen-pixel-artist`
+- Simulation, ECS, storytelling → `aeternum-sim-dev` / `comp-sim-lead` / `fantasy-story-narrative`
+- Performance, loop orchestration → `fantasy-sim-story-worker`
+- TypeScript types → `voltagent-lang:typescript-pro`
 
-## Current Phase
-**Phase 8: UX Overhaul** ✅ **COMPLETE**
-
-**Delivered:**
-- 8.1-8.2: Entity name resolution, world dashboard, significance labels
-- 8.3-8.4: Click handling (menu bar, event log), context-sensitive status hints
-- 8.5-8.6: Auto-pause on legendary events (sig 95+), welcome screen with warmup
-- 8.7: Narrative-first UI (281 templates, prose events, region detail panel, BIOME_PROSE)
-- 8.8: UI redesign (blessed tag fixes, menu bar active indicator, chronicle-first layout, clickable entity names)
-- **Context View System (Foundation for 8.9-8.12):**
-  - Polymorphic inspector with 6 entity types (Character, Faction, Site, Artifact, Event, Region)
-  - Prose-first design with narrative paragraphs and structured data
-  - Navigation system (history stack, breadcrumbs, back/forward)
-  - Universal click-to-inspect (EventLog→Event, Map→Region, Inspector→Entity)
-  - 6 prose lookup tables (HEALTH_PROSE, PERSONALITY_AXIS, SETTLEMENT_SIZE_PROSE, etc.)
-  - UX architecture: `docs/plans/context-view-ux-architecture.md`
-  - Layout spec: `docs/plans/context-view-layout-spec.md`, `context-view-mockups.md`
-- **Chronicle View Transformation (8.9-8.11):**
-  - Event aggregation system (batches events <60 significance by category + participant)
-  - 4 chronicle modes: Prose (aggregated), Compact (timeline), Story Arcs (cascade tree), Domain Focus
-  - Region-contextual filtering (toggle 'r' key, spatial distance-based)
-  - Prose-first rendering with significance indicators (✦★◆•·)
-  - Temporal headers (year/season/month separators)
-  - Enhanced right pane with causal chains and multiple perspectives
-  - 30 category-specific prose templates for aggregated summaries
-- **Dynamic Map Overlays (Living World):**
-  - MapOverlayBridge connects ECS world state to rendering
-  - 6 cached layers: Settlements, Territory, Military, Trade, Magic, Entity Markers
-  - 7 overlay presets: None, Political, Military, Economic, Arcane, Climate, Full
-  - Territory flood-fill from faction capitals with border detection
-  - Trade route tracing between economic hubs
-  - Event-driven dirty tracking with per-layer refresh intervals
-  - Multi-layer compositing with priority rules
-
-**Impact:**
-The UX overhaul transforms Æternum from a data-dump interface into an immersive narrative experience:
-- **From:** Raw event log → **To:** Prose-based Chronicle with emergent storytelling
-- **From:** Static entity display → **To:** Deep polymorphic inspectors with clickable navigation
-- **From:** Dead terrain map → **To:** Living world showing settlements, wars, territories
-- **Test coverage:** 531 → 2955 tests (457% increase), 94 test files, all passing
-- **Documentation:** 3 architecture docs (context-view-ux, layout-spec, map-overlay)
-
-**Previous Phases (Complete):**
-- Phase 1-2: ECS foundation, world generation pipeline
-- Phase 3: 10 simulation systems (Character AI, Memory/Reputation, Faction/Political, Economic, Military, Magic, Religion, Cultural, Ecology, Secrets)
-- Phase 4: Terminal UI with 8 panels
-- Phase 5: Narrative engine with 5 tones, chronicler system, vignettes
-- Phase 6: Simulation controls, influence system (17 actions, 3 categories, IP economy)
-- Phase 7: World fingerprint, timeline branching, save/load, heraldry, dreaming, introspection
-
-**Test Count:** 2955 passing
-
-## Key Architectural Decisions
-
-**ECS Design:**
-- Map-backed component stores, monotonic entity IDs (no recycling)
-- Branded types for compile-time safety
-- World.query() starts with smallest store for efficiency
-
-**Event System:**
-- Priority queue uses significance-based binary heap
-- Events are immutable; ConsequenceRule defines cascade potential
-- Dampening formula: `baseProbability × (1-dampening)^depth`
-- Max cascade depth: 10
-- Cross-domain transitions map event categories to consequence types
-
-**Time System:**
-- 1 tick = 1 day
-- Calendar: 12 months × 30 days = 360 days/year
-- 6 frequency tiers: Daily/Weekly/Monthly/Seasonal/Annual/Decadal
-- TimeController: 7 speed modes (Paused/SlowMotion/Normal/Fast7/30/365/UltraFast3650)
-
-**Simulation Engine:**
-- 13-step tick order (immutable pipeline)
-- LoD zones: Full (50 tiles), Reduced (200), Abstract (beyond)
-- Significance override threshold: 85
-- **Influence actions process BETWEEN ticks** (after tick N completes, before N+1 starts) to preserve clean 13-step architecture
-
-**Phase 3 Systems Bridge:**
-- Systems use **internal Maps**, NOT ECS queries for state
-- Generator data bridges to system state via `initializeSystemsFromGenerated()`
-- MagicSystem needs `registerInstitution()` + `startResearch()`
-- CulturalEvolutionSystem needs `startResearch()` with high progress
-- WarfareSystem needs `declareWar()` + `createArmy()`
-
-**Renderer (blessed):**
-- BasePanel abstraction for layout management
-- Render loop throttled to 30fps
-- MockScreen/MockBox enable headless testing
-- **BasePanel methods (resize/moveTo/focus/blur) must NOT call screen.render()** — caller batches renders
+## Phase History
+- **1-2**: ECS foundation, world generation pipeline
+- **3**: 10 simulation systems (Character AI, Memory, Faction, Economic, Military, Magic, Religion, Cultural, Ecology, Secrets)
+- **4**: Terminal UI, 8 panels
+- **5**: Narrative engine (281 templates, 5 tones, chronicler, vignettes)
+- **6**: Simulation controls, influence system (17 actions, 3 categories, IP economy)
+- **7**: World fingerprint, timeline branching, save/load, heraldry, dreaming
+- **8 (COMPLETE)**: UX Overhaul — prose-first chronicle (4 modes, aggregation, region filter), 6 polymorphic inspectors (Character/Faction/Site/Artifact/Event/Region), dynamic map overlays (6 layers, 7 presets, territory flood-fill, trade routes), click-to-inspect navigation
 
 ## Common Pitfalls
-- `TerrainTile` has NO `freshwater` property — use `tile.riverId !== undefined`
-- Running `npx tsc --noEmit` from root won't work — must use `pnpm run typecheck`
-- Unused type imports trigger TS6133 with strict config — clean up before commit
-- `import type` for enums used as values causes TS1361 — use regular `import`
-- `exactOptionalPropertyTypes`: Cannot assign `undefined` to optional — use spread operator
-- Cross-package imports need: 1) explicit paths in child tsconfig 2) built declarations 3) vitest resolve aliases
-- blessed: `screen.width`/`screen.height` returns 1 on MINGW64, `keys: true` intercepts arrow keys
-- Template subtypes mismatch: simulation uses prefixed (`culture.technology_invented`), templates use simple (`technology_invented`)
-- Phase 3 systems use INTERNAL Maps, NOT ECS queries for state
+- `TerrainTile` has NO `freshwater` — use `tile.riverId !== undefined`
+- Must use `pnpm run typecheck`, not `npx tsc --noEmit`
+- `import type` for enums used as values → TS1361. Use regular `import`
+- `exactOptionalPropertyTypes`: Cannot assign `undefined` to optional — use spread
+- Phase 3 systems use INTERNAL Maps, NOT ECS queries
 - `WorldEvent.id` is `EventId` (branded), not `EntityId`
-- Blessed tags MUST close on every line — multi-line spans corrupt character counting
-- `buildEntityResolver()` needs World param for runtime entity fallback (armies, institutions)
+- Blessed tags MUST close on every line — multi-line spans corrupt rendering
+- `buildEntityResolver()` needs World param for runtime fallback
+- Template subtypes: simulation uses prefixed (`culture.technology_invented`), templates use simple (`technology_invented`)
+- BasePanel `resize()`/`moveTo()`/`focus()`/`blur()` must NOT call `screen.render()`
+
+## Design Documents
+- `all_docs/game_design/game_design_index.md` — 19 section files (load only what you need)
+- `all_docs/graphics_ui/graphics_ui_index.md` — 16 section files (Caves of Qud-inspired visual spec)
 
 ## Known Issues
 - EventCategory.Exploratory has no system producing events

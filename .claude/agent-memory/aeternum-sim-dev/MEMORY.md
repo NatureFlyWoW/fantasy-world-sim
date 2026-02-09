@@ -7,54 +7,34 @@
 - Entity span tracking via `EntitySpanMap` for clickable names
 - Shared utilities in `inspector-prose.ts` (renderBar, renderEntityName, renderDottedLeader, etc.)
 
-## Section Structures (Post Prose-First Rewrite)
+## Section Structures
 - **Character**: 7 sections (story-so-far, strengths-flaws, bonds-rivalries, worldly-standing, heart-mind, remembered-things, possessions-treasures)
 - **Location**: 7 sections (living-portrait, people-peoples, power-governance, trade-industry, walls-works, notable-souls, the-annals)
 - **Faction**: 8 sections (rise-reign, banner-creed, court-council, lands-holdings, swords-shields, alliances-enmities, coffers-commerce, chronicles)
 - **Event**: 6 sections (what-happened, who-involved, where-when, why-matters, what-before, what-followed)
 - **Region**: 5-6 sections (land, riches, dwellers, marks, echoes, +arcane if leyLine)
-- **Artifact**: 8 sections (overview, creation, powers, consciousness, ownership, curses, significance, history) -- NOT yet rewritten
+- **Artifact**: 8 sections (overview, creation, powers, consciousness, ownership, curses, significance, history)
 
-## Integration Wiring (Complete)
-- EventLogPanel -> InspectorPanel: `setInspectEntityHandler` for entity name clicks, `setInspectEventHandler` for Enter on event
-- MapPanel -> InspectorPanel: `inspectRegion()` called from selection handler in CLI index.ts
-- InspectorPanel -> InspectorPanel: `setInspectHandler` for clicking entity names within inspector
-- RelationshipsPanel -> InspectorPanel: `setInspectHandler` for clicking entity names
-- TimelinePanel -> InspectorPanel: `setInspectHandler` for clicking events (EventId)
-- Enter key on EventLogPanel inspects the **event** (via `inspectSelectedEvent`); 'i' key inspects primary participant
-- Double-click pattern: clicking already-selected event in left pane triggers event inspection
+## Integration Wiring
+- EventLogPanel -> InspectorPanel: `setInspectEntityHandler` + `setInspectEventHandler`
+- MapPanel -> InspectorPanel: `inspectRegion()` via CLI index.ts
+- InspectorPanel -> InspectorPanel: `setInspectHandler` for entity name clicks
+- Enter on EventLogPanel inspects **event**; 'i' inspects primary participant
 
 ## Key Patterns
-- `exactOptionalPropertyTypes`: Use spread for conditional optional props: `...(condition ? { summaryHint: value } : {})`
-- `toLocaleString()` produces locale-dependent separators (comma vs space on MINGW64) -- use `toContain` not `toBe` in tests
+- `exactOptionalPropertyTypes`: Use spread for conditional optional props
+- `toLocaleString()` locale-dependent — use `toContain` not `toBe` in tests
 - `getStore()` needs double cast: `as unknown as { getAll: () => Map<...> }`
 - Tests need `getStore` in MockWorldOverrides when inspectors query stores
-- EventLogPanel autoScroll selects last event on addEvent -- test double-click with 2+ events
 
 ## MapOverlayBridge Architecture
-- `overlay-bridge.ts`: ECS-to-overlay data bridge with 6 cached layers
-- Layers: Settlements, Territory, Military, Trade, Magic, EntityMarkers
+- `overlay-bridge.ts`: 6 cached layers (Settlements, Territory, Military, Trade, Magic, EntityMarkers)
 - Cache key: `"x,y"` string for O(1) tile lookup
 - Hybrid update: event-driven dirty flags + tick-interval refresh per layer
-- Territory: diamond flood-fill (Manhattan dist) from capitals, detectBorders via orthogonal neighbors
-- Trade: Bresenham line between top-10 wealthy settlement pairs within 50 tiles
-- Faction colors/capitals injected from generator data (not in ECS components)
-- `overlay.ts` extended: OverlayPreset system (7 presets), renderAllAt() for multi-layer compositing
-- CLI wiring: bridge created in launchTerminalUI, lookups wired to overlay classes
-- `noUnusedLocals: true` catches private fields -- cannot store unused params even with underscore prefix. Use `void param;` instead.
+- Territory: diamond flood-fill from capitals, Trade: Bresenham line between wealthy settlements
+- 7 overlay presets, `renderAllAt()` for multi-layer compositing
 
 ## Test Counts
-- 2776 -> 2844 (Phase 8 inspector system rewrite)
-- 2844 -> 2847 (integration wiring tests)
-- 2847 -> 2955 (MapOverlayBridge: +53 bridge tests, +55 other changes)
-- overlay-bridge.test.ts: 53 tests
-- overlay.test.ts: 44 tests (all backward-compatible)
-- sub-inspectors.test.ts: 51 tests (Location: 20, Faction: 19, Artifact: 12)
-- character-inspector.test.ts: 33 tests
-- event-inspector.test.ts: 19 tests
-- region-inspector.test.ts: 24 tests
-- event-log-panel.test.ts: 82 tests
-
-## Remaining Work (Phase 8)
-- ArtifactInspector prose-first rewrite (not yet started)
-- 8.9-8.12: Chronicle view, event aggregation, story threads, polish
+- 2955 total (Phase 8 complete)
+- overlay-bridge.test.ts: 53, overlay.test.ts: 44, sub-inspectors.test.ts: 51
+- character-inspector.test.ts: 33, event-inspector.test.ts: 19, region-inspector.test.ts: 24

@@ -10,5 +10,5 @@ Follow these steps:
 3. Define its tick frequency (daily/weekly/monthly/seasonal/annual/decadal)
 4. Define its position in the 13-step tick execution order
 5. Register it in the system registry
-6. Write Vitest tests in packages/core/tests/systems/
+6. Write Vitest tests alongside source (packages/core/src/systems/*.test.ts)
 7. Update CLAUDE.md with the new system's details
