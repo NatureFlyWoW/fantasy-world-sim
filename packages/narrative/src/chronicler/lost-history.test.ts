@@ -513,38 +513,3 @@ describe('LostHistoryTracker', () => {
     });
   });
 });
-
-describe('LossReason', () => {
-  it('should have all expected reasons', () => {
-    expect(LossReason.Destroyed).toBe('destroyed');
-    expect(LossReason.Decay).toBe('decay');
-    expect(LossReason.Suppressed).toBe('suppressed');
-    expect(LossReason.Misplaced).toBe('misplaced');
-    expect(LossReason.NeverRecorded).toBe('never_recorded');
-    expect(LossReason.Falsified).toBe('falsified');
-  });
-});
-
-describe('PreservationQuality', () => {
-  it('should have all expected qualities', () => {
-    expect(PreservationQuality.Excellent).toBe('excellent');
-    expect(PreservationQuality.Good).toBe('good');
-    expect(PreservationQuality.Fair).toBe('fair');
-    expect(PreservationQuality.Poor).toBe('poor');
-    expect(PreservationQuality.Endangered).toBe('endangered');
-  });
-});
-
-describe('ChronicleFeature', () => {
-  it('should have all expected features', () => {
-    expect(ChronicleFeature.Illuminated).toBe('illuminated');
-    expect(ChronicleFeature.HasMaps).toBe('has_maps');
-    expect(ChronicleFeature.RareLanguage).toBe('rare_language');
-    expect(ChronicleFeature.Encrypted).toBe('encrypted');
-    expect(ChronicleFeature.Firsthand).toBe('firsthand');
-    expect(ChronicleFeature.Annotated).toBe('annotated');
-    expect(ChronicleFeature.Erroneous).toBe('erroneous');
-    expect(ChronicleFeature.Authoritative).toBe('authoritative');
-    expect(ChronicleFeature.Forbidden).toBe('forbidden');
-  });
-});

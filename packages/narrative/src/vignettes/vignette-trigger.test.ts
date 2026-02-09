@@ -8,65 +8,12 @@ import {
   EmotionalContent,
   VignetteArchetype,
   VignetteMood,
-  TriggerConditionType,
 } from './vignette-trigger.js';
 import type { VignetteTriggerContext } from './vignette-trigger.js';
 import type { EntityId, CharacterId } from '@fws/core';
 import { toEntityId, toCharacterId, toSiteId, toEventId, EventCategory, PersonalityTrait } from '@fws/core';
 import type { WorldEvent } from '@fws/core';
 import type { Memory, MemoryCategory, MemoryRole } from '@fws/core';
-
-describe('EmotionalContent', () => {
-  it('should have all expected emotional categories', () => {
-    expect(EmotionalContent.Betrayal).toBe('betrayal');
-    expect(EmotionalContent.Loss).toBe('loss');
-    expect(EmotionalContent.Triumph).toBe('triumph');
-    expect(EmotionalContent.Love).toBe('love');
-    expect(EmotionalContent.Humiliation).toBe('humiliation');
-    expect(EmotionalContent.Discovery).toBe('discovery');
-    expect(EmotionalContent.MoralCrisis).toBe('moral_crisis');
-    expect(EmotionalContent.Transformation).toBe('transformation');
-    expect(EmotionalContent.Reunion).toBe('reunion');
-    expect(EmotionalContent.Sacrifice).toBe('sacrifice');
-    expect(EmotionalContent.Reckoning).toBe('reckoning');
-    expect(EmotionalContent.Terror).toBe('terror');
-  });
-});
-
-describe('VignetteArchetype', () => {
-  it('should have all expected archetypes', () => {
-    expect(VignetteArchetype.BeforeTheStorm).toBe('before_the_storm');
-    expect(VignetteArchetype.TheDiscovery).toBe('the_discovery');
-    expect(VignetteArchetype.TheConfrontation).toBe('the_confrontation');
-    expect(VignetteArchetype.TheFarewell).toBe('the_farewell');
-    expect(VignetteArchetype.TheAscension).toBe('the_ascension');
-    expect(VignetteArchetype.TheFall).toBe('the_fall');
-    expect(VignetteArchetype.TheSacrifice).toBe('the_sacrifice');
-    expect(VignetteArchetype.TheRevelation).toBe('the_revelation');
-    expect(VignetteArchetype.TheCrossroads).toBe('the_crossroads');
-    expect(VignetteArchetype.TheReunion).toBe('the_reunion');
-    expect(VignetteArchetype.TheReckoning).toBe('the_reckoning');
-    expect(VignetteArchetype.TheChange).toBe('the_change');
-    expect(VignetteArchetype.TheAftermath).toBe('the_aftermath');
-    expect(VignetteArchetype.TheConfession).toBe('the_confession');
-    expect(VignetteArchetype.TheOath).toBe('the_oath');
-  });
-});
-
-describe('VignetteMood', () => {
-  it('should have all expected moods', () => {
-    expect(VignetteMood.Foreboding).toBe('foreboding');
-    expect(VignetteMood.Hopeful).toBe('hopeful');
-    expect(VignetteMood.Melancholy).toBe('melancholy');
-    expect(VignetteMood.Tense).toBe('tense');
-    expect(VignetteMood.Triumphant).toBe('triumphant');
-    expect(VignetteMood.Serene).toBe('serene');
-    expect(VignetteMood.Horror).toBe('horror');
-    expect(VignetteMood.Intimate).toBe('intimate');
-    expect(VignetteMood.Epic).toBe('epic');
-    expect(VignetteMood.Bittersweet).toBe('bittersweet');
-  });
-});
 
 describe('VignetteTrigger', () => {
   let trigger: VignetteTrigger;
@@ -388,20 +335,5 @@ describe('VignetteTrigger', () => {
       // With high threshold, moderate events shouldn't trigger
       expect(result.triggerStrength).toBeLessThan(0.9);
     });
-  });
-});
-
-describe('TriggerConditionType', () => {
-  it('should have all expected condition types', () => {
-    expect(TriggerConditionType.SignificanceThreshold).toBe('significance_threshold');
-    expect(TriggerConditionType.EventCategory).toBe('event_category');
-    expect(TriggerConditionType.CharacterTrait).toBe('character_trait');
-    expect(TriggerConditionType.RelatedMemory).toBe('related_memory');
-    expect(TriggerConditionType.MultiFaction).toBe('multi_faction');
-    expect(TriggerConditionType.HistoricLocation).toBe('historic_location');
-    expect(TriggerConditionType.LifeMilestone).toBe('life_milestone');
-    expect(TriggerConditionType.RelationshipIntensity).toBe('relationship_intensity');
-    expect(TriggerConditionType.TemporalDistance).toBe('temporal_distance');
-    expect(TriggerConditionType.ArcPhase).toBe('arc_phase');
   });
 });

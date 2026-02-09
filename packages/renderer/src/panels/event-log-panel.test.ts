@@ -59,23 +59,14 @@ describe('EventLogPanel', () => {
   });
 
   describe('initialization', () => {
-    it('creates with correct layout', () => {
+    it('has correct defaults', () => {
       const layout = panel.getLayout();
       expect(layout.id).toBe(PanelId.EventLog);
       expect(layout.width).toBe(80);
       expect(layout.height).toBe(24);
-    });
-
-    it('starts in normal mode', () => {
       expect(panel.getMode()).toBe('normal');
-    });
-
-    it('starts with no events', () => {
       expect(panel.getTotalEventCount()).toBe(0);
       expect(panel.getFilteredEventCount()).toBe(0);
-    });
-
-    it('starts with no selected event', () => {
       expect(panel.getSelectedEvent()).toBeNull();
     });
   });
@@ -572,18 +563,14 @@ describe('EventLogPanel', () => {
   });
 
   describe('narrative engine integration', () => {
-    it('initializes with Epic Historical tone', () => {
+    it('has correct narrative defaults', () => {
       expect(panel.getCurrentTone()).toBe('EpicHistorical');
-    });
-
-    it('has all 5 tones available', () => {
-      const tones = panel.getAvailableTones();
-      expect(tones).toHaveLength(5);
-      expect(tones).toContain('EpicHistorical');
-      expect(tones).toContain('PersonalCharacterFocus');
-      expect(tones).toContain('Mythological');
-      expect(tones).toContain('PoliticalIntrigue');
-      expect(tones).toContain('Scholarly');
+      expect(panel.getAvailableTones()).toEqual([
+        'EpicHistorical', 'PersonalCharacterFocus', 'Mythological',
+        'PoliticalIntrigue', 'Scholarly',
+      ]);
+      expect(panel.getChroniclers().length).toBeGreaterThanOrEqual(1);
+      expect(panel.getCurrentVignette()).toBeNull();
     });
 
     it('cycles tone with t key', () => {
@@ -605,11 +592,6 @@ describe('EventLogPanel', () => {
       // Should wrap around
       panel.handleInput('t');
       expect(panel.getCurrentTone()).toBe('EpicHistorical');
-    });
-
-    it('initializes with default chroniclers', () => {
-      const chroniclers = panel.getChroniclers();
-      expect(chroniclers.length).toBeGreaterThanOrEqual(1);
     });
 
     it('cycles chronicler with h key', () => {
@@ -652,10 +634,6 @@ describe('EventLogPanel', () => {
       const secondTone = panel.getCurrentTone();
 
       expect(firstTone).not.toBe(secondTone);
-    });
-
-    it('initializes without vignette', () => {
-      expect(panel.getCurrentVignette()).toBeNull();
     });
 
     it('enters vignette mode with v key when vignette available', () => {

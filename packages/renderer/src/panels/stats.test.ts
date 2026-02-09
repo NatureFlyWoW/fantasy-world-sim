@@ -78,14 +78,11 @@ describe('StatisticsPanel', () => {
   });
 
   describe('initialization', () => {
-    it('creates with correct layout', () => {
+    it('has correct defaults', () => {
       const layout = panel.getLayout();
       expect(layout.id).toBe(PanelId.Statistics);
       expect(layout.width).toBe(60);
       expect(layout.height).toBe(30);
-    });
-
-    it('starts with overview view', () => {
       expect(panel.getCurrentView()).toBe('overview');
     });
   });

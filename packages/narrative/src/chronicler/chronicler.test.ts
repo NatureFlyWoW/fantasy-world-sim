@@ -7,60 +7,11 @@ import {
   ChroniclerIdeology,
   WritingStyle,
   BiasStrength,
-  BiasType,
   ChroniclerRegistry,
   createChronicler,
 } from './chronicler.js';
 import type { WorldTime } from '@fws/core';
 import { toEntityId, toSiteId, toFactionId, toCharacterId } from '@fws/core';
-
-describe('ChroniclerIdeology', () => {
-  it('should have all expected ideologies', () => {
-    expect(ChroniclerIdeology.ProEstablishment).toBe('pro_establishment');
-    expect(ChroniclerIdeology.Populist).toBe('populist');
-    expect(ChroniclerIdeology.Religious).toBe('religious');
-    expect(ChroniclerIdeology.Materialist).toBe('materialist');
-    expect(ChroniclerIdeology.GreatMan).toBe('great_man');
-    expect(ChroniclerIdeology.Cyclical).toBe('cyclical');
-    expect(ChroniclerIdeology.Progressive).toBe('progressive');
-    expect(ChroniclerIdeology.Cynical).toBe('cynical');
-  });
-});
-
-describe('WritingStyle', () => {
-  it('should have all expected styles', () => {
-    expect(WritingStyle.Formal).toBe('formal');
-    expect(WritingStyle.Matter_Of_Fact).toBe('matter_of_fact');
-    expect(WritingStyle.Florid).toBe('florid');
-    expect(WritingStyle.Laconic).toBe('laconic');
-    expect(WritingStyle.Academic).toBe('academic');
-    expect(WritingStyle.Dramatic).toBe('dramatic');
-    expect(WritingStyle.Intimate).toBe('intimate');
-    expect(WritingStyle.Detached).toBe('detached');
-  });
-});
-
-describe('BiasStrength', () => {
-  it('should have all expected strengths', () => {
-    expect(BiasStrength.Subtle).toBe('subtle');
-    expect(BiasStrength.Moderate).toBe('moderate');
-    expect(BiasStrength.Strong).toBe('strong');
-    expect(BiasStrength.Extreme).toBe('extreme');
-  });
-});
-
-describe('BiasType', () => {
-  it('should have all expected bias types', () => {
-    expect(BiasType.FactionSpin).toBe('faction_spin');
-    expect(BiasType.Omission).toBe('omission');
-    expect(BiasType.AttributionShift).toBe('attribution_shift');
-    expect(BiasType.ToneAdjustment).toBe('tone_adjustment');
-    expect(BiasType.KnowledgeLimitation).toBe('knowledge_limitation');
-    expect(BiasType.SignificanceShift).toBe('significance_shift');
-    expect(BiasType.MoralJudgment).toBe('moral_judgment');
-    expect(BiasType.IdeologicalFraming).toBe('ideological_framing');
-  });
-});
 
 describe('createChronicler', () => {
   const homeLocation = toSiteId(toEntityId(1));

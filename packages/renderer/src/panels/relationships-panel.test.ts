@@ -50,26 +50,14 @@ describe('RelationshipsPanel', () => {
   });
 
   describe('initialization', () => {
-    it('creates with correct layout', () => {
+    it('has correct defaults', () => {
       const layout = panel.getLayout();
       expect(layout.id).toBe(PanelId.RelationshipGraph);
       expect(layout.width).toBe(60);
       expect(layout.height).toBe(40);
-    });
-
-    it('starts with no center entity', () => {
       expect(panel.getCenterEntity()).toBeNull();
-    });
-
-    it('starts with default depth of 2', () => {
       expect(panel.getDepth()).toBe(2);
-    });
-
-    it('starts with all filter', () => {
       expect(panel.getFilter()).toBe('all');
-    });
-
-    it('starts with legend hidden', () => {
       expect(panel.isLegendShown()).toBe(false);
     });
   });

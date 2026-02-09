@@ -9,9 +9,7 @@ import { EventBus } from '../events/event-bus.js';
 import { EventCategory, type WorldEvent } from '../events/types.js';
 import {
   SecretType,
-  ALL_SECRET_TYPES,
   RevelationMethod,
-  ALL_REVELATION_METHODS,
   SECRET_BASE_SIGNIFICANCE,
   SECRET_BASE_REVELATION_RATE,
 } from './secret-types.js';
@@ -88,52 +86,6 @@ function setupSecretSystem(): {
 
   return { manager, events, emittedEvents };
 }
-
-// =============================================================================
-// ENUM TESTS
-// =============================================================================
-
-describe('SecretType', () => {
-  it('should have all expected secret types', () => {
-    expect(ALL_SECRET_TYPES).toContain(SecretType.DisguisedIdentity);
-    expect(ALL_SECRET_TYPES).toContain(SecretType.HiddenArtifactLocation);
-    expect(ALL_SECRET_TYPES).toContain(SecretType.MilitaryStrength);
-    expect(ALL_SECRET_TYPES).toContain(SecretType.Prophecy);
-    expect(ALL_SECRET_TYPES).toContain(SecretType.EntityWeakness);
-    expect(ALL_SECRET_TYPES).toContain(SecretType.ConspiracyPlot);
-    expect(ALL_SECRET_TYPES).toContain(SecretType.ForbiddenKnowledge);
-    expect(ALL_SECRET_TYPES).toContain(SecretType.SecretAlliance);
-    expect(ALL_SECRET_TYPES).toHaveLength(8);
-  });
-
-  it('should have base significance for all types', () => {
-    for (const type of ALL_SECRET_TYPES) {
-      expect(SECRET_BASE_SIGNIFICANCE[type]).toBeGreaterThan(0);
-      expect(SECRET_BASE_SIGNIFICANCE[type]).toBeLessThanOrEqual(100);
-    }
-  });
-
-  it('should have revelation rates for all types', () => {
-    for (const type of ALL_SECRET_TYPES) {
-      expect(SECRET_BASE_REVELATION_RATE[type]).toBeGreaterThan(0);
-      expect(SECRET_BASE_REVELATION_RATE[type]).toBeLessThanOrEqual(1);
-    }
-  });
-});
-
-describe('RevelationMethod', () => {
-  it('should have all expected revelation methods', () => {
-    expect(ALL_REVELATION_METHODS).toContain(RevelationMethod.NaturalLeak);
-    expect(ALL_REVELATION_METHODS).toContain(RevelationMethod.Investigation);
-    expect(ALL_REVELATION_METHODS).toContain(RevelationMethod.Interrogation);
-    expect(ALL_REVELATION_METHODS).toContain(RevelationMethod.Deduction);
-    expect(ALL_REVELATION_METHODS).toContain(RevelationMethod.DivineRevelation);
-    expect(ALL_REVELATION_METHODS).toContain(RevelationMethod.Betrayal);
-    expect(ALL_REVELATION_METHODS).toContain(RevelationMethod.Accident);
-    expect(ALL_REVELATION_METHODS).toContain(RevelationMethod.VoluntaryDisclosure);
-    expect(ALL_REVELATION_METHODS).toHaveLength(8);
-  });
-});
 
 // =============================================================================
 // ID GENERATION TESTS

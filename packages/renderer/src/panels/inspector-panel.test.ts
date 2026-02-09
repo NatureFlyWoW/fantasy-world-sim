@@ -51,24 +51,15 @@ describe('InspectorPanel', () => {
   });
 
   describe('initialization', () => {
-    it('creates with correct layout', () => {
+    it('has correct defaults', () => {
       const layout = panel.getLayout();
       expect(layout.id).toBe(PanelId.Inspector);
       expect(layout.width).toBe(60);
       expect(layout.height).toBe(40);
-    });
-
-    it('starts with no entity selected', () => {
       expect(panel.getCurrentEntityId()).toBeNull();
       expect(panel.getCurrentEntityType()).toBe('unknown');
-    });
-
-    it('starts with empty history', () => {
       expect(panel.getHistory()).toHaveLength(0);
       expect(panel.getHistoryIndex()).toBe(-1);
-    });
-
-    it('starts in overview mode', () => {
       expect(panel.getMode()).toBe('overview');
     });
   });

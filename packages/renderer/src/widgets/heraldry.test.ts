@@ -86,36 +86,17 @@ describe('Heraldry data', () => {
 // ---------------------------------------------------------------------------
 
 describe('getShieldShape', () => {
-  it('maps nordic to knightly', () => {
-    expect(getShieldShape('nordic')).toBe('knightly');
-  });
-
-  it('maps dwarven to knightly', () => {
-    expect(getShieldShape('dwarven')).toBe('knightly');
-  });
-
-  it('maps elvish to round', () => {
-    expect(getShieldShape('elvish')).toBe('round');
-  });
-
-  it('maps desert to round', () => {
-    expect(getShieldShape('desert')).toBe('round');
-  });
-
-  it('maps eastern to round', () => {
-    expect(getShieldShape('eastern')).toBe('round');
-  });
-
-  it('maps fey to round', () => {
-    expect(getShieldShape('fey')).toBe('round');
-  });
-
-  it('maps infernal to totem', () => {
-    expect(getShieldShape('infernal')).toBe('totem');
-  });
-
-  it('defaults unknown culture to knightly', () => {
-    expect(getShieldShape('unknown_culture')).toBe('knightly');
+  it.each([
+    ['nordic', 'knightly'],
+    ['dwarven', 'knightly'],
+    ['elvish', 'round'],
+    ['desert', 'round'],
+    ['eastern', 'round'],
+    ['fey', 'round'],
+    ['infernal', 'totem'],
+    ['unknown_culture', 'knightly'],
+  ] as const)('maps %s to %s', (culture, expected) => {
+    expect(getShieldShape(culture)).toBe(expected);
   });
 });
 
@@ -401,35 +382,21 @@ describe('renderLargeCoatOfArms', () => {
 // ---------------------------------------------------------------------------
 
 describe('renderSmallCoatOfArms', () => {
-  it('renders 3 lines for knightly', () => {
-    const arms = generateCoatOfArms(makeProps({ culture: 'nordic' }));
+  it.each([
+    ['knightly', 'nordic'],
+    ['round', 'elvish'],
+    ['totem', 'infernal'],
+  ] as const)('renders 3 lines for %s shield', (_shape, culture) => {
+    const arms = generateCoatOfArms(makeProps({ culture }));
     const lines = renderSmallCoatOfArms(arms);
     expect(lines.length).toBe(3);
   });
 
-  it('renders 3 lines for round', () => {
-    const arms = generateCoatOfArms(makeProps({ culture: 'elvish' }));
-    const lines = renderSmallCoatOfArms(arms);
-    expect(lines.length).toBe(3);
-  });
-
-  it('renders 3 lines for totem', () => {
-    const arms = generateCoatOfArms(makeProps({ culture: 'infernal' }));
-    const lines = renderSmallCoatOfArms(arms);
-    expect(lines.length).toBe(3);
-  });
-
-  it('includes charge in small render', () => {
+  it('includes charge and primary fill', () => {
     const arms = generateCoatOfArms(makeProps());
     const lines = renderSmallCoatOfArms(arms);
     const joined = lines.join('');
     expect(joined).toContain(arms.charge.symbolSmall);
-  });
-
-  it('includes primary fill in small render', () => {
-    const arms = generateCoatOfArms(makeProps());
-    const lines = renderSmallCoatOfArms(arms);
-    const joined = lines.join('');
     expect(joined).toContain(arms.primary.fill);
   });
 });

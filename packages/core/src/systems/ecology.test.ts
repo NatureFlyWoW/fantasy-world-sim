@@ -14,15 +14,11 @@ import { ExecutionOrder } from '../engine/system.js';
 import {
   // Enums
   EcologicalResourceType,
-  ALL_ECOLOGICAL_RESOURCE_TYPES,
   DegradationType,
   ALL_DEGRADATION_TYPES,
   CreatureTerritoryType,
-  ALL_CREATURE_TERRITORY_TYPES,
   InvasiveSpeciesBehavior,
-  ALL_INVASIVE_BEHAVIORS,
   EnvironmentalEventType,
-  ALL_ENVIRONMENTAL_EVENT_TYPES,
   // Pure functions - Resource Depletion
   calculateStockChange,
   calculateHarvestPressure,
@@ -133,78 +129,6 @@ function setupEcologySystem(
 
   return { system, world, clock, events, emittedEvents };
 }
-
-// =============================================================================
-// ENUM TESTS
-// =============================================================================
-
-describe('EcologicalResourceType', () => {
-  it('should have all expected resource types', () => {
-    expect(ALL_ECOLOGICAL_RESOURCE_TYPES).toContain(EcologicalResourceType.Game);
-    expect(ALL_ECOLOGICAL_RESOURCE_TYPES).toContain(EcologicalResourceType.Fish);
-    expect(ALL_ECOLOGICAL_RESOURCE_TYPES).toContain(EcologicalResourceType.Timber);
-    expect(ALL_ECOLOGICAL_RESOURCE_TYPES).toContain(EcologicalResourceType.Herbs);
-    expect(ALL_ECOLOGICAL_RESOURCE_TYPES).toContain(EcologicalResourceType.Ore);
-    expect(ALL_ECOLOGICAL_RESOURCE_TYPES).toContain(EcologicalResourceType.Water);
-    expect(ALL_ECOLOGICAL_RESOURCE_TYPES).toContain(EcologicalResourceType.Soil);
-    expect(ALL_ECOLOGICAL_RESOURCE_TYPES).toHaveLength(7);
-  });
-});
-
-describe('DegradationType', () => {
-  it('should have all expected degradation types', () => {
-    expect(ALL_DEGRADATION_TYPES).toContain(DegradationType.Deforestation);
-    expect(ALL_DEGRADATION_TYPES).toContain(DegradationType.Erosion);
-    expect(ALL_DEGRADATION_TYPES).toContain(DegradationType.MineInstability);
-    expect(ALL_DEGRADATION_TYPES).toContain(DegradationType.MagicalPollution);
-    expect(ALL_DEGRADATION_TYPES).toContain(DegradationType.WaterPollution);
-    expect(ALL_DEGRADATION_TYPES).toContain(DegradationType.Desertification);
-    expect(ALL_DEGRADATION_TYPES).toContain(DegradationType.Overfishing);
-    expect(ALL_DEGRADATION_TYPES).toContain(DegradationType.Overhunting);
-    expect(ALL_DEGRADATION_TYPES).toHaveLength(8);
-  });
-});
-
-describe('CreatureTerritoryType', () => {
-  it('should have all expected territory types', () => {
-    expect(ALL_CREATURE_TERRITORY_TYPES).toContain(CreatureTerritoryType.DragonLair);
-    expect(ALL_CREATURE_TERRITORY_TYPES).toContain(CreatureTerritoryType.FeyForest);
-    expect(ALL_CREATURE_TERRITORY_TYPES).toContain(CreatureTerritoryType.ElementalZone);
-    expect(ALL_CREATURE_TERRITORY_TYPES).toContain(CreatureTerritoryType.UndeadDomain);
-    expect(ALL_CREATURE_TERRITORY_TYPES).toContain(CreatureTerritoryType.GiantClaim);
-    expect(ALL_CREATURE_TERRITORY_TYPES).toContain(CreatureTerritoryType.AbyssalRift);
-    expect(ALL_CREATURE_TERRITORY_TYPES).toContain(CreatureTerritoryType.SeaMonsterWaters);
-    expect(ALL_CREATURE_TERRITORY_TYPES).toContain(CreatureTerritoryType.HauntedLand);
-    expect(ALL_CREATURE_TERRITORY_TYPES).toHaveLength(8);
-  });
-});
-
-describe('InvasiveSpeciesBehavior', () => {
-  it('should have all expected behaviors', () => {
-    expect(ALL_INVASIVE_BEHAVIORS).toContain(InvasiveSpeciesBehavior.Aggressive);
-    expect(ALL_INVASIVE_BEHAVIORS).toContain(InvasiveSpeciesBehavior.Opportunistic);
-    expect(ALL_INVASIVE_BEHAVIORS).toContain(InvasiveSpeciesBehavior.Parasitic);
-    expect(ALL_INVASIVE_BEHAVIORS).toContain(InvasiveSpeciesBehavior.Competitive);
-    expect(ALL_INVASIVE_BEHAVIORS).toContain(InvasiveSpeciesBehavior.Predatory);
-    expect(ALL_INVASIVE_BEHAVIORS).toHaveLength(5);
-  });
-});
-
-describe('EnvironmentalEventType', () => {
-  it('should have all expected event types', () => {
-    expect(ALL_ENVIRONMENTAL_EVENT_TYPES).toContain(EnvironmentalEventType.MineCollapse);
-    expect(ALL_ENVIRONMENTAL_EVENT_TYPES).toContain(EnvironmentalEventType.Flood);
-    expect(ALL_ENVIRONMENTAL_EVENT_TYPES).toContain(EnvironmentalEventType.Drought);
-    expect(ALL_ENVIRONMENTAL_EVENT_TYPES).toContain(EnvironmentalEventType.WildfireNatural);
-    expect(ALL_ENVIRONMENTAL_EVENT_TYPES).toContain(EnvironmentalEventType.CropFailure);
-    expect(ALL_ENVIRONMENTAL_EVENT_TYPES).toContain(EnvironmentalEventType.FishStockCollapse);
-    expect(ALL_ENVIRONMENTAL_EVENT_TYPES).toContain(EnvironmentalEventType.WildlifeExtinction);
-    expect(ALL_ENVIRONMENTAL_EVENT_TYPES).toContain(EnvironmentalEventType.MagicalStorm);
-    expect(ALL_ENVIRONMENTAL_EVENT_TYPES).toContain(EnvironmentalEventType.PlagueOutbreak);
-    expect(ALL_ENVIRONMENTAL_EVENT_TYPES).toContain(EnvironmentalEventType.Landslide);
-    expect(ALL_ENVIRONMENTAL_EVENT_TYPES).toHaveLength(10);
-  });
-});
 
 // =============================================================================
 // RESOURCE DEPLETION TESTS

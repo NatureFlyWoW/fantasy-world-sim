@@ -28,11 +28,18 @@ function generateWorld(seed: number, overrides?: Partial<WorldConfig>) {
 }
 
 describe('FloraDistributor', () => {
-  it('should distribute flora across land tiles', () => {
-    const { rng, worldMap } = generateWorld(42);
-    const floraDistributor = new FloraDistributor();
-    const flora = floraDistributor.distribute(worldMap, rng);
+  let rng: SeededRNG;
+  let worldMap: WorldMap;
+  let flora: (import('./flora.js').FloraEntry | undefined)[][];
 
+  beforeAll(() => {
+    const result = generateWorld(42);
+    rng = result.rng;
+    worldMap = result.worldMap;
+    flora = new FloraDistributor().distribute(worldMap, rng);
+  });
+
+  it('should distribute flora across land tiles', () => {
     expect(flora.length).toBe(worldMap.getHeight());
 
     // Count non-undefined flora entries
@@ -49,9 +56,6 @@ describe('FloraDistributor', () => {
   });
 
   it('should not place flora on ocean tiles', () => {
-    const { rng, worldMap } = generateWorld(42);
-    const flora = new FloraDistributor().distribute(worldMap, rng);
-
     for (let y = 0; y < worldMap.getHeight(); y++) {
       for (let x = 0; x < worldMap.getWidth(); x++) {
         const tile = worldMap.getTile(x, y);
@@ -64,9 +68,6 @@ describe('FloraDistributor', () => {
   });
 
   it('should place forest species in forest biomes', () => {
-    const { rng, worldMap } = generateWorld(42);
-    const flora = new FloraDistributor().distribute(worldMap, rng);
-
     const forestSpecies = new Set<FloraSpecies>();
     for (let y = 0; y < worldMap.getHeight(); y++) {
       for (let x = 0; x < worldMap.getWidth(); x++) {
@@ -88,9 +89,6 @@ describe('FloraDistributor', () => {
   });
 
   it('should have higher density in jungle/dense forest', () => {
-    const { rng, worldMap } = generateWorld(42);
-    const flora = new FloraDistributor().distribute(worldMap, rng);
-
     let jungleDensitySum = 0;
     let jungleCount = 0;
     let desertDensitySum = 0;
@@ -144,19 +142,24 @@ describe('FloraDistributor', () => {
 });
 
 describe('FaunaDistributor', () => {
-  it('should distribute fauna populations', () => {
-    const { rng, worldMap } = generateWorld(42);
-    const flora = new FloraDistributor().distribute(worldMap, rng);
-    const fauna = new FaunaDistributor().distribute(worldMap, flora, rng);
+  let rng: SeededRNG;
+  let worldMap: WorldMap;
+  let flora: (import('./flora.js').FloraEntry | undefined)[][];
+  let fauna: import('./fauna.js').FaunaPopulation[];
 
+  beforeAll(() => {
+    const result = generateWorld(42);
+    rng = result.rng;
+    worldMap = result.worldMap;
+    flora = new FloraDistributor().distribute(worldMap, rng);
+    fauna = new FaunaDistributor().distribute(worldMap, flora, rng);
+  });
+
+  it('should distribute fauna populations', () => {
     expect(fauna.length).toBeGreaterThan(0);
   });
 
   it('should include both herbivores and predators', () => {
-    const { rng, worldMap } = generateWorld(42);
-    const flora = new FloraDistributor().distribute(worldMap, rng);
-    const fauna = new FaunaDistributor().distribute(worldMap, flora, rng);
-
     const herbivores = fauna.filter(f => !f.isPredator);
     const predators = fauna.filter(f => f.isPredator);
 
@@ -165,10 +168,6 @@ describe('FaunaDistributor', () => {
   });
 
   it('should place fauna within map bounds', () => {
-    const { rng, worldMap } = generateWorld(42);
-    const flora = new FloraDistributor().distribute(worldMap, rng);
-    const fauna = new FaunaDistributor().distribute(worldMap, flora, rng);
-
     for (const pop of fauna) {
       expect(pop.x).toBeGreaterThanOrEqual(0);
       expect(pop.x).toBeLessThan(worldMap.getWidth());
@@ -180,28 +179,89 @@ describe('FaunaDistributor', () => {
   });
 
   it('should have varied species', () => {
-    const { rng, worldMap } = generateWorld(42);
-    const flora = new FloraDistributor().distribute(worldMap, rng);
-    const fauna = new FaunaDistributor().distribute(worldMap, flora, rng);
-
     const species = new Set(fauna.map(f => f.species));
     expect(species.size).toBeGreaterThanOrEqual(3);
   });
 });
 
 describe('MagicalCreaturePlacer', () => {
-  it('should place creatures for moderate magic', () => {
-    const { config, rng, worldMap } = generateWorld(42);
-    const creatures = new MagicalCreaturePlacer().place(worldMap, config, rng);
+  describe('moderate magic', () => {
+    let config: WorldConfig;
+    let rng: SeededRNG;
+    let worldMap: WorldMap;
 
-    expect(creatures.length).toBeGreaterThan(0);
+    beforeAll(() => {
+      const result = generateWorld(42);
+      config = result.config;
+      rng = result.rng;
+      worldMap = result.worldMap;
+    });
+
+    it('should place creatures for moderate magic', () => {
+      const creatures = new MagicalCreaturePlacer().place(worldMap, config, rng);
+      expect(creatures.length).toBeGreaterThan(0);
+    });
   });
 
-  it('should place zero creatures for mundane magic', () => {
-    const { config, rng, worldMap } = generateWorld(42, { magicPrevalence: 'mundane' });
-    const creatures = new MagicalCreaturePlacer().place(worldMap, config, rng);
+  describe('mundane magic', () => {
+    let config: WorldConfig;
+    let rng: SeededRNG;
+    let worldMap: WorldMap;
 
-    expect(creatures.length).toBe(0);
+    beforeAll(() => {
+      const result = generateWorld(42, { magicPrevalence: 'mundane' });
+      config = result.config;
+      rng = result.rng;
+      worldMap = result.worldMap;
+    });
+
+    it('should place zero creatures for mundane magic', () => {
+      const creatures = new MagicalCreaturePlacer().place(worldMap, config, rng);
+      expect(creatures.length).toBe(0);
+    });
+  });
+
+  describe('high magic', () => {
+    let config: WorldConfig;
+    let rng: SeededRNG;
+    let worldMap: WorldMap;
+    let creatures: import('./magical-creatures.js').MagicalCreature[];
+
+    beforeAll(() => {
+      const result = generateWorld(42, { magicPrevalence: 'high' });
+      config = result.config;
+      rng = result.rng;
+      worldMap = result.worldMap;
+      creatures = new MagicalCreaturePlacer().place(worldMap, config, rng);
+    });
+
+    it('should place dragons in high mountains', () => {
+      const dragons = creatures.filter(c => c.type === MagicalCreatureType.Dragon);
+      for (const dragon of dragons) {
+        const tile = worldMap.getTile(dragon.x, dragon.y);
+        expect(tile).toBeDefined();
+        expect(tile!.elevation).toBeGreaterThan(5000);
+      }
+    });
+
+    it('should place fey in dense forests', () => {
+      const fey = creatures.filter(c => c.type === MagicalCreatureType.Fey);
+      for (const f of fey) {
+        const tile = worldMap.getTile(f.x, f.y);
+        expect(tile).toBeDefined();
+        expect([BiomeType.DenseForest, BiomeType.Jungle]).toContain(tile!.biome);
+      }
+    });
+
+    it('should place elementals on ley lines', () => {
+      const elementals = creatures.filter(c => c.type === MagicalCreatureType.Elemental);
+      for (const e of elementals) {
+        const tile = worldMap.getTile(e.x, e.y);
+        expect(tile).toBeDefined();
+        expect(tile!.leyLine).toBe(true);
+        expect(e.affinity).toBeDefined();
+      }
+    });
   });
 
   it('should scale creature count with magic prevalence', () => {
@@ -217,51 +277,90 @@ describe('MagicalCreaturePlacer', () => {
 
     expect(highCreatures.length).toBeGreaterThan(lowCreatures.length);
   });
-
-  it('should place dragons in high mountains', () => {
-    const { config, rng, worldMap } = generateWorld(42, { magicPrevalence: 'high' });
-    const creatures = new MagicalCreaturePlacer().place(worldMap, config, rng);
-
-    const dragons = creatures.filter(c => c.type === MagicalCreatureType.Dragon);
-    for (const dragon of dragons) {
-      const tile = worldMap.getTile(dragon.x, dragon.y);
-      expect(tile).toBeDefined();
-      expect(tile!.elevation).toBeGreaterThan(5000);
-    }
-  });
-
-  it('should place fey in dense forests', () => {
-    const { config, rng, worldMap } = generateWorld(42, { magicPrevalence: 'high' });
-    const creatures = new MagicalCreaturePlacer().place(worldMap, config, rng);
-
-    const fey = creatures.filter(c => c.type === MagicalCreatureType.Fey);
-    for (const f of fey) {
-      const tile = worldMap.getTile(f.x, f.y);
-      expect(tile).toBeDefined();
-      expect([BiomeType.DenseForest, BiomeType.Jungle]).toContain(tile!.biome);
-    }
-  });
-
-  it('should place elementals on ley lines', () => {
-    const { config, rng, worldMap } = generateWorld(42, { magicPrevalence: 'high' });
-    const creatures = new MagicalCreaturePlacer().place(worldMap, config, rng);
-
-    const elementals = creatures.filter(c => c.type === MagicalCreatureType.Elemental);
-    for (const e of elementals) {
-      const tile = worldMap.getTile(e.x, e.y);
-      expect(tile).toBeDefined();
-      expect(tile!.leyLine).toBe(true);
-      expect(e.affinity).toBeDefined();
-    }
-  });
 });
 
 describe('DungeonPlacer', () => {
-  it('should place dungeons', () => {
-    const { config, rng, worldMap } = generateWorld(42);
-    const dungeons = new DungeonPlacer().place(worldMap, config, rng);
+  describe('moderate danger', () => {
+    let config: WorldConfig;
+    let rng: SeededRNG;
+    let worldMap: WorldMap;
+    let dungeons: import('./dungeons.js').Dungeon[];
 
-    expect(dungeons.length).toBeGreaterThan(0);
+    beforeAll(() => {
+      const result = generateWorld(42);
+      config = result.config;
+      rng = result.rng;
+      worldMap = result.worldMap;
+      dungeons = new DungeonPlacer().place(worldMap, config, rng);
+    });
+
+    it('should place dungeons', () => {
+      expect(dungeons.length).toBeGreaterThan(0);
+    });
+
+    it('should place dungeons on valid terrain', () => {
+      for (const dungeon of dungeons) {
+        expect(dungeon.x).toBeGreaterThanOrEqual(0);
+        expect(dungeon.x).toBeLessThan(worldMap.getWidth());
+        expect(dungeon.y).toBeGreaterThanOrEqual(0);
+        expect(dungeon.y).toBeLessThan(worldMap.getHeight());
+        expect(dungeon.dangerRating).toBeGreaterThanOrEqual(1);
+        expect(dungeon.dangerRating).toBeLessThanOrEqual(10);
+        expect(dungeon.lootPotential).toBeGreaterThanOrEqual(1);
+        expect(dungeon.lootPotential).toBeLessThanOrEqual(10);
+        expect(dungeon.age).toBeGreaterThan(0);
+      }
+    });
+  });
+
+  describe('dangerous + ancient', () => {
+    let config: WorldConfig;
+    let rng: SeededRNG;
+    let worldMap: WorldMap;
+    let dungeons: import('./dungeons.js').Dungeon[];
+
+    beforeAll(() => {
+      const result = generateWorld(42, {
+        dangerLevel: 'dangerous',
+        historicalDepth: 'ancient',
+      });
+      config = result.config;
+      rng = result.rng;
+      worldMap = result.worldMap;
+      dungeons = new DungeonPlacer().place(worldMap, config, rng);
+    });
+
+    it('should produce diverse dungeon types', () => {
+      const types = new Set(dungeons.map(d => d.type));
+      expect(types.size).toBeGreaterThanOrEqual(2);
+    });
+  });
+
+  describe('apocalyptic + ancient', () => {
+    let config: WorldConfig;
+    let rng: SeededRNG;
+    let worldMap: WorldMap;
+    let dungeons: import('./dungeons.js').Dungeon[];
+
+    beforeAll(() => {
+      const result = generateWorld(42, {
+        dangerLevel: 'apocalyptic',
+        historicalDepth: 'ancient',
+      });
+      config = result.config;
+      rng = result.rng;
+      worldMap = result.worldMap;
+      dungeons = new DungeonPlacer().place(worldMap, config, rng);
+    });
+
+    it('should place underwater ruins on coast/ocean', () => {
+      const underwater = dungeons.filter(d => d.type === DungeonType.UnderwaterRuin);
+      for (const d of underwater) {
+        const tile = worldMap.getTile(d.x, d.y);
+        expect(tile).toBeDefined();
+        expect([BiomeType.Coast, BiomeType.Ocean]).toContain(tile!.biome);
+      }
+    });
   });
 
   it('should scale count with danger level', () => {
@@ -291,59 +390,25 @@ describe('DungeonPlacer', () => {
 
     expect(ancient.length).toBeGreaterThan(shallow.length);
   });
-
-  it('should place dungeons on valid terrain', () => {
-    const { config, rng, worldMap } = generateWorld(42);
-    const dungeons = new DungeonPlacer().place(worldMap, config, rng);
-
-    for (const dungeon of dungeons) {
-      expect(dungeon.x).toBeGreaterThanOrEqual(0);
-      expect(dungeon.x).toBeLessThan(worldMap.getWidth());
-      expect(dungeon.y).toBeGreaterThanOrEqual(0);
-      expect(dungeon.y).toBeLessThan(worldMap.getHeight());
-      expect(dungeon.dangerRating).toBeGreaterThanOrEqual(1);
-      expect(dungeon.dangerRating).toBeLessThanOrEqual(10);
-      expect(dungeon.lootPotential).toBeGreaterThanOrEqual(1);
-      expect(dungeon.lootPotential).toBeLessThanOrEqual(10);
-      expect(dungeon.age).toBeGreaterThan(0);
-    }
-  });
-
-  it('should produce diverse dungeon types', () => {
-    const { config, rng, worldMap } = generateWorld(42, {
-      dangerLevel: 'dangerous',
-      historicalDepth: 'ancient',
-    });
-    const dungeons = new DungeonPlacer().place(worldMap, config, rng);
-
-    const types = new Set(dungeons.map(d => d.type));
-    expect(types.size).toBeGreaterThanOrEqual(2);
-  });
-
-  it('should place underwater ruins on coast/ocean', () => {
-    const { config, rng, worldMap } = generateWorld(42, {
-      dangerLevel: 'apocalyptic',
-      historicalDepth: 'ancient',
-    });
-    const dungeons = new DungeonPlacer().place(worldMap, config, rng);
-
-    const underwater = dungeons.filter(d => d.type === DungeonType.UnderwaterRuin);
-    for (const d of underwater) {
-      const tile = worldMap.getTile(d.x, d.y);
-      expect(tile).toBeDefined();
-      expect([BiomeType.Coast, BiomeType.Ocean]).toContain(tile!.biome);
-    }
-  });
 });
 
 describe('EcologicalBaseline', () => {
+  let rng: SeededRNG;
+  let worldMap: WorldMap;
+  let flora: (import('./flora.js').FloraEntry | undefined)[][];
+  let fauna: import('./fauna.js').FaunaPopulation[];
+  let baseline: import('./ecological-baseline.js').EcologicalSnapshot;
+
+  beforeAll(() => {
+    const result = generateWorld(42);
+    rng = result.rng;
+    worldMap = result.worldMap;
+    flora = new FloraDistributor().distribute(worldMap, rng);
+    fauna = new FaunaDistributor().distribute(worldMap, flora, rng);
+    baseline = new EcologicalBaseline().snapshot(worldMap, flora, fauna);
+  });
+
   it('should capture baseline with non-zero values', () => {
-    const { rng, worldMap } = generateWorld(42);
-    const flora = new FloraDistributor().distribute(worldMap, rng);
-    const fauna = new FaunaDistributor().distribute(worldMap, flora, rng);
-
-    const baseline = new EcologicalBaseline().snapshot(worldMap, flora, fauna);
-
     expect(baseline.totalAnimalPopulation).toBeGreaterThan(0);
     expect(baseline.totalSpeciesCount).toBeGreaterThan(0);
     expect(baseline.totalForestCover).toBeGreaterThan(0);
@@ -353,23 +418,11 @@ describe('EcologicalBaseline', () => {
   });
 
   it('should have populated regions with non-zero fauna', () => {
-    const { rng, worldMap } = generateWorld(42);
-    const flora = new FloraDistributor().distribute(worldMap, rng);
-    const fauna = new FaunaDistributor().distribute(worldMap, flora, rng);
-
-    const baseline = new EcologicalBaseline().snapshot(worldMap, flora, fauna);
-
     const regionsWithFauna = baseline.regions.filter(r => r.animalPopulation > 0);
     expect(regionsWithFauna.length).toBeGreaterThan(0);
   });
 
   it('should track forest cover per region', () => {
-    const { rng, worldMap } = generateWorld(42);
-    const flora = new FloraDistributor().distribute(worldMap, rng);
-    const fauna = new FaunaDistributor().distribute(worldMap, flora, rng);
-
-    const baseline = new EcologicalBaseline().snapshot(worldMap, flora, fauna);
-
     // Some regions should have forest cover, some should not
     const withForest = baseline.regions.filter(r => r.forestCover > 0);
     const withoutForest = baseline.regions.filter(r => r.forestCover === 0);
@@ -378,34 +431,16 @@ describe('EcologicalBaseline', () => {
   });
 
   it('should track resource nodes', () => {
-    const { rng, worldMap } = generateWorld(42);
-    const flora = new FloraDistributor().distribute(worldMap, rng);
-    const fauna = new FaunaDistributor().distribute(worldMap, flora, rng);
-
-    const baseline = new EcologicalBaseline().snapshot(worldMap, flora, fauna);
-
     const totalResources = baseline.regions.reduce((sum, r) => sum + r.resourceNodeCount, 0);
     expect(totalResources).toBeGreaterThan(0);
   });
 
   it('should track magic level from ley lines', () => {
-    const { rng, worldMap } = generateWorld(42);
-    const flora = new FloraDistributor().distribute(worldMap, rng);
-    const fauna = new FaunaDistributor().distribute(worldMap, flora, rng);
-
-    const baseline = new EcologicalBaseline().snapshot(worldMap, flora, fauna);
-
     const regionsWithMagic = baseline.regions.filter(r => r.magicLevel > 0);
     expect(regionsWithMagic.length).toBeGreaterThan(0);
   });
 
   it('should track flora density', () => {
-    const { rng, worldMap } = generateWorld(42);
-    const flora = new FloraDistributor().distribute(worldMap, rng);
-    const fauna = new FaunaDistributor().distribute(worldMap, flora, rng);
-
-    const baseline = new EcologicalBaseline().snapshot(worldMap, flora, fauna);
-
     const regionsWithFlora = baseline.regions.filter(r => r.floraDensity > 0);
     expect(regionsWithFlora.length).toBeGreaterThan(0);
   });

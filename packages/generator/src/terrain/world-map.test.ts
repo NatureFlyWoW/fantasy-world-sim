@@ -17,12 +17,18 @@ function makeSmallConfig(seed: number): WorldConfig {
 
 describe('WorldMap', () => {
   describe('generate', () => {
-    it('should generate a complete tile grid', () => {
-      const config = makeSmallConfig(42);
-      const rng = new SeededRNG(config.seed);
-      const worldMap = new WorldMap(config, rng);
-      const tiles = worldMap.generate();
+    let config: WorldConfig;
+    let worldMap: WorldMap;
+    let tiles: import('./terrain-tile.js').TerrainTile[][];
 
+    beforeAll(() => {
+      config = makeSmallConfig(42);
+      const rng = new SeededRNG(config.seed);
+      worldMap = new WorldMap(config, rng);
+      tiles = worldMap.generate();
+    });
+
+    it('should generate a complete tile grid', () => {
       expect(tiles).toHaveLength(200);
       expect(tiles[0]).toHaveLength(200);
       expect(worldMap.getWidth()).toBe(200);
@@ -31,11 +37,6 @@ describe('WorldMap', () => {
     });
 
     it('should populate all tile fields', () => {
-      const config = makeSmallConfig(42);
-      const rng = new SeededRNG(config.seed);
-      const worldMap = new WorldMap(config, rng);
-      worldMap.generate();
-
       const tile = worldMap.getTile(100, 100);
       expect(tile).toBeDefined();
       expect(typeof tile!.elevation).toBe('number');
@@ -48,8 +49,6 @@ describe('WorldMap', () => {
     });
 
     it('should be deterministic', () => {
-      const config = makeSmallConfig(42);
-
       const rng1 = new SeededRNG(config.seed);
       const map1 = new WorldMap(config, rng1);
       map1.generate();
@@ -71,11 +70,6 @@ describe('WorldMap', () => {
     });
 
     it('should produce diverse biomes', () => {
-      const config = makeSmallConfig(42);
-      const rng = new SeededRNG(config.seed);
-      const worldMap = new WorldMap(config, rng);
-      worldMap.generate();
-
       const biomeSet = new Set<BiomeType>();
       for (let y = 0; y < 200; y++) {
         for (let x = 0; x < 200; x++) {
@@ -88,11 +82,6 @@ describe('WorldMap', () => {
     });
 
     it('should generate rivers', () => {
-      const config = makeSmallConfig(42);
-      const rng = new SeededRNG(config.seed);
-      const worldMap = new WorldMap(config, rng);
-      worldMap.generate();
-
       const rivers = worldMap.getRivers();
       expect(rivers.length).toBeGreaterThan(0);
 
@@ -110,12 +99,16 @@ describe('WorldMap', () => {
   });
 
   describe('getTile', () => {
-    it('should return undefined for out-of-bounds coordinates', () => {
+    let worldMap: WorldMap;
+
+    beforeAll(() => {
       const config = makeSmallConfig(42);
       const rng = new SeededRNG(config.seed);
-      const worldMap = new WorldMap(config, rng);
+      worldMap = new WorldMap(config, rng);
       worldMap.generate();
+    });
 
+    it('should return undefined for out-of-bounds coordinates', () => {
       expect(worldMap.getTile(-1, 0)).toBeUndefined();
       expect(worldMap.getTile(0, -1)).toBeUndefined();
       expect(worldMap.getTile(200, 0)).toBeUndefined();
@@ -124,12 +117,16 @@ describe('WorldMap', () => {
   });
 
   describe('findSuitableSettlementSites', () => {
-    it('should return scored settlement sites', () => {
+    let worldMap: WorldMap;
+
+    beforeAll(() => {
       const config = makeSmallConfig(42);
       const rng = new SeededRNG(config.seed);
-      const worldMap = new WorldMap(config, rng);
+      worldMap = new WorldMap(config, rng);
       worldMap.generate();
+    });
 
+    it('should return scored settlement sites', () => {
       const sites = worldMap.findSuitableSettlementSites(10);
 
       expect(sites.length).toBeGreaterThan(0);
@@ -149,11 +146,6 @@ describe('WorldMap', () => {
     });
 
     it('should return sites sorted by score descending', () => {
-      const config = makeSmallConfig(42);
-      const rng = new SeededRNG(config.seed);
-      const worldMap = new WorldMap(config, rng);
-      worldMap.generate();
-
       const sites = worldMap.findSuitableSettlementSites(10);
 
       for (let i = 1; i < sites.length; i++) {

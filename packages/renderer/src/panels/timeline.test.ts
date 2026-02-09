@@ -70,26 +70,14 @@ describe('TimelinePanel', () => {
   });
 
   describe('initialization', () => {
-    it('creates with correct layout', () => {
+    it('has correct defaults', () => {
       const layout = panel.getLayout();
       expect(layout.id).toBe(PanelId.Timeline);
       expect(layout.width).toBe(80);
       expect(layout.height).toBe(20);
-    });
-
-    it('starts with decade zoom level', () => {
       expect(panel.getZoomLevel()).toBe('decade');
-    });
-
-    it('starts with zero scroll offset', () => {
       expect(panel.getScrollOffset()).toBe(0);
-    });
-
-    it('starts with tracks visible', () => {
       expect(panel.areTracksVisible()).toBe(true);
-    });
-
-    it('starts with no category filter', () => {
       expect(panel.getCategoryFilter()).toBeNull();
     });
   });

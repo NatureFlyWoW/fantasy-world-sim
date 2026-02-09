@@ -51,32 +51,19 @@ describe('LocationInspector', () => {
   });
 
   describe('getSections', () => {
-    it('returns 7 sections', () => {
+    it('returns correct sections with expected defaults', () => {
       expect(sections).toHaveLength(7);
-    });
-
-    it('includes required section IDs', () => {
       const sectionIds = sections.map(s => s.id);
-      expect(sectionIds).toContain('living-portrait');
-      expect(sectionIds).toContain('people-peoples');
-      expect(sectionIds).toContain('power-governance');
-      expect(sectionIds).toContain('trade-industry');
-      expect(sectionIds).toContain('walls-works');
-      expect(sectionIds).toContain('notable-souls');
-      expect(sectionIds).toContain('the-annals');
-    });
-
-    it('first 2 sections expanded by default', () => {
+      expect(sectionIds).toEqual([
+        'living-portrait', 'people-peoples', 'power-governance',
+        'trade-industry', 'walls-works', 'notable-souls', 'the-annals',
+      ]);
+      // First 2 expanded, rest collapsed
       expect(sections[0]?.collapsed).toBe(false);
       expect(sections[1]?.collapsed).toBe(false);
-    });
-
-    it('remaining sections collapsed by default', () => {
-      expect(sections[2]?.collapsed).toBe(true);
-      expect(sections[3]?.collapsed).toBe(true);
-      expect(sections[4]?.collapsed).toBe(true);
-      expect(sections[5]?.collapsed).toBe(true);
-      expect(sections[6]?.collapsed).toBe(true);
+      for (let i = 2; i < sections.length; i++) {
+        expect(sections[i]?.collapsed).toBe(true);
+      }
     });
 
     it('includes settlement type summary hint from context', () => {
@@ -321,34 +308,17 @@ describe('FactionInspector', () => {
   });
 
   describe('getSections', () => {
-    it('returns 8 sections', () => {
+    it('returns correct sections with expected defaults', () => {
       expect(sections).toHaveLength(8);
-    });
-
-    it('includes required section IDs', () => {
       const sectionIds = sections.map(s => s.id);
-      expect(sectionIds).toContain('rise-reign');
-      expect(sectionIds).toContain('banner-creed');
-      expect(sectionIds).toContain('court-council');
-      expect(sectionIds).toContain('lands-holdings');
-      expect(sectionIds).toContain('swords-shields');
-      expect(sectionIds).toContain('alliances-enmities');
-      expect(sectionIds).toContain('coffers-commerce');
-      expect(sectionIds).toContain('chronicles');
-    });
-
-    it('first 3 sections expanded by default', () => {
-      expect(sections[0]?.collapsed).toBe(false);
-      expect(sections[1]?.collapsed).toBe(false);
-      expect(sections[2]?.collapsed).toBe(false);
-    });
-
-    it('remaining sections collapsed by default', () => {
-      expect(sections[3]?.collapsed).toBe(true);
-      expect(sections[4]?.collapsed).toBe(true);
-      expect(sections[5]?.collapsed).toBe(true);
-      expect(sections[6]?.collapsed).toBe(true);
-      expect(sections[7]?.collapsed).toBe(true);
+      expect(sectionIds).toEqual([
+        'rise-reign', 'banner-creed', 'court-council', 'lands-holdings',
+        'swords-shields', 'alliances-enmities', 'coffers-commerce', 'chronicles',
+      ]);
+      // First 3 expanded, rest collapsed
+      for (let i = 0; i < sections.length; i++) {
+        expect(sections[i]?.collapsed).toBe(i >= 3);
+      }
     });
 
     it('includes summary hints from context data', () => {
@@ -639,20 +609,13 @@ describe('ArtifactInspector', () => {
   });
 
   describe('getSections', () => {
-    it('returns 8 sections', () => {
+    it('returns correct sections', () => {
       expect(sections).toHaveLength(8);
-    });
-
-    it('includes required sections', () => {
       const sectionIds = sections.map(s => s.id);
-      expect(sectionIds).toContain('overview');
-      expect(sectionIds).toContain('creation');
-      expect(sectionIds).toContain('powers');
-      expect(sectionIds).toContain('consciousness');
-      expect(sectionIds).toContain('ownership');
-      expect(sectionIds).toContain('curses');
-      expect(sectionIds).toContain('significance');
-      expect(sectionIds).toContain('history');
+      expect(sectionIds).toEqual([
+        'overview', 'creation', 'powers', 'consciousness',
+        'ownership', 'curses', 'significance', 'history',
+      ]);
     });
   });
 
