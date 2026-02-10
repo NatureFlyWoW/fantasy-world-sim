@@ -11,6 +11,7 @@ import { Viewport } from './viewport.js';
 import { BIOME_CONFIGS, ENTITY_MARKERS, selectGlyph } from './biome-config.js';
 import { OverlayType } from './overlay-manager.js';
 import type { OverlayManager, OverlayModification } from './overlay-manager.js';
+import { generateTileVariants, getTileVariant, type TileVariant } from './tile-variants.js';
 import type {
   WorldSnapshot, TileSnapshot, EntitySnapshot, TickDelta, SerializedEvent,
 } from '../../shared/types.js';
@@ -85,6 +86,9 @@ export class TilemapRenderer {
   private lastCenterY = -1;
   private lastZoom = -1;
 
+  // Tile variants
+  private tileVariants: Map<string, TileVariant[]> | null = null;
+
   constructor() {
     this.container.addChild(this.bgLayer);
     this.container.addChild(this.glyphLayer);
@@ -136,6 +140,10 @@ export class TilemapRenderer {
     for (const f of snapshot.factions) {
       this.factionColors.set(f.id, f.color);
     }
+
+    // Generate tile variants with world seed
+    this.seed = snapshot.seed;
+    this.tileVariants = generateTileVariants(snapshot.seed);
 
     this.viewport.setWorldSize(this.mapWidth, this.mapHeight);
     this.viewport.centerOn(
@@ -302,12 +310,29 @@ export class TilemapRenderer {
 
     // River overlay
     let char: string;
+    let glyphIdx: number;
     if (tileData.riverId !== undefined) {
       char = '~';
+      glyphIdx = glyphIndex(char);
       fgColor = '#2868a0'; // TS
     } else {
-      const noise = tileNoise(wx, wy, this.seed);
-      char = selectGlyph(config, noise);
+      // Use tile variant system for deterministic glyph selection
+      if (this.tileVariants !== null) {
+        const variant = getTileVariant(this.tileVariants, tileData.biome, wx, wy);
+        if (variant !== null) {
+          glyphIdx = variant.glyphIndex;
+        } else {
+          // Fallback to old method
+          const noise = tileNoise(wx, wy, this.seed);
+          char = selectGlyph(config, noise);
+          glyphIdx = glyphIndex(char);
+        }
+      } else {
+        // Fallback if variants not initialized
+        const noise = tileNoise(wx, wy, this.seed);
+        char = selectGlyph(config, noise);
+        glyphIdx = glyphIndex(char);
+      }
     }
 
     // Apply overlay modification
@@ -322,7 +347,7 @@ export class TilemapRenderer {
     tile.bg.clear().rect(0, 0, TILE_W, TILE_H).fill({ color: hexToNum(bgColor) });
 
     tile.glyph.visible = true;
-    tile.glyph.texture = getGlyphTexture(glyphIndex(char));
+    tile.glyph.texture = getGlyphTexture(glyphIdx);
     tile.glyph.tint = hexToNum(fgColor);
   }
 

@@ -327,6 +327,7 @@ export class SimulationRunner {
     return {
       mapWidth: width,
       mapHeight: height,
+      seed: this.seed,
       tiles,
       entities,
       events: this.serializeEvents(this.eventLog.getAll()),

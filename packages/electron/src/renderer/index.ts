@@ -19,6 +19,8 @@ import { NotificationManager } from './notification-toast.js';
 import { initPanelDivider } from './panel-divider.js';
 import { uiEvents } from './ui-events.js';
 import { ChroniclePanel } from './chronicle/chronicle-panel.js';
+import { initChargeAtlas } from './procgen/charge-atlas.js';
+import { generateIconAtlas } from './procgen/icon-atlas.js';
 import type { EntityType, InspectorQuery, TickDelta, WorldSnapshot } from '../shared/types.js';
 
 // ── State ────────────────────────────────────────────────────────────────────
@@ -299,6 +301,10 @@ async function init(): Promise<void> {
   totalEvents = snapshot.events.length;
 
   console.log(`[renderer] World loaded: ${snapshot.mapWidth}x${snapshot.mapHeight}, ${snapshot.entities.length} entities`);
+
+  // Initialize procedural art atlases
+  initChargeAtlas();
+  generateIconAtlas(); // Pre-generate (could cache texture if needed)
 
   // Build faction color map for overlays
   for (const f of snapshot.factions) {
