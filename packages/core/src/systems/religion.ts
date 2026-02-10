@@ -13,6 +13,7 @@ import { EventCategory } from '../events/types.js';
 import type { EventBus } from '../events/event-bus.js';
 import { createEvent } from '../events/event-factory.js';
 import { BaseSystem, ExecutionOrder } from '../engine/system.js';
+import { SeededRNG } from '../utils/seeded-rng.js';
 
 // ── Divine domains (mirroring generator) ─────────────────────────────────────
 
@@ -360,6 +361,12 @@ export class ReligionSystem extends BaseSystem {
 
   private lastAnnualTick = 0;
   private pantheonComplexity: 'atheistic' | 'deistic' | 'theistic' | 'interventionist' = 'theistic';
+  private readonly rng: SeededRNG;
+
+  constructor(rng?: SeededRNG) {
+    super();
+    this.rng = rng ?? new SeededRNG(0);
+  }
 
   override initialize(world: World): void {
     super.initialize(world);
@@ -730,7 +737,7 @@ export class ReligionSystem extends BaseSystem {
 
       // Deities occasionally intervene based on their power
       const interventionChance = Math.min(0.3, deity.currentPower / 1000);
-      if (Math.random() > interventionChance) continue;
+      if (this.rng.next() > interventionChance) continue;
 
       // Pick a random intervention type they can afford
       const affordableTypes = ALL_INTERVENTION_TYPES.filter(type => {
@@ -744,7 +751,7 @@ export class ReligionSystem extends BaseSystem {
       // Weight by rarity (rarer = less likely to be chosen)
       const weights = affordableTypes.map(t => INTERVENTION_COSTS[t].rarity);
       const totalWeight = weights.reduce((a, b) => a + b, 0);
-      let roll = Math.random() * totalWeight;
+      let roll = this.rng.next() * totalWeight;
 
       let selectedType = affordableTypes[0]!;
       for (let i = 0; i < affordableTypes.length; i++) {
@@ -759,10 +766,10 @@ export class ReligionSystem extends BaseSystem {
       const religions = this.getReligionsByDeity(deity.id);
       if (religions.length === 0) continue;
 
-      const targetReligion = religions[Math.floor(Math.random() * religions.length)]!;
+      const targetReligion = religions[this.rng.nextInt(0, religions.length - 1)]!;
       const targetId = targetReligion.id;
 
-      this.attemptIntervention(deity.id, selectedType, targetId, clock, events, Math.random);
+      this.attemptIntervention(deity.id, selectedType, targetId, clock, events, () => this.rng.next());
     }
   }
 
@@ -782,12 +789,12 @@ export class ReligionSystem extends BaseSystem {
       religion.schismRisk = calculateSchismProbability(religion) * 100;
 
       // Check for schism
-      if (religion.schismRisk > 50 && Math.random() < (religion.schismRisk - 50) / 500) {
-        this.triggerSchism(religion.id, clock, events, Math.random);
+      if (religion.schismRisk > 50 && this.rng.next() < (religion.schismRisk - 50) / 500) {
+        this.triggerSchism(religion.id, clock, events, () => this.rng.next());
       }
 
       // Check for corruption scandal
-      if (religion.corruptionLevel > 70 && Math.random() < 0.05) {
+      if (religion.corruptionLevel > 70 && this.rng.next() < 0.05) {
         events.emit(createEvent({
           category: EventCategory.Religious,
           subtype: 'religion.corruption_scandal',
@@ -806,7 +813,7 @@ export class ReligionSystem extends BaseSystem {
       }
 
       // Check for reform movement
-      if (religion.reformPressure > 60 && Math.random() < 0.03) {
+      if (religion.reformPressure > 60 && this.rng.next() < 0.03) {
         events.emit(createEvent({
           category: EventCategory.Religious,
           subtype: 'religion.reform_movement',
@@ -842,7 +849,7 @@ export class ReligionSystem extends BaseSystem {
         }
 
         // Strong influences can lead to full absorption
-        if (influence > 0.7 && Math.random() < 0.01) {
+        if (influence > 0.7 && this.rng.next() < 0.01) {
           // Add foreign deity to secondary deities
           if (!religion.secondaryDeityIds.includes(foreignDeityId)) {
             religion.secondaryDeityIds.push(foreignDeityId);
@@ -879,17 +886,17 @@ export class ReligionSystem extends BaseSystem {
 
       const prophetChance = crisisFactor + divinePowerFactor + faithFactor;
 
-      if (Math.random() < prophetChance * 0.01) {
+      if (this.rng.next() < prophetChance * 0.01) {
         // Create a new prophet
         const prophet: HolyFigure = {
           id: createHolyFigureId(),
-          characterId: toCharacterId(toEntityId(Math.floor(Math.random() * 10000))), // Placeholder
+          characterId: toCharacterId(toEntityId(this.rng.nextInt(0, 9999))), // Placeholder
           religionId: religion.id,
           deityId: religion.primaryDeityId,
           type: HolyFigureType.Prophet,
           emergenceTick: clock.currentTick,
           name: `Prophet of ${deity.name}`,
-          fame: 20 + Math.floor(Math.random() * 30),
+          fame: this.rng.nextInt(20, 49),
           miracleCount: 0,
           prophecies: [],
           alive: true,

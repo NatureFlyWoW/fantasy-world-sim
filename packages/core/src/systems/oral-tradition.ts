@@ -13,6 +13,7 @@ import { EventCategory } from '../events/types.js';
 import type { EventBus } from '../events/event-bus.js';
 import { createEvent } from '../events/event-factory.js';
 import { BaseSystem, ExecutionOrder } from '../engine/system.js';
+import { SeededRNG } from '../utils/seeded-rng.js';
 
 // ── Oral Tradition Interface ──────────────────────────────────────────────────
 
@@ -388,11 +389,13 @@ export class OralTraditionSystem extends BaseSystem {
   private readonly traditions = new Map<EntityId, OralTradition>();
   private readonly siteConnections = new Map<SiteId, SiteId[]>();
   private readonly mutationConfig: MutationConfig;
+  private readonly rng: SeededRNG;
   private writingInventedTick: number | null = null;
 
-  constructor(config: Partial<MutationConfig> = {}) {
+  constructor(config?: Partial<MutationConfig>, rng?: SeededRNG) {
     super();
-    this.mutationConfig = { ...DEFAULT_MUTATION_CONFIG, ...config };
+    this.mutationConfig = { ...DEFAULT_MUTATION_CONFIG, ...(config ?? {}) };
+    this.rng = rng ?? new SeededRNG(0);
   }
 
   override initialize(world: World): void {
@@ -558,8 +561,7 @@ export class OralTraditionSystem extends BaseSystem {
       if (currentTick - tradition.lastRetellingTick < 30) continue;
 
       // Process retelling with mutations
-      const rng = () => Math.random();
-      const mutations = processRetelling(tradition, this.mutationConfig, rng);
+      const mutations = processRetelling(tradition, this.mutationConfig, () => this.rng.next());
 
       tradition.lastRetellingTick = currentTick;
 
@@ -584,8 +586,6 @@ export class OralTraditionSystem extends BaseSystem {
   }
 
   private spreadTraditions(currentTick: number, events: EventBus): void {
-    const rng = () => Math.random();
-
     for (const tradition of this.traditions.values()) {
       // Higher cultural significance = faster spread
       const spreadChance = 0.05 + (tradition.culturalSignificance / 1000);
@@ -596,12 +596,12 @@ export class OralTraditionSystem extends BaseSystem {
         for (const connectedSite of connections) {
           if (tradition.geographicSpread.includes(connectedSite)) continue;
 
-          if (rng() < spreadChance) {
+          if (this.rng.next() < spreadChance) {
             // Spread to connected site
             tradition.geographicSpread.push(connectedSite);
 
             // Apply mutations during transmission
-            const mutations = processRetelling(tradition, this.mutationConfig, rng);
+            const mutations = processRetelling(tradition, this.mutationConfig, () => this.rng.next());
 
             events.emit(createEvent({
               category: EventCategory.Cultural,

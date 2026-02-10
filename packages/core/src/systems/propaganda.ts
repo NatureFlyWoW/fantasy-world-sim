@@ -8,6 +8,7 @@
  */
 
 import type { EntityId } from '../ecs/types.js';
+import { SeededRNG } from '../utils/seeded-rng.js';
 import { PersonalityTrait } from './personality-traits.js';
 import { MemoryCategory, MemoryRole } from './memory-types.js';
 import type { Memory } from './memory-types.js';
@@ -110,6 +111,12 @@ const HISTORIAN_BIASES: readonly HistorianBias[] = [
 // ── PropagandaSystem ────────────────────────────────────────────────────────
 
 export class PropagandaSystem {
+  private readonly rng: SeededRNG;
+
+  constructor(rng?: SeededRNG) {
+    this.rng = rng ?? new SeededRNG(0);
+  }
+
   /**
    * Apply organic distortion to a memory based on personality traits.
    * Models how people naturally misremember things based on their biases.
@@ -118,7 +125,7 @@ export class PropagandaSystem {
   organicDistortion(
     memory: Memory,
     traitValues: ReadonlyMap<string, number>,
-    rng: () => number = Math.random,
+    rng: () => number = () => this.rng.next(),
   ): Memory {
     let emotionalShift = 0;
     let accuracyLoss = 0;
@@ -220,7 +227,7 @@ export class PropagandaSystem {
   applyPropaganda(
     memory: Memory,
     effect: PropagandaEffect,
-    rng: () => number = Math.random,
+    rng: () => number = () => this.rng.next(),
   ): Memory {
     // Roll against credibility to see if this character accepts the propaganda
     if (rng() * 100 > effect.credibility) {

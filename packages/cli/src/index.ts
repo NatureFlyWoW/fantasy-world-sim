@@ -281,26 +281,29 @@ function createSimulationEngine(
   eventLog: EventLog,
   seed: number
 ): { engine: SimulationEngine; dreamingSystem: DreamingSystem } {
+  const rng = new SeededRNG(seed);
+  const cascadeRng = rng.fork('cascade');
   const cascadeEngine = new CascadeEngine(eventBus, eventLog, {
     maxCascadeDepth: 10,
+    randomFn: () => cascadeRng.next(),
   });
   const systemRegistry = new SystemRegistry();
 
   // Support classes
-  const reputationSystem = new ReputationSystem();
+  const reputationSystem = new ReputationSystem(undefined, rng.fork('reputation'));
   const grudgeSystem = new GrudgeSystem();
 
-  // Register the 10 main simulation systems
+  // Register the 10 main simulation systems with forked RNGs
   const dreamingSystem = new DreamingSystem(undefined, seed);
-  systemRegistry.register(new CharacterAISystem());
-  systemRegistry.register(new FactionPoliticalSystem(reputationSystem, grudgeSystem));
+  systemRegistry.register(new CharacterAISystem(rng.fork('character')));
+  systemRegistry.register(new FactionPoliticalSystem(reputationSystem, grudgeSystem, rng.fork('faction')));
   systemRegistry.register(new EconomicSystem());
-  systemRegistry.register(new WarfareSystem());
-  systemRegistry.register(new MagicSystem());
-  systemRegistry.register(new ReligionSystem());
-  systemRegistry.register(new CulturalEvolutionSystem());
-  systemRegistry.register(new EcologySystem());
-  systemRegistry.register(new OralTraditionSystem());
+  systemRegistry.register(new WarfareSystem(rng.fork('warfare')));
+  systemRegistry.register(new MagicSystem(rng.fork('magic')));
+  systemRegistry.register(new ReligionSystem(rng.fork('religion')));
+  systemRegistry.register(new CulturalEvolutionSystem(rng.fork('culture')));
+  systemRegistry.register(new EcologySystem(undefined, rng.fork('ecology')));
+  systemRegistry.register(new OralTraditionSystem(undefined, rng.fork('oral')));
   systemRegistry.register(dreamingSystem);
 
   const engine = new SimulationEngine(
@@ -309,7 +312,8 @@ function createSimulationEngine(
     eventBus,
     eventLog,
     systemRegistry,
-    cascadeEngine
+    cascadeEngine,
+    seed,
   );
 
   return { engine, dreamingSystem };

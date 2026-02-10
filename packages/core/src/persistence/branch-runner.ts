@@ -121,7 +121,8 @@ export type EngineFactory = (
   world: World,
   clock: WorldClock,
   eventBus: EventBus,
-  eventLog: EventLog
+  eventLog: EventLog,
+  seed?: number,
 ) => SimulationEngine;
 
 // ──────────────────────────────────────────────────────────────────
@@ -224,7 +225,8 @@ export class BranchRunner {
       branch.world,
       branch.clock,
       eventBus,
-      branch.eventLog
+      branch.eventLog,
+      branch.seed,
     );
 
     engine.initialize();

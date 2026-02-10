@@ -4,6 +4,7 @@
  */
 
 import type { EntityId } from '../ecs/types.js';
+import { SeededRNG } from '../utils/seeded-rng.js';
 import type { WorldTime } from '../time/types.js';
 import { timeDifferenceInDays } from '../time/types.js';
 import { EventCategory } from '../events/types.js';
@@ -57,9 +58,11 @@ export class ReputationSystem {
   /** observer (number) → subject (number) → entry */
   private entries: Map<number, Map<number, ReputationEntry>> = new Map();
   private readonly config: PropagationConfig;
+  private readonly rng: SeededRNG;
 
-  constructor(config?: PropagationConfig) {
+  constructor(config?: PropagationConfig, rng?: SeededRNG) {
     this.config = config ?? DEFAULT_PROPAGATION_CONFIG;
+    this.rng = rng ?? new SeededRNG(0);
   }
 
   /**
@@ -150,7 +153,7 @@ export class ReputationSystem {
     sourceId: EntityId,
     connections: ReadonlyMap<number, readonly EntityId[]>,
     currentTime: WorldTime,
-    rng: () => number = Math.random,
+    rng: () => number = () => this.rng.next(),
   ): void {
     const sourceEntries = this.entries.get(sourceId as number);
     if (sourceEntries === undefined) return;

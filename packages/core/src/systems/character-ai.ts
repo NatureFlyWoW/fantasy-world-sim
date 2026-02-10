@@ -10,6 +10,7 @@
 
 import { BaseSystem, ExecutionOrder } from '../engine/system.js';
 import type { ExecutionOrderValue } from '../engine/system.js';
+import { SeededRNG } from '../utils/seeded-rng.js';
 import type { World } from '../ecs/world.js';
 import type { EntityId } from '../ecs/types.js';
 import type {
@@ -739,13 +740,19 @@ export class CharacterAISystem extends BaseSystem {
   private readonly actionScorer = new ActionScorer();
   private readonly actionExecutor = new ActionExecutor();
   private readonly goalReflector = new GoalReflector();
+  private readonly rng: SeededRNG;
 
   /** Internal goal storage keyed by entity ID. */
   private readonly entityGoals: Map<EntityId, CharacterGoal[]> = new Map();
 
-  /** Simple deterministic random seeded per tick + entity. */
+  constructor(rng?: SeededRNG) {
+    super();
+    this.rng = rng ?? new SeededRNG(0);
+  }
+
+  /** Deterministic random seeded per tick + entity + world seed. */
   private makeRng(tick: number, entityId: EntityId): () => number {
-    let state = (tick * 2654435761 + (entityId as number) * 1597334677) >>> 0;
+    let state = (tick * 2654435761 + (entityId as number) * 1597334677 + this.rng.getSeed() * 7) >>> 0;
     return () => {
       state = (state ^ (state << 13)) >>> 0;
       state = (state ^ (state >> 17)) >>> 0;

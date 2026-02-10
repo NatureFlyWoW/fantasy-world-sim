@@ -21,6 +21,7 @@ import type {
   SecretRevelationEvent,
 } from './secret.js';
 import { createSecretId, createClueId } from './secret.js';
+import { SeededRNG } from '../utils/seeded-rng.js';
 
 /**
  * Configuration for secret revelation mechanics.
@@ -73,9 +74,11 @@ export class SecretManager {
   private readonly secretsByEntity: Map<EntityId, Set<EntityId>> = new Map();
   private readonly secretsByFaction: Map<FactionId, Set<EntityId>> = new Map();
   private readonly secretsByKnower: Map<CharacterId, Set<EntityId>> = new Map();
+  private readonly rng: SeededRNG;
 
-  constructor(config: Partial<SecretManagerConfig> = {}) {
-    this.config = { ...DEFAULT_SECRET_CONFIG, ...config };
+  constructor(config?: Partial<SecretManagerConfig>, rng?: SeededRNG) {
+    this.config = { ...DEFAULT_SECRET_CONFIG, ...(config ?? {}) };
+    this.rng = rng ?? new SeededRNG(0);
 
     // Initialize type index
     for (const type of Object.values(SecretType)) {
@@ -405,7 +408,7 @@ export class SecretManager {
     }
 
     // Roll for revelation
-    const roll = Math.random();
+    const roll = this.rng.next();
     const shouldReveal = roll < probability;
 
     return {

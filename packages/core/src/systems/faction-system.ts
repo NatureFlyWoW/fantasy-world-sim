@@ -7,6 +7,7 @@
 
 import { BaseSystem, ExecutionOrder } from '../engine/system.js';
 import type { ExecutionOrderValue } from '../engine/system.js';
+import { SeededRNG } from '../utils/seeded-rng.js';
 import type { World } from '../ecs/world.js';
 import type { EntityId, FactionId } from '../ecs/types.js';
 import { toFactionId } from '../ecs/types.js';
@@ -56,15 +57,18 @@ export class FactionPoliticalSystem extends BaseSystem {
   readonly executionOrder: ExecutionOrderValue = ExecutionOrder.POLITICS;
 
   private readonly treatyEnforcement: TreatyEnforcement;
+  private readonly rng: SeededRNG;
   private recentEvents: WorldEvent[] = [];
   private unsubscribe: (() => void) | null = null;
 
   constructor(
     private readonly reputationSystem: ReputationSystem,
     private readonly grudgeSystem: GrudgeSystem,
+    rng?: SeededRNG,
   ) {
     super();
     this.treatyEnforcement = new TreatyEnforcement();
+    this.rng = rng ?? new SeededRNG(0);
   }
 
   initialize(world: World): void {
@@ -589,9 +593,10 @@ export class FactionPoliticalSystem extends BaseSystem {
 
   /**
    * Deterministic RNG for reproducible faction decisions.
+   * Incorporates world seed for cross-seed variation.
    */
   private makeRng(tick: number, factionId: FactionId): () => number {
-    let seed = tick * 31337 + (factionId as number) * 7919;
+    let seed = (tick * 31337 + (factionId as number) * 7919 + this.rng.getSeed() * 13) >>> 0;
     return (): number => {
       seed = (seed * 1103515245 + 12345) >>> 0;
       return (seed % 1000000) / 1000000;

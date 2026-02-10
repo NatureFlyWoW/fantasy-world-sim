@@ -13,6 +13,7 @@ import { EventCategory } from '../events/types.js';
 import type { EventBus } from '../events/event-bus.js';
 import { createEvent } from '../events/event-factory.js';
 import { BaseSystem, ExecutionOrder } from '../engine/system.js';
+import { SeededRNG } from '../utils/seeded-rng.js';
 
 // ── Magic schools (re-export from generator types for consistency) ───────────
 
@@ -611,6 +612,12 @@ export class MagicSystem extends BaseSystem {
 
   private lastMonthlyTick = 0;
   private worldMagicStrength = 1.0; // Set during initialize
+  private readonly rng: SeededRNG;
+
+  constructor(rng?: SeededRNG) {
+    super();
+    this.rng = rng ?? new SeededRNG(0);
+  }
 
   override initialize(world: World): void {
     super.initialize(world);
@@ -694,7 +701,6 @@ export class MagicSystem extends BaseSystem {
     artifactId: ArtifactId,
     wielderId: CharacterId,
     wielderTraits: Map<string, number>,
-    rng: () => number,
   ): { success: boolean; reason: string } {
     const artifact = this.artifacts.get(artifactId);
     if (artifact === undefined) {
@@ -711,7 +717,7 @@ export class MagicSystem extends BaseSystem {
 
     // Chance of rejection even if compatible, based on bond potential
     const rejectionChance = (100 - compatibility.bondPotential) / 200;
-    if (rng() < rejectionChance) {
+    if (this.rng.next() < rejectionChance) {
       artifact.consciousness.rejectedWielders.push(wielderId);
       return { success: false, reason: 'Artifact resisted the bond' };
     }
@@ -765,7 +771,7 @@ export class MagicSystem extends BaseSystem {
         researcherSkill: 60, // Would come from character component
         resourceLevel: institution.resources,
         environmentBonus: institution.specializations.includes(project.school) ? 1.5 : 1.0,
-        serendipityRoll: Math.random(),
+        serendipityRoll: this.rng.next(),
         institutionSupport: institution.politicalStability,
         schoolAffinity: institution.headmasterBias === project.school ? 1.3 : 1.0,
       };
@@ -785,7 +791,7 @@ export class MagicSystem extends BaseSystem {
             projectName: project.name,
             type: project.type,
             school: project.school,
-            breakthrough: Math.random() < project.breakthroughChance,
+            breakthrough: this.rng.next() < project.breakthroughChance,
           },
         }));
       }
@@ -811,7 +817,7 @@ export class MagicSystem extends BaseSystem {
       // Check for schism risk
       if (institution.schismRisk > 70) {
         const schismChance = (institution.schismRisk - 70) / 100;
-        if (Math.random() < schismChance) {
+        if (this.rng.next() < schismChance) {
           this.triggerSchism(institution, clock, events);
         }
       }
@@ -825,7 +831,7 @@ export class MagicSystem extends BaseSystem {
       ));
 
       // Emit politics event if significant tension
-      if (institution.schismRisk > 50 && Math.random() < 0.2) {
+      if (institution.schismRisk > 50 && this.rng.next() < 0.2) {
         events.emit(createEvent({
           category: EventCategory.Magical,
           subtype: 'magic.institution_tension',
@@ -908,7 +914,7 @@ export class MagicSystem extends BaseSystem {
       consciousness.lastActiveInteractionTick = clock.currentTick;
 
       // Occasional significant interaction events
-      if (consciousness.awarenessLevel > 50 && Math.random() < 0.01) {
+      if (consciousness.awarenessLevel > 50 && this.rng.next() < 0.01) {
         events.emit(createEvent({
           category: EventCategory.Magical,
           subtype: 'magic.artifact_influence',
@@ -967,7 +973,7 @@ export class MagicSystem extends BaseSystem {
       riskFactors
     );
 
-    if (Math.random() < catastropheChance) {
+    if (this.rng.next() < catastropheChance) {
       this.triggerCatastrophe(clock, events);
     }
   }
@@ -979,16 +985,16 @@ export class MagicSystem extends BaseSystem {
       CatastropheType.MagicalPlague,
       CatastropheType.CursedGround,
     ];
-    const type = types[Math.floor(Math.random() * types.length)]!;
+    const type = types[this.rng.nextInt(0, types.length - 1)]!;
 
     const catastrophe: MagicalCatastrophe = {
       id: createCatastropheId(),
       type,
-      location: { x: Math.floor(Math.random() * 100), y: Math.floor(Math.random() * 100) },
-      radius: 3 + Math.floor(Math.random() * 7),
-      severity: 1 + Math.floor(Math.random() * 10),
+      location: { x: this.rng.nextInt(0, 99), y: this.rng.nextInt(0, 99) },
+      radius: this.rng.nextInt(3, 9),
+      severity: this.rng.nextInt(1, 10),
       startTick: clock.currentTick,
-      duration: type === CatastropheType.ManaStorm ? 30 + Math.floor(Math.random() * 60) : null,
+      duration: type === CatastropheType.ManaStorm ? this.rng.nextInt(30, 89) : null,
       causeId: null,
       activeEffects: [],
       containmentLevel: 0,
@@ -1062,7 +1068,7 @@ export class MagicSystem extends BaseSystem {
 
     // Check if low magic areas are experiencing persecution
     for (const institution of this.institutions.values()) {
-      if (institution.reputation < 30 && Math.random() < 0.1) {
+      if (institution.reputation < 30 && this.rng.next() < 0.1) {
         events.emit(createEvent({
           category: EventCategory.Magical,
           subtype: 'magic.persecution_threat',
@@ -1091,16 +1097,15 @@ export class MagicSystem extends BaseSystem {
     schools: MagicSchool[],
     clock: WorldClock,
     events: EventBus,
-    rng: () => number,
   ): Artifact {
     // Determine initial personality based on creation context
     const personality = new Map<ArtifactPersonalityTrait, number>();
 
     // Add some random base traits
-    const traitCount = 2 + Math.floor(rng() * 3);
-    const shuffledTraits = [...ALL_ARTIFACT_TRAITS].sort(() => rng() - 0.5);
+    const traitCount = this.rng.nextInt(2, 4);
+    const shuffledTraits = this.rng.shuffle([...ALL_ARTIFACT_TRAITS]);
     for (let i = 0; i < traitCount; i++) {
-      personality.set(shuffledTraits[i]!, 30 + Math.floor(rng() * 50));
+      personality.set(shuffledTraits[i]!, this.rng.nextInt(30, 79));
     }
 
     // Modify based on purpose

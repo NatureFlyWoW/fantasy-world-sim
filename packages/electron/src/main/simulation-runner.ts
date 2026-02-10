@@ -191,27 +191,32 @@ export class SimulationRunner {
     this.eventBus = new EventBus();
     this.eventLog = new EventLog();
 
-    const cascadeEngine = new CascadeEngine(this.eventBus, this.eventLog, { maxCascadeDepth: 10 });
+    const simRng = new SeededRNG(this.seed);
+    const cascadeRng = simRng.fork('cascade');
+    const cascadeEngine = new CascadeEngine(this.eventBus, this.eventLog, {
+      maxCascadeDepth: 10,
+      randomFn: () => cascadeRng.next(),
+    });
     const systemRegistry = new SystemRegistry();
 
-    const reputationSystem = new ReputationSystem();
+    const reputationSystem = new ReputationSystem(undefined, simRng.fork('reputation'));
     const grudgeSystem = new GrudgeSystem();
     const dreamingSystem = new DreamingSystem(undefined, this.seed);
 
-    systemRegistry.register(new CharacterAISystem());
-    systemRegistry.register(new FactionPoliticalSystem(reputationSystem, grudgeSystem));
+    systemRegistry.register(new CharacterAISystem(simRng.fork('character')));
+    systemRegistry.register(new FactionPoliticalSystem(reputationSystem, grudgeSystem, simRng.fork('faction')));
     systemRegistry.register(new EconomicSystem());
-    systemRegistry.register(new WarfareSystem());
-    systemRegistry.register(new MagicSystem());
-    systemRegistry.register(new ReligionSystem());
-    systemRegistry.register(new CulturalEvolutionSystem());
-    systemRegistry.register(new EcologySystem());
-    systemRegistry.register(new OralTraditionSystem());
+    systemRegistry.register(new WarfareSystem(simRng.fork('warfare')));
+    systemRegistry.register(new MagicSystem(simRng.fork('magic')));
+    systemRegistry.register(new ReligionSystem(simRng.fork('religion')));
+    systemRegistry.register(new CulturalEvolutionSystem(simRng.fork('culture')));
+    systemRegistry.register(new EcologySystem(undefined, simRng.fork('ecology')));
+    systemRegistry.register(new OralTraditionSystem(undefined, simRng.fork('oral')));
     systemRegistry.register(dreamingSystem);
 
     this.engine = new SimulationEngine(
       this.world, this.clock, this.eventBus, this.eventLog,
-      systemRegistry, cascadeEngine,
+      systemRegistry, cascadeEngine, this.seed,
     );
 
     // Initialize DreamingSystem

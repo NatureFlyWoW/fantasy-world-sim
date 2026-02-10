@@ -13,6 +13,7 @@ import { TickFrequency } from '../time/types.js';
 import { EventCategory } from '../events/types.js';
 import { createEvent } from '../events/event-factory.js';
 import { BaseSystem, ExecutionOrder } from '../engine/system.js';
+import { SeededRNG } from '../utils/seeded-rng.js';
 
 // =============================================================================
 // ENUMS
@@ -679,11 +680,13 @@ export class EcologySystem extends BaseSystem {
   private territories: Map<EntityId, CreatureTerritory> = new Map();
   private invasiveSpecies: Map<EntityId, InvasiveSpecies> = new Map();
   private environmentalEvents: Map<EntityId, EnvironmentalEvent> = new Map();
+  private readonly rng: SeededRNG;
   private lastSeasonalTick = 0;
 
-  constructor(config: Partial<EcologyConfig> = {}) {
+  constructor(config?: Partial<EcologyConfig>, rng?: SeededRNG) {
     super();
-    this.config = { ...DEFAULT_ECOLOGY_CONFIG, ...config };
+    this.config = { ...DEFAULT_ECOLOGY_CONFIG, ...(config ?? {}) };
+    this.rng = rng ?? new SeededRNG(0);
   }
 
   // --- Registration Methods ---
@@ -990,7 +993,7 @@ export class EcologySystem extends BaseSystem {
       );
 
       // Simple expansion check (would need adjacent region logic in real impl)
-      if (Math.random() < expansionProb) {
+      if (this.rng.next() < expansionProb) {
         events.emit(
           createEvent({
             category: EventCategory.Disaster,
@@ -1035,7 +1038,7 @@ export class EcologySystem extends BaseSystem {
       }
 
       // Check for spread to new regions
-      if (Math.random() < this.config.invasiveSpreadProbability * species.spreadRate) {
+      if (this.rng.next() < this.config.invasiveSpreadProbability * species.spreadRate) {
         events.emit(
           createEvent({
             category: EventCategory.Disaster,

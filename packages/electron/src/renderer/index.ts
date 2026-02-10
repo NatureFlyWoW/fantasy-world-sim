@@ -8,6 +8,7 @@ import { initPixiApp } from './pixi-app.js';
 import { createIpcClient } from './ipc-client.js';
 import { TilemapRenderer } from './map/tilemap-renderer.js';
 import { MapTooltip } from './map/map-tooltip.js';
+import { TileDataProvider } from './map/tile-data-provider.js';
 import { OverlayManager } from './map/overlay-manager.js';
 import { bindMapInput } from './map/input-handler.js';
 import type { TickDelta, WorldSnapshot } from '../shared/types.js';
@@ -27,6 +28,7 @@ let lastFpsTime = performance.now();
 // Map
 const tilemap = new TilemapRenderer();
 const tooltip = new MapTooltip();
+const tileDataProvider = new TileDataProvider();
 const overlayManager = new OverlayManager();
 const factionColorMap = new Map<number, string>();
 
@@ -71,12 +73,17 @@ function handleTickDelta(delta: TickDelta): void {
   updateStatusBar();
   tilemap.handleTickDelta(delta);
 
+  // Feed events to tile data provider
+  if (delta.events.length > 0) {
+    tileDataProvider.addEvents(delta.events, tilemap.getEntities());
+  }
+
   // Rebuild overlay caches when entities change
   if (delta.entityUpdates.length > 0 || delta.removedEntities.length > 0) {
     const currentEntities = tilemap.getEntities();
     overlayManager.buildTerritoryCache(currentEntities, factionColorMap);
     overlayManager.buildTradeRouteCache(currentEntities);
-    tooltip.updateEntities(currentEntities);
+    tileDataProvider.updateEntities(currentEntities);
   }
 }
 
@@ -183,10 +190,16 @@ async function init(): Promise<void> {
     },
   });
 
-  // Bind tooltip
-  tooltip.setData(
-    tilemap.getViewport(), snapshot.tiles, [...snapshot.entities],
+  // Initialize tile data provider
+  tileDataProvider.init(
+    snapshot.tiles, [...snapshot.entities],
     [...snapshot.factions], snapshot.mapWidth, snapshot.mapHeight,
+  );
+
+  // Bind tooltip with provider
+  tooltip.setProvider(
+    tilemap.getViewport(), tileDataProvider,
+    snapshot.mapWidth, snapshot.mapHeight,
   );
   tooltip.bind(canvas);
 

@@ -25,6 +25,7 @@ import type { EventLog } from '../events/event-log.js';
 import type { CascadeEngine } from '../events/cascade-engine.js';
 import type { SystemRegistry } from './system-registry.js';
 import type { WorldEvent } from '../events/types.js';
+import { SeededRNG } from '../utils/seeded-rng.js';
 
 /**
  * Callback type for tick listeners.
@@ -36,6 +37,8 @@ export class SimulationEngine {
   private tickListeners: Set<TickCallback> = new Set();
   private pendingEvents: WorldEvent[] = [];
   private initialized = false;
+  private readonly seed: number;
+  private readonly rng: SeededRNG;
 
   constructor(
     private readonly world: World,
@@ -43,8 +46,11 @@ export class SimulationEngine {
     private readonly eventBus: EventBus,
     private readonly eventLog: EventLog,
     private readonly systemRegistry: SystemRegistry,
-    private readonly cascadeEngine?: CascadeEngine
+    private readonly cascadeEngine?: CascadeEngine,
+    seed: number = 0,
   ) {
+    this.seed = seed;
+    this.rng = new SeededRNG(seed);
     // Subscribe to all events to capture them during tick
     this.eventBus.onAny((event) => {
       this.pendingEvents.push(event);
@@ -170,6 +176,20 @@ export class SimulationEngine {
    */
   getLastTickEvents(): readonly WorldEvent[] {
     return this.pendingEvents;
+  }
+
+  /**
+   * Get the world seed.
+   */
+  getSeed(): number {
+    return this.seed;
+  }
+
+  /**
+   * Get the engine's root RNG (for forking per-system RNGs).
+   */
+  getRng(): SeededRNG {
+    return this.rng;
   }
 
   /**

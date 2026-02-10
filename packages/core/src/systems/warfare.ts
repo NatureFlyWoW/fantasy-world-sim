@@ -15,6 +15,7 @@ import type { EventBus } from '../events/event-bus.js';
 import { createEvent } from '../events/event-factory.js';
 import { BaseSystem, ExecutionOrder } from '../engine/system.js';
 import type { PositionComponent } from '../ecs/component.js';
+import { SeededRNG } from '../utils/seeded-rng.js';
 
 // ── Unit types ───────────────────────────────────────────────────────────────
 
@@ -964,7 +965,13 @@ export class WarfareSystem extends BaseSystem {
   private wars: Map<number, War> = new Map();
   private armies: Map<number, Army> = new Map();
   private sieges: Map<number, SiegeState> = new Map();
+  private readonly rng: SeededRNG;
   private lastSeasonalTick = 0;
+
+  constructor(rng?: SeededRNG) {
+    super();
+    this.rng = rng ?? new SeededRNG(0);
+  }
 
   /**
    * Main execution — daily for movement, seasonal for campaigns.
@@ -1081,7 +1088,7 @@ export class WarfareSystem extends BaseSystem {
              ) < 5
       );
 
-      const siegeEvent = progressSiege(siege, besiegers, defenders, reliefForce !== undefined, Math.random);
+      const siegeEvent = progressSiege(siege, besiegers, defenders, reliefForce !== undefined, () => this.rng.next());
 
       if (siegeEvent !== null) {
         // Fix timestamp
@@ -1172,7 +1179,7 @@ export class WarfareSystem extends BaseSystem {
     };
 
     // Resolve battle
-    const result = resolveBattle(context, war.id, battleId, clock.currentTime, Math.random);
+    const result = resolveBattle(context, war.id, battleId, clock.currentTime, () => this.rng.next());
 
     // Apply casualties
     this.applyCasualties(attackerArmy, result.attackerCasualties);

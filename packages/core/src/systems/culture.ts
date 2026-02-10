@@ -13,6 +13,7 @@ import { EventCategory } from '../events/types.js';
 import type { EventBus } from '../events/event-bus.js';
 import { createEvent } from '../events/event-factory.js';
 import { BaseSystem, ExecutionOrder } from '../engine/system.js';
+import { SeededRNG } from '../utils/seeded-rng.js';
 
 // ══════════════════════════════════════════════════════════════════════════════
 // TECHNOLOGY SYSTEM
@@ -359,11 +360,13 @@ export class CulturalEvolutionSystem extends BaseSystem {
   private readonly schools = new Map<EntityId, PhilosophicalSchool>();
   private readonly languages = new Map<EntityId, Language>();
   private readonly tradeConnections = new Map<FactionId, FactionId[]>();
+  private readonly rng: SeededRNG;
 
   private lastAnnualTick = 0;
 
-  constructor() {
+  constructor(rng?: SeededRNG) {
     super();
+    this.rng = rng ?? new SeededRNG(0);
     // Initialize base technologies
     for (const tech of TECHNOLOGIES) {
       const id = createTechId();
@@ -850,8 +853,6 @@ export class CulturalEvolutionSystem extends BaseSystem {
   }
 
   private processTechSpread(tick: number, events: EventBus): void {
-    const rng = () => Math.random();
-
     for (const [factionId, partners] of this.tradeConnections) {
       for (const partnerId of partners) {
         // Check each technology the partner has
@@ -864,7 +865,7 @@ export class CulturalEvolutionSystem extends BaseSystem {
             // Spread chance based on trade and tech difficulty
             const spreadChance = 0.1 / tech.inventionDifficulty;
 
-            if (rng() < spreadChance) {
+            if (this.rng.next() < spreadChance) {
               // Adopt the technology
               const key = `${techId}-${factionId}`;
               const state: TechnologyState = {
@@ -909,7 +910,6 @@ export class CulturalEvolutionSystem extends BaseSystem {
     }
 
     // Movements spread to trade partners
-    const rng = () => Math.random();
     for (const movement of this.movements.values()) {
       if (!movement.isActive) continue;
 
@@ -918,7 +918,7 @@ export class CulturalEvolutionSystem extends BaseSystem {
         if (movement.spreadTo.includes(partner)) continue;
 
         const spreadChance = 0.05 + (movement.influence / 500);
-        if (rng() < spreadChance) {
+        if (this.rng.next() < spreadChance) {
           movement.spreadTo.push(partner);
 
           events.emit(createEvent({
@@ -1025,7 +1025,7 @@ export class CulturalEvolutionSystem extends BaseSystem {
       if (ageInYears > 50) {
         // Movements typically last 50-100 years
         const fadeChance = (ageInYears - 50) / 100;
-        if (Math.random() < fadeChance) {
+        if (this.rng.next() < fadeChance) {
           movement.isActive = false;
           movement.endTick = tick;
 

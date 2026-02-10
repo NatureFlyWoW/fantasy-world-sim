@@ -22,3 +22,6 @@ export * from './systems/index.js';
 
 // Persistence module
 export * from './persistence/index.js';
+
+// Utils module
+export * from './utils/index.js';
