@@ -15,7 +15,7 @@
 import type { World } from '../ecs/world.js';
 import type { WorldClock } from '../time/world-clock.js';
 import type { EventBus } from '../events/event-bus.js';
-import type { EntityId, CharacterId, SiteId } from '../ecs/types.js';
+import type { CharacterId, SiteId } from '../ecs/types.js';
 import type { PositionComponent, TraitsComponent } from '../ecs/component.js';
 import type {
   InfluenceAction,
@@ -25,7 +25,7 @@ import type {
   InfluencePointState,
   InfluenceActionKind,
 } from './influence-types.js';
-import { EventCategory, type TickNumber } from '../events/types.js';
+import type { TickNumber } from '../events/types.js';
 import { createEvent } from '../events/event-factory.js';
 import { LevelOfDetailManager } from '../engine/lod-manager.js';
 import { PersonalityTrait } from './personality-traits.js';
@@ -49,12 +49,6 @@ const BASE_REGENERATION_RATE = 1;
 
 /** Ticks per year for regeneration calculation */
 const TICKS_PER_YEAR = 365;
-
-/** Maximum distance for ArrangeMeeting action */
-const MAX_MEETING_DISTANCE = 50;
-
-/** Maximum personality nudge swing */
-const MAX_NUDGE_SWING = 15;
 
 /** Base success probability for resistance checks */
 const BASE_SUCCESS_PROBABILITY = 0.7;
@@ -370,135 +364,17 @@ export class InfluenceSystem {
 
   /**
    * Check if an action is believable given world state.
+   * Delegates to config-defined believabilityCheck function if present.
    */
   checkBelievability(action: InfluenceAction): BelievabilityResult {
-    switch (action.type) {
-      case 'InspireIdea':
-        return this.checkInspireIdeaBelievability(action);
-      case 'PersonalityNudge':
-        return this.checkPersonalityNudgeBelievability(action);
-      case 'ArrangeMeeting':
-        return this.checkArrangeMeetingBelievability(action);
-      case 'RevealSecret':
-        return this.checkRevealSecretBelievability(action);
-      case 'TriggerNaturalEvent':
-        return this.checkTriggerNaturalEventBelievability(action);
-      case 'MinorGeology':
-        return this.checkMinorGeologyBelievability(action);
-      default:
-        // Most actions are always believable
-        return { believable: true };
-    }
-  }
-
-  private checkInspireIdeaBelievability(
-    action: Extract<InfluenceAction, { type: 'InspireIdea' }>
-  ): BelievabilityResult {
-    // Check if concept relates to character's skills/interests
-    // For now, just check that the concept is not empty
-    if (action.concept.trim().length === 0) {
-      return { believable: false, reason: 'Concept cannot be empty' };
+    const config = this.getConfigForActionType(action.type);
+    if (config === undefined) {
+      return { believable: true };
     }
 
-    // Future: Check character's skills component and match against concept keywords
-    // const skills = this.world.getComponent<SkillComponent>(action.target, 'Skill');
-    // if (!conceptRelatedToSkills(action.concept, skills)) {
-    //   return { believable: false, reason: 'Concept unrelated to character interests' };
-    // }
-
-    return { believable: true };
-  }
-
-  private checkPersonalityNudgeBelievability(
-    action: Extract<InfluenceAction, { type: 'PersonalityNudge' }>
-  ): BelievabilityResult {
-    // Cannot swing more than 15 points at once
-    if (Math.abs(action.direction) > MAX_NUDGE_SWING) {
-      return {
-        believable: false,
-        reason: `Cannot nudge personality more than ${MAX_NUDGE_SWING} points at once (requested ${Math.abs(action.direction)})`,
-      };
-    }
-
-    // Validate trait name
-    const validTraits = Object.values(PersonalityTrait) as string[];
-    if (!validTraits.includes(action.trait)) {
-      return {
-        believable: false,
-        reason: `Unknown personality trait: ${action.trait}`,
-      };
-    }
-
-    return { believable: true };
-  }
-
-  private checkArrangeMeetingBelievability(
-    action: Extract<InfluenceAction, { type: 'ArrangeMeeting' }>
-  ): BelievabilityResult {
-    // Characters must be within 50 tiles of each other
-    const pos1 = this.getCharacterPosition(action.character1);
-    const pos2 = this.getCharacterPosition(action.character2);
-
-    if (pos1 === null || pos2 === null) {
-      return {
-        believable: false,
-        reason: 'Cannot determine character positions',
-      };
-    }
-
-    const distance = Math.sqrt(
-      (pos1.x - pos2.x) ** 2 + (pos1.y - pos2.y) ** 2
-    );
-
-    if (distance > MAX_MEETING_DISTANCE) {
-      return {
-        believable: false,
-        reason: `Characters are too far apart (${Math.round(distance)} tiles, max ${MAX_MEETING_DISTANCE})`,
-      };
-    }
-
-    return { believable: true };
-  }
-
-  private checkRevealSecretBelievability(
-    action: Extract<InfluenceAction, { type: 'RevealSecret' }>
-  ): BelievabilityResult {
-    // Character must be in position to learn (near a clue)
-    // For now, we allow it if the secret exists
-    // Future: Check proximity to clues, knowledge of related characters, etc.
-
-    // Validate secret exists (placeholder)
-    if ((action.secretId as number) < 0) {
-      return { believable: false, reason: 'Invalid secret reference' };
-    }
-
-    return { believable: true };
-  }
-
-  private checkTriggerNaturalEventBelievability(
-    action: Extract<InfluenceAction, { type: 'TriggerNaturalEvent' }>
-  ): BelievabilityResult {
-    // Must be geologically plausible for location
-    // For now, accept any non-empty event type
-    if (action.eventType.trim().length === 0) {
-      return { believable: false, reason: 'Event type cannot be empty' };
-    }
-
-    // Future: Check location's geological properties
-    // const biome = this.world.getComponent<BiomeComponent>(action.location, 'Biome');
-    // if (!eventPlausibleForBiome(action.eventType, biome)) {
-    //   return { believable: false, reason: 'Event implausible for location' };
-    // }
-
-    return { believable: true };
-  }
-
-  private checkMinorGeologyBelievability(
-    action: Extract<InfluenceAction, { type: 'MinorGeology' }>
-  ): BelievabilityResult {
-    // Must be geologically plausible for location
-    if (action.effect.trim().length === 0) {
-      return { believable: false, reason: 'Geological effect cannot be empty' };
+    // Use config-defined check if present, otherwise default to believable
+    if (config.believabilityCheck !== undefined) {
+      return config.believabilityCheck(action, this.world);
     }
 
     return { believable: true };
@@ -508,10 +384,21 @@ export class InfluenceSystem {
 
   /**
    * Check if a character-targeted action is resisted.
+   * Uses config-defined extractTarget to identify the target.
    */
   checkResistance(action: InfluenceAction): ResistanceResult {
     // Only character-targeted actions have resistance
-    const targetId = this.getActionTarget(action);
+    const config = this.getConfigForActionType(action.type);
+    if (config === undefined) {
+      return {
+        resisted: false,
+        resistanceScore: 0,
+        successProbability: 1,
+        explanation: 'No target to resist',
+      };
+    }
+
+    const targetId = config.extractTarget(action);
     if (targetId === null) {
       return {
         resisted: false,
@@ -623,27 +510,25 @@ export class InfluenceSystem {
     eventBus: EventBus,
     currentTick: TickNumber
   ): string {
-    // Get the event category and subtype from mapping
+    // Get the config for this action type
     const config = this.getConfigForActionType(action.type);
-    const category = config?.category ?? EventCategory.Personal;
-    const subtype = config?.subtypePrefix ?? `influence.${action.type.toLowerCase()}`;
+    if (config === undefined) {
+      return 'Unknown action type';
+    }
 
-    // Build event data based on action type
-    const eventData = this.buildEventData(action);
+    // Build event data, participants, location, and narrative from config
+    const eventData = config.buildEventData(action);
+    const participants = config.extractParticipants(action);
+    const location = config.extractLocation(action);
+    const narrative = config.buildNarrative(action);
 
     // Calculate significance
     const significance = this.calculateSignificance(action);
 
-    // Get participants
-    const participants = this.getParticipants(action);
-
-    // Get location if applicable
-    const location = this.getActionLocation(action);
-
     // Emit the event
     const eventOptions: Parameters<typeof createEvent>[0] = {
-      category,
-      subtype,
+      category: config.category,
+      subtype: config.subtypePrefix,
       timestamp: currentTick,
       participants,
       significance,
@@ -657,7 +542,7 @@ export class InfluenceSystem {
     const event = createEvent(eventOptions);
     eventBus.emit(event);
 
-    return this.buildNarrative(action);
+    return narrative;
   }
 
   private emitResistedEvent(
@@ -667,14 +552,13 @@ export class InfluenceSystem {
     resistance: ResistanceResult
   ): void {
     const config = this.getConfigForActionType(action.type);
-    const category = config?.category ?? EventCategory.Personal;
-    const subtype = `influence.${action.type.toLowerCase()}.resisted`;
+    if (config === undefined) return;
 
     const event = createEvent({
-      category,
-      subtype,
+      category: config.category,
+      subtype: `${config.subtypePrefix}.resisted`,
       timestamp: currentTick,
-      participants: this.getParticipants(action),
+      participants: config.extractParticipants(action),
       significance: 10, // Low significance for resisted actions
       data: {
         actionType: action.type,
@@ -686,136 +570,6 @@ export class InfluenceSystem {
     eventBus.emit(event);
   }
 
-  private buildEventData(action: InfluenceAction): Record<string, unknown> {
-    const baseData: Record<string, unknown> = {
-      actionType: action.type,
-      influenceCost: action.cost,
-    };
-
-    switch (action.type) {
-      case 'InspireIdea':
-        return { ...baseData, concept: action.concept, target: action.target };
-      case 'PropheticDream':
-        return { ...baseData, vision: action.vision, target: action.target };
-      case 'ArrangeMeeting':
-        return {
-          ...baseData,
-          character1: action.character1,
-          character2: action.character2,
-        };
-      case 'PersonalityNudge':
-        return {
-          ...baseData,
-          trait: action.trait,
-          direction: action.direction,
-          target: action.target,
-        };
-      case 'RevealSecret':
-        return {
-          ...baseData,
-          secretId: action.secretId,
-          target: action.target,
-        };
-      case 'LuckModifier':
-        return {
-          ...baseData,
-          actionType: action.actionType,
-          modifier: action.modifier,
-          target: action.target,
-        };
-      case 'VisionOfFuture':
-        return {
-          ...baseData,
-          futureEvent: action.futureEvent,
-          target: action.target,
-        };
-      case 'EmpowerChampion':
-        return {
-          ...baseData,
-          boostAmount: action.boostAmount,
-          duration: action.duration,
-          target: action.target,
-        };
-      case 'AdjustWeather':
-        return { ...baseData, change: action.change, location: action.location };
-      case 'MinorGeology':
-        return { ...baseData, effect: action.effect, location: action.location };
-      case 'AnimalMigration':
-        return {
-          ...baseData,
-          species: action.species,
-          from: action.from,
-          to: action.to,
-        };
-      case 'ResourceDiscovery':
-        return {
-          ...baseData,
-          resource: action.resource,
-          location: action.location,
-        };
-      case 'TriggerNaturalEvent':
-        return {
-          ...baseData,
-          eventType: action.eventType,
-          location: action.location,
-        };
-      case 'PromoteArt':
-        return { ...baseData, artForm: action.artForm, culture: action.culture };
-      case 'EncourageResearch':
-        return { ...baseData, field: action.field, target: action.target };
-      case 'StrengthenTradition':
-        return {
-          ...baseData,
-          tradition: action.tradition,
-          faction: action.faction,
-        };
-      case 'IntroduceForeignConcept':
-        return {
-          ...baseData,
-          concept: action.concept,
-          target: action.target,
-        };
-    }
-  }
-
-  private buildNarrative(action: InfluenceAction): string {
-    switch (action.type) {
-      case 'InspireIdea':
-        return `A moment of inspiration strikes - the concept of "${action.concept}" takes root`;
-      case 'PropheticDream':
-        return `A prophetic dream visits the sleeper, showing visions of "${action.vision}"`;
-      case 'ArrangeMeeting':
-        return 'Fate conspires to bring two souls together in an unexpected encounter';
-      case 'PersonalityNudge':
-        return `A subtle shift occurs in temperament, ${action.direction > 0 ? 'strengthening' : 'weakening'} ${action.trait}`;
-      case 'RevealSecret':
-        return 'Hidden knowledge begins to surface, bringing long-buried truths to light';
-      case 'LuckModifier':
-        return 'Fortune\'s wheel turns slightly, altering the odds of what is to come';
-      case 'VisionOfFuture':
-        return 'The mists of time part briefly, revealing a glimpse of what may yet be';
-      case 'EmpowerChampion':
-        return 'Divine favor settles upon the chosen one, granting temporary blessings';
-      case 'AdjustWeather':
-        return `The winds shift and weather patterns change - ${action.change}`;
-      case 'MinorGeology':
-        return `The earth stirs with subtle movement - ${action.effect}`;
-      case 'AnimalMigration':
-        return `The ${action.species} begin an unexpected migration`;
-      case 'ResourceDiscovery':
-        return `Prospectors stumble upon deposits of ${action.resource}`;
-      case 'TriggerNaturalEvent':
-        return `Nature stirs, and a ${action.eventType} begins to unfold`;
-      case 'PromoteArt':
-        return `Artistic inspiration flourishes - ${action.artForm} gains new prominence`;
-      case 'EncourageResearch':
-        return `Scholarly attention turns toward the mysteries of ${action.field}`;
-      case 'StrengthenTradition':
-        return `The old ways are renewed - ${action.tradition} grows stronger`;
-      case 'IntroduceForeignConcept':
-        return `New ideas arrive from distant lands - "${action.concept}" spreads through the culture`;
-    }
-  }
 
   // ── Helper Methods ────────────────────────────────────────────────────────
 
@@ -861,95 +615,26 @@ export class InfluenceSystem {
     return Math.floor((minSig + maxSig) / 2);
   }
 
-  private getActionTarget(action: InfluenceAction): CharacterId | null {
-    switch (action.type) {
-      case 'InspireIdea':
-      case 'PropheticDream':
-      case 'PersonalityNudge':
-      case 'RevealSecret':
-      case 'LuckModifier':
-      case 'VisionOfFuture':
-      case 'EmpowerChampion':
-      case 'EncourageResearch':
-        return action.target;
-      case 'ArrangeMeeting':
-        // Both characters could resist, but we'll just check the first
-        return action.character1;
-      default:
-        return null;
-    }
-  }
-
-  private getActionLocation(action: InfluenceAction): SiteId | null {
-    switch (action.type) {
-      case 'AdjustWeather':
-      case 'MinorGeology':
-      case 'ResourceDiscovery':
-      case 'TriggerNaturalEvent':
-        return action.location;
-      case 'AnimalMigration':
-        return action.from; // Use origin as primary location
-      default:
-        return null;
-    }
-  }
 
   private getActionPosition(
     action: InfluenceAction
   ): { x: number; y: number } | null {
+    const config = this.getConfigForActionType(action.type);
+    if (config === undefined) return null;
+
     // First try to get character position
-    const targetId = this.getActionTarget(action);
+    const targetId = config.extractTarget(action);
     if (targetId !== null) {
       return this.getCharacterPosition(targetId);
     }
 
     // Then try location
-    const locationId = this.getActionLocation(action);
+    const locationId = config.extractLocation(action);
     if (locationId !== null) {
       return this.getSitePosition(locationId);
     }
 
     return null;
-  }
-
-  private getParticipants(action: InfluenceAction): EntityId[] {
-    const participants: EntityId[] = [];
-
-    switch (action.type) {
-      case 'InspireIdea':
-      case 'PropheticDream':
-      case 'PersonalityNudge':
-      case 'RevealSecret':
-      case 'LuckModifier':
-      case 'VisionOfFuture':
-      case 'EmpowerChampion':
-      case 'EncourageResearch':
-        participants.push(action.target);
-        break;
-      case 'ArrangeMeeting':
-        participants.push(action.character1, action.character2);
-        break;
-      case 'AdjustWeather':
-      case 'MinorGeology':
-      case 'ResourceDiscovery':
-      case 'TriggerNaturalEvent':
-        participants.push(action.location);
-        break;
-      case 'AnimalMigration':
-        participants.push(action.from, action.to);
-        break;
-      case 'PromoteArt':
-        participants.push(action.culture);
-        break;
-      case 'StrengthenTradition':
-        participants.push(action.faction);
-        break;
-      case 'IntroduceForeignConcept':
-        participants.push(action.target);
-        break;
-    }
-
-    return participants;
   }
 
   private getCharacterPosition(

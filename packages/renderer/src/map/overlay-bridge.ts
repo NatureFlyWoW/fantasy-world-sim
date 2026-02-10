@@ -11,7 +11,7 @@
  */
 
 import type { World, SpatialIndex, EventBus } from '@fws/core';
-import { EventCategory } from '@fws/core';
+import { EventCategory, bresenhamLine } from '@fws/core';
 import type {
   EntityId,
   PositionComponent,
@@ -764,19 +764,11 @@ export class MapOverlayBridge {
     const volumeLevel: 'high' | 'medium' | 'low' =
       volume > 5000 ? 'high' : volume > 1000 ? 'medium' : 'low';
 
-    const dx = Math.abs(x1 - x0);
-    const dy = Math.abs(y1 - y0);
-    const sx = x0 < x1 ? 1 : -1;
-    const sy = y0 < y1 ? 1 : -1;
-    let err = dx - dy;
+    const points = bresenhamLine(x0, y0, x1, y1);
 
-    let cx = x0;
-    let cy = y0;
-    let prevX = x0;
-    let prevY = y0;
-
-    while (true) {
-      const key = tileKey(cx, cy);
+    for (let i = 0; i < points.length; i++) {
+      const point = points[i]!;
+      const key = tileKey(point.x, point.y);
       const existing = this.tradeCache.get(key);
 
       // Determine connections based on prev and next positions
@@ -785,19 +777,21 @@ export class MapOverlayBridge {
       );
 
       // Connection from previous tile
-      if (cx !== x0 || cy !== y0) {
-        if (prevX < cx) connections.add('W');
-        if (prevX > cx) connections.add('E');
-        if (prevY < cy) connections.add('N');
-        if (prevY > cy) connections.add('S');
+      if (i > 0) {
+        const prev = points[i - 1]!;
+        if (prev.x < point.x) connections.add('W');
+        if (prev.x > point.x) connections.add('E');
+        if (prev.y < point.y) connections.add('N');
+        if (prev.y > point.y) connections.add('S');
       }
 
-      // Connection toward next tile (approximate)
-      if (cx !== x1 || cy !== y1) {
-        if (x1 > cx) connections.add('E');
-        if (x1 < cx) connections.add('W');
-        if (y1 > cy) connections.add('S');
-        if (y1 < cy) connections.add('N');
+      // Connection to next tile
+      if (i < points.length - 1) {
+        const next = points[i + 1]!;
+        if (next.x > point.x) connections.add('E');
+        if (next.x < point.x) connections.add('W');
+        if (next.y > point.y) connections.add('S');
+        if (next.y < point.y) connections.add('N');
       }
 
       if (!existing?.isHub) {
@@ -807,21 +801,6 @@ export class MapOverlayBridge {
           isHub: existing?.isHub ?? false,
           volumeLevel: existing?.volumeLevel ?? volumeLevel,
         });
-      }
-
-      if (cx === x1 && cy === y1) break;
-
-      prevX = cx;
-      prevY = cy;
-
-      const e2 = 2 * err;
-      if (e2 > -dy) {
-        err -= dy;
-        cx += sx;
-      }
-      if (e2 < dx) {
-        err += dx;
-        cy += sy;
       }
     }
   }

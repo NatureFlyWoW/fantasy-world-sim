@@ -23,3 +23,10 @@ export {
   type Position,
   LOD_CONSTANTS,
 } from './lod-manager.js';
+
+// Engine factory
+export {
+  createSimulationEngine,
+  type CharacterInitData,
+  type EngineCreationResult,
+} from './engine-factory.js';

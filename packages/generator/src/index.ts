@@ -33,3 +33,6 @@ export type {
   InitializableSystems,
   SystemInitResult,
 } from './integration/populate-world.js';
+
+// World factory (centralized generation pipeline)
+export { generateWorld, type GeneratedWorld } from './world-factory.js';

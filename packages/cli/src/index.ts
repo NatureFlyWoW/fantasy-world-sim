@@ -25,28 +25,13 @@ import {
   WorldClock,
   EventBus,
   EventLog,
-  CascadeEngine,
-  SimulationEngine,
-  SystemRegistry,
   EventCategory,
   SpatialIndex,
   LevelOfDetailManager,
   resetEntityIdCounter,
-  CharacterAISystem,
-  ReputationSystem,
-  GrudgeSystem,
-  FactionPoliticalSystem,
-  EconomicSystem,
-  WarfareSystem,
-  MagicSystem,
-  ReligionSystem,
-  CulturalEvolutionSystem,
-  EcologySystem,
-  OralTraditionSystem,
-  DreamingSystem,
-  CharacterMemoryStore,
+  createSimulationEngine,
 } from '@fws/core';
-import type { WorldEvent, EntityId, CharacterId, SiteId } from '@fws/core';
+import type { WorldEvent, EntityId, CharacterId, SiteId, CharacterInitData } from '@fws/core';
 
 // Controls imports
 import {
@@ -84,22 +69,10 @@ import type { EntityResolver, ResolvedEntity, Gender } from '@fws/narrative';
 
 // Generator imports
 import {
-  SeededRNG,
-  WorldMap,
-  PantheonGenerator,
-  MagicSystemGenerator,
-  RaceGenerator,
-  InitialPopulationPlacer,
-  SettlementPlacer,
-  FactionInitializer,
-  CharacterGenerator,
-  TensionSeeder,
-  NameGenerator,
-  getAllCultures,
-  PreHistorySimulator,
+  generateWorld,
   populateWorldFromGenerated,
 } from '@fws/generator';
-import type { WorldConfig } from '@fws/generator';
+import type { GeneratedWorld } from '@fws/generator';
 
 // ============================================================================
 // CLI Entry Point
@@ -161,163 +134,6 @@ function parseArgs(): { seed: number; headless: boolean; ticks: number } {
   return { seed, headless, ticks };
 }
 
-/**
- * Create world configuration with standard_fantasy preset.
- */
-function makeConfig(seed: number): WorldConfig {
-  return {
-    seed,
-    worldSize: 'small',
-    magicPrevalence: 'moderate',
-    civilizationDensity: 'normal',
-    dangerLevel: 'moderate',
-    historicalDepth: 'shallow',
-    geologicalActivity: 'normal',
-    raceDiversity: 'standard',
-    pantheonComplexity: 'theistic',
-    technologyEra: 'iron_age',
-  };
-}
-
-/**
- * Run the full world generation pipeline.
- */
-function generateWorld(seed: number) {
-  const config = makeConfig(seed);
-  const rng = new SeededRNG(seed);
-
-  // Terrain
-  const worldMap = new WorldMap(config, rng);
-  worldMap.generate();
-
-  // Cosmology
-  const pantheonGen = new PantheonGenerator();
-  const pantheon = pantheonGen.generate(config.pantheonComplexity, rng);
-  const magicGen = new MagicSystemGenerator();
-  const magicRules = magicGen.generate(config.magicPrevalence, rng);
-
-  // Races & population
-  const raceGen = new RaceGenerator();
-  const races = raceGen.generate(config, pantheon, rng);
-  const popPlacer = new InitialPopulationPlacer();
-  const populationSeeds = popPlacer.place(worldMap, races, rng);
-
-  // Pre-history
-  const preSim = new PreHistorySimulator(
-    { worldMap, races, populationSeeds, pantheon, magicRules },
-    config,
-    rng
-  );
-  const preHistory = preSim.run();
-
-  // Name generator
-  const nameGen = new NameGenerator(getAllCultures());
-
-  // Race dominance map
-  const raceDominance = new Map<string, string>();
-  for (const pop of populationSeeds) {
-    const key = `${Math.floor(pop.x / 50)},${Math.floor(pop.y / 50)}`;
-    if (!raceDominance.has(key)) {
-      raceDominance.set(key, pop.race.name);
-    }
-  }
-
-  // Settlements
-  const settlementPlacer = new SettlementPlacer();
-  const settlements = settlementPlacer.place(
-    worldMap,
-    preHistory,
-    raceDominance,
-    nameGen,
-    config,
-    rng
-  );
-
-  // Factions
-  const factionInit = new FactionInitializer();
-  const factions = factionInit.initialize(
-    settlements,
-    races,
-    preHistory,
-    nameGen,
-    config,
-    rng
-  );
-
-  // Characters
-  const charGen = new CharacterGenerator(nameGen);
-  const rulers = charGen.generateRulers(factions, settlements, rng);
-  const notables = charGen.generateNotables(factions, settlements, config, rng);
-
-  // Tensions
-  const tensionSeeder = new TensionSeeder();
-  const tensions = tensionSeeder.seed(factions, settlements, preHistory, rng);
-
-  return {
-    config,
-    rng,
-    worldMap,
-    pantheon,
-    magicRules,
-    races,
-    populationSeeds,
-    preHistory,
-    nameGen,
-    settlements,
-    factions,
-    rulers,
-    notables,
-    tensions,
-  };
-}
-
-/**
- * Create simulation engine with all systems registered.
- */
-function createSimulationEngine(
-  world: World,
-  clock: WorldClock,
-  eventBus: EventBus,
-  eventLog: EventLog,
-  seed: number
-): { engine: SimulationEngine; dreamingSystem: DreamingSystem } {
-  const rng = new SeededRNG(seed);
-  const cascadeRng = rng.fork('cascade');
-  const cascadeEngine = new CascadeEngine(eventBus, eventLog, {
-    maxCascadeDepth: 10,
-    randomFn: () => cascadeRng.next(),
-  });
-  const systemRegistry = new SystemRegistry();
-
-  // Support classes
-  const reputationSystem = new ReputationSystem(undefined, rng.fork('reputation'));
-  const grudgeSystem = new GrudgeSystem();
-
-  // Register the 10 main simulation systems with forked RNGs
-  const dreamingSystem = new DreamingSystem(undefined, seed);
-  systemRegistry.register(new CharacterAISystem(rng.fork('character')));
-  systemRegistry.register(new FactionPoliticalSystem(reputationSystem, grudgeSystem, rng.fork('faction')));
-  systemRegistry.register(new EconomicSystem());
-  systemRegistry.register(new WarfareSystem(rng.fork('warfare')));
-  systemRegistry.register(new MagicSystem(rng.fork('magic')));
-  systemRegistry.register(new ReligionSystem(rng.fork('religion')));
-  systemRegistry.register(new CulturalEvolutionSystem(rng.fork('culture')));
-  systemRegistry.register(new EcologySystem(undefined, rng.fork('ecology')));
-  systemRegistry.register(new OralTraditionSystem(undefined, rng.fork('oral')));
-  systemRegistry.register(dreamingSystem);
-
-  const engine = new SimulationEngine(
-    world,
-    clock,
-    eventBus,
-    eventLog,
-    systemRegistry,
-    cascadeEngine,
-    seed,
-  );
-
-  return { engine, dreamingSystem };
-}
 
 /**
  * Build an EntityResolver from generated data with World-based fallback.
@@ -326,7 +142,7 @@ function createSimulationEngine(
  * by reading their Status/Attribute/Territory components.
  */
 function buildEntityResolver(
-  generatedData: ReturnType<typeof generateWorld>,
+  generatedData: GeneratedWorld,
   populationResult: ReturnType<typeof populateWorldFromGenerated>,
   world: World
 ): EntityResolver {
@@ -1007,10 +823,8 @@ async function main(): Promise<void> {
   const clock = new WorldClock();
   const eventBus = new EventBus();
   const eventLog = new EventLog();
-  const { engine, dreamingSystem } = createSimulationEngine(ecsWorld, clock, eventBus, eventLog, seed);
 
-  // Initialize DreamingSystem with character data from populated world
-  // Build settlement name → SiteId lookup for character location registration
+  // Build character initialization data for DreamingSystem
   const settlementNameToId = new Map<string, SiteId>();
   for (let si = 0; si < generatedData.settlements.length; si++) {
     const settlement = generatedData.settlements[si];
@@ -1021,24 +835,32 @@ async function main(): Promise<void> {
   }
 
   const allChars = [...generatedData.rulers, ...generatedData.notables];
+  const characterInitData: CharacterInitData[] = [];
   for (const [charName, charId] of populationResult.characterIds) {
-    const store = new CharacterMemoryStore(charId);
-    dreamingSystem.registerMemoryStore(charId, store);
-
-    // Find character data for goals and location
     const charData = allChars.find(c => c.name === charName);
     if (charData !== undefined) {
-      dreamingSystem.registerGoalCount(charId, charData.goals.length);
+      const locationSiteId = charData.position.settlementName !== undefined
+        ? settlementNameToId.get(charData.position.settlementName)
+        : undefined;
 
-      // Register character location from their settlement
-      if (charData.position.settlementName !== undefined) {
-        const siteId = settlementNameToId.get(charData.position.settlementName);
-        if (siteId !== undefined) {
-          dreamingSystem.registerCharacterLocation(charId, siteId);
-        }
-      }
+      characterInitData.push({
+        id: charId,
+        goalCount: charData.goals.length,
+        ...(locationSiteId !== undefined ? { locationSiteId } : {}),
+      });
     }
   }
+
+  // Create simulation engine with all systems registered (includes 30-tick warmup)
+  const { engine, dreamingSystem } = createSimulationEngine(
+    ecsWorld,
+    clock,
+    eventBus,
+    eventLog,
+    seed,
+    characterInitData,
+    headless ? 0 : 30 // No warmup in headless mode (it runs its own ticks)
+  );
 
   // Create spatial index
   const spatialIndex = new SpatialIndex(
@@ -1088,14 +910,7 @@ async function main(): Promise<void> {
     // Build entity resolver for narrative generation (with World fallback for runtime entities)
     const entityResolver = buildEntityResolver(generatedData, populationResult, ecsWorld);
 
-    // Auto-run 30 ticks to populate events before displaying the welcome screen.
-    // This gives the narrative engine real events to work with.
-    const WARMUP_TICKS = 30;
-    console.log(`Running ${WARMUP_TICKS}-tick warmup...`);
-    engine.run(WARMUP_TICKS);
-    console.log(`Warmup complete: ${eventLog.getAll().length} events generated\n`);
-
-    // Build welcome data from the now-populated event log
+    // Build welcome data from the event log (populated by 30-tick warmup in createSimulationEngine)
     const recentEvents = eventLog.getAll();
     const tensionEvents = recentEvents
       .filter(e => (e.category === EventCategory.Political || e.category === EventCategory.Military) && e.significance >= 50)

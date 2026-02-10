@@ -5,6 +5,7 @@
 import type { SeededRNG } from '../rng.js';
 import { BiomeType, ResourceType } from './terrain-tile.js';
 import type { CollisionMap } from './tectonics.js';
+import { bresenhamLine } from '@fws/core';
 
 /**
  * Ley line definition — a great-circle arc across the map.
@@ -187,53 +188,23 @@ export class ResourcePlacer {
     }
 
     for (const line of leyLines) {
-      this.bresenham(line.startX, line.startY, line.endX, line.endY, map, width, height);
-    }
+      // Use shared bresenhamLine function
+      const points = bresenhamLine(line.startX, line.startY, line.endX, line.endY);
 
-    return map;
-  }
-
-  /**
-   * Draw a line using Bresenham's algorithm with a 1-tile radius.
-   */
-  private bresenham(
-    x0: number, y0: number,
-    x1: number, y1: number,
-    map: boolean[][],
-    width: number, height: number
-  ): void {
-    let dx = Math.abs(x1 - x0);
-    let dy = -Math.abs(y1 - y0);
-    const sx = x0 < x1 ? 1 : -1;
-    const sy = y0 < y1 ? 1 : -1;
-    let err = dx + dy;
-
-    let cx = x0;
-    let cy = y0;
-
-    for (;;) {
-      // Mark the point and immediate neighbors
-      for (let oy = -1; oy <= 1; oy++) {
-        for (let ox = -1; ox <= 1; ox++) {
-          const px = cx + ox;
-          const py = cy + oy;
-          if (px >= 0 && px < width && py >= 0 && py < height) {
-            map[py]![px] = true;
+      // Mark each point and its neighbors (1-tile radius)
+      for (const point of points) {
+        for (let oy = -1; oy <= 1; oy++) {
+          for (let ox = -1; ox <= 1; ox++) {
+            const px = point.x + ox;
+            const py = point.y + oy;
+            if (px >= 0 && px < width && py >= 0 && py < height) {
+              map[py]![px] = true;
+            }
           }
         }
       }
-
-      if (cx === x1 && cy === y1) break;
-
-      const e2 = 2 * err;
-      if (e2 >= dy) {
-        err += dy;
-        cx += sx;
-      }
-      if (e2 <= dx) {
-        err += dx;
-        cy += sy;
-      }
     }
+
+    return map;
   }
 }
