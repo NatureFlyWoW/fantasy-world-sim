@@ -77,6 +77,7 @@ export interface FactionSnapshot {
 export interface WorldSnapshot {
   readonly mapWidth: number;
   readonly mapHeight: number;
+  readonly seed: number;
   readonly tiles: readonly (readonly TileSnapshot[])[];
   readonly entities: readonly EntitySnapshot[];
   readonly events: readonly SerializedEvent[];
