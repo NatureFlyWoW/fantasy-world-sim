@@ -36,22 +36,23 @@ const GLYPH_CHARS: string[] = [
 
   // Row 2-3: Entity markers (32 slots)
   '\u263C',   // 32: ☼ settlement (sun)
-  '\u2691',   // 33: ⚑ capital (flag)
-  '\u2020',   // 34: † ruin (dagger)
-  '\u2694',   // 35: ⚔ army (crossed swords)
-  '\u271D',   // 36: ✝ temple
-  '\u2727',   // 37: ✧ academy (sparkle)
-  '\u2605',   // 38: ★ star 6pt
-  '\u2726',   // 39: ✦ artifact 4pt star
-  '@',        // 40: character
-  '\u2193',   // 41: ↓ south arrow
-  '\u2190',   // 42: ← west arrow
-  '\u2192',   // 43: → east arrow
-  '\u2197',   // 44: ↗ NE arrow
-  '\u2196',   // 45: ↖ NW arrow
-  '\u2198',   // 46: ↘ SE arrow
-  '\u2199',   // 47: ↙ SW arrow
-  '\u2699',   // 48: ⚙ gear (besieged)
+  '\u2691',   // 33: ⚑ capital (flag right)
+  '\u2690',   // 34: ⚐ capital (flag left)
+  '\u2020',   // 35: † ruin (dagger)
+  '\u2694',   // 36: ⚔ army (crossed swords)
+  '\u271D',   // 37: ✝ temple
+  '\u2727',   // 38: ✧ academy (sparkle)
+  '\u2605',   // 39: ★ star 6pt
+  '\u2726',   // 40: ✦ artifact 4pt star
+  '@',        // 41: character
+  '\u2193',   // 42: ↓ south arrow
+  '\u2190',   // 43: ← west arrow
+  '\u2192',   // 44: → east arrow
+  '\u2197',   // 45: ↗ NE arrow
+  '\u2196',   // 46: ↖ NW arrow
+  '\u2198',   // 47: ↘ SE arrow
+  '\u2199',   // 48: ↙ SW arrow
+  '\u2699',   // 49: ⚙ gear (besieged)
   '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', // 49-63: padding
 
   // Row 4-5: Overlay / box-drawing glyphs (32 slots)
