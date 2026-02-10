@@ -12,6 +12,7 @@ const PAN_SPEED = 3; // tiles per keypress
 export interface InputCallbacks {
   onDirty: () => void;
   onCycleOverlay?: () => void;
+  onTileClick?: (wx: number, wy: number) => void;
 }
 
 /**
@@ -23,7 +24,7 @@ export function bindMapInput(
   canvas: HTMLCanvasElement,
   callbacks: InputCallbacks,
 ): () => void {
-  const { onDirty, onCycleOverlay } = callbacks;
+  const { onDirty, onCycleOverlay, onTileClick } = callbacks;
 
   // ── Keyboard ──────────────────────────────────────────────────────────
 
@@ -67,12 +68,18 @@ export function bindMapInput(
   let dragging = false;
   let lastMouseX = 0;
   let lastMouseY = 0;
+  let mouseDownX = 0;
+  let mouseDownY = 0;
+  let mouseDownTime = 0;
 
   function handleMouseDown(e: MouseEvent): void {
     if (e.button !== 0) return; // left click only
     dragging = true;
     lastMouseX = e.clientX;
     lastMouseY = e.clientY;
+    mouseDownX = e.clientX;
+    mouseDownY = e.clientY;
+    mouseDownTime = performance.now();
     canvas.style.cursor = 'grabbing';
   }
 
@@ -91,10 +98,24 @@ export function bindMapInput(
     onDirty();
   }
 
-  function handleMouseUp(): void {
+  function handleMouseUp(e: MouseEvent): void {
     if (!dragging) return;
     dragging = false;
     canvas.style.cursor = 'default';
+
+    // Detect click vs drag: <5px movement and <300ms elapsed
+    const dx = e.clientX - mouseDownX;
+    const dy = e.clientY - mouseDownY;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const elapsed = performance.now() - mouseDownTime;
+
+    if (dist < 5 && elapsed < 300 && onTileClick !== undefined) {
+      const rect = canvas.getBoundingClientRect();
+      const px = e.clientX - rect.left;
+      const py = e.clientY - rect.top;
+      const { wx, wy } = viewport.screenToWorld(px, py);
+      onTileClick(wx, wy);
+    }
   }
 
   // ── Bind events ───────────────────────────────────────────────────────

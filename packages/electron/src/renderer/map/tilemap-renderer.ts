@@ -75,6 +75,10 @@ export class TilemapRenderer {
   // Event accumulation per tile
   private tileEvents = new Map<string, SerializedEvent[]>();
 
+  // Selection
+  private selectedTile: { wx: number; wy: number } | null = null;
+  private readonly highlightLayer = new Container();
+
   // Dirty tracking
   private dirty = true;
   private lastCenterX = -1;
@@ -86,6 +90,7 @@ export class TilemapRenderer {
     this.container.addChild(this.glyphLayer);
     this.container.addChild(this.routeLayer);
     this.container.addChild(this.markerLayer);
+    this.container.addChild(this.highlightLayer);
   }
 
   /** The PixiJS container to add to stage */
@@ -102,6 +107,16 @@ export class TilemapRenderer {
   }
 
   markDirty(): void {
+    this.dirty = true;
+  }
+
+  setSelectedTile(wx: number, wy: number): void {
+    this.selectedTile = { wx, wy };
+    this.dirty = true;
+  }
+
+  clearSelectedTile(): void {
+    this.selectedTile = null;
     this.dirty = true;
   }
 
@@ -192,6 +207,7 @@ export class TilemapRenderer {
 
     this.renderTerrain();
     this.renderEntityMarkers();
+    this.renderSelectionHighlight();
 
     // Apply sub-pixel offset for smooth scrolling
     const { ox, oy } = this.viewport.getPixelOffset();
@@ -203,6 +219,8 @@ export class TilemapRenderer {
     this.routeLayer.y = oy;
     this.markerLayer.x = ox;
     this.markerLayer.y = oy;
+    this.highlightLayer.x = ox;
+    this.highlightLayer.y = oy;
   }
 
   // ── Pool management ─────────────────────────────────────────────────────
@@ -458,6 +476,23 @@ export class TilemapRenderer {
         this.routeLayer.addChild(sprite);
       }
     }
+  }
+
+  // ── Selection highlight ─────────────────────────────────────────────
+
+  private renderSelectionHighlight(): void {
+    this.highlightLayer.removeChildren();
+    if (this.selectedTile === null) return;
+
+    const screenPos = this.viewport.worldToScreen(this.selectedTile.wx, this.selectedTile.wy);
+    if (screenPos === null) return;
+
+    const highlight = new Graphics();
+    highlight.rect(0, 0, TILE_W, TILE_H);
+    highlight.stroke({ width: 1, color: 0xc9a84c }); // AU2 gold
+    highlight.x = screenPos.px;
+    highlight.y = screenPos.py;
+    this.highlightLayer.addChild(highlight);
   }
 
   // ── Helpers ─────────────────────────────────────────────────────────

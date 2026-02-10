@@ -102,6 +102,9 @@ export interface EntityRef {
 }
 
 export interface InspectorResponse {
+  readonly entityType: 'character' | 'faction' | 'site' | 'artifact' | 'event' | 'region';
+  readonly entityName: string;
+  readonly summary: string;
   readonly sections: readonly InspectorSection[];
   readonly prose: readonly string[];
   readonly relatedEntities: readonly EntityRef[];

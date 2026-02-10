@@ -115,3 +115,59 @@
 .status-separator {
   color: var(--n0);
 }
+
+/* ── Layout Presets ─────────────────────────────────────────────────── */
+
+/* Narrative: panels take more space */
+.layout--narrative {
+  grid-template-columns: 1fr minmax(420px, 60%);
+}
+
+/* Map focus: hide panels, full-width map */
+.layout--map-focus #panel-column {
+  display: none;
+}
+.layout--map-focus {
+  grid-template-columns: 1fr;
+}
+
+/* Log focus: swap widths, hide inspector */
+.layout--log-focus {
+  grid-template-columns: minmax(420px, 60%) 1fr;
+}
+.layout--log-focus #panel-column {
+  grid-column: 1;
+  grid-row: 2;
+  border-left: none;
+  border-right: 1px solid var(--border-default);
+}
+.layout--log-focus #map-container {
+  grid-column: 2;
+  grid-row: 2;
+}
+.layout--log-focus #inspector-panel,
+.layout--log-focus #panel-divider {
+  display: none;
+}
+
+/* Split: horizontal stacking — map top, panels bottom */
+.layout--split {
+  grid-template-columns: 1fr;
+  grid-template-rows: 36px 1fr 1fr 24px;
+  grid-template-areas:
+    "topbar"
+    "map"
+    "panels"
+    "status";
+}
+.layout--split #panel-column {
+  border-left: none;
+  border-top: 1px solid var(--border-default);
+  flex-direction: row;
+}
+.layout--split #panel-column > .panel {
+  flex: 1;
+}
+.layout--split #panel-divider {
+  display: none;
+}

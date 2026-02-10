@@ -1,0 +1,72 @@
+/**
+ * Help overlay — F1 keyboard shortcut reference.
+ * Fixed overlay with backdrop, shortcut rows, kbd styling.
+ * All colors from variables.css. No rounded corners.
+ */
+
+.help-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+
+.help-overlay.visible {
+  display: flex;
+}
+
+.help-overlay__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(12, 12, 20, 0.7);
+}
+
+.help-overlay__content {
+  position: relative;
+  width: 90%;
+  max-width: 520px;
+  background: var(--bg1);
+  border: 1px solid var(--n1);
+  padding: var(--space-2xl);
+}
+
+.help-overlay__content h2 {
+  font-family: var(--font-display);
+  color: var(--pa1);
+  margin: 0 0 var(--space-xl);
+  font-size: var(--text-lg);
+}
+
+.help-overlay__section {
+  margin-bottom: var(--space-lg);
+}
+
+.help-overlay__section h3 {
+  color: var(--au2);
+  font-size: var(--text-sm);
+  margin: var(--space-lg) 0 var(--space-sm);
+  font-weight: 600;
+}
+
+.help-overlay__row {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  padding: var(--space-xs) 0;
+  display: flex;
+  align-items: baseline;
+}
+
+.help-overlay__row kbd {
+  display: inline-block;
+  min-width: 60px;
+  padding: 1px 4px;
+  background: var(--bg3);
+  border: 1px solid var(--n0);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--au2);
+  margin-right: var(--space-md);
+  text-align: center;
+}

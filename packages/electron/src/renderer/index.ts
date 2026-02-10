@@ -2,6 +2,7 @@
  * Renderer process entry point.
  *
  * Initializes PixiJS, connects IPC, wires map rendering + controls,
+ * inspector, chronicle, layout presets, help overlay, notifications,
  * and maintains an FPS counter.
  */
 import { initPixiApp } from './pixi-app.js';
@@ -11,8 +12,14 @@ import { MapTooltip } from './map/map-tooltip.js';
 import { TileDataProvider } from './map/tile-data-provider.js';
 import { OverlayManager } from './map/overlay-manager.js';
 import { bindMapInput } from './map/input-handler.js';
-import type { TickDelta, WorldSnapshot } from '../shared/types.js';
+import { InspectorPanel } from './inspector/inspector-panel.js';
+import { LayoutManager } from './layout-manager.js';
+import { HelpOverlay } from './help-overlay.js';
+import { NotificationManager } from './notification-toast.js';
+import { initPanelDivider } from './panel-divider.js';
+import { uiEvents } from './ui-events.js';
 import { ChroniclePanel } from './chronicle/chronicle-panel.js';
+import type { EntityType, InspectorQuery, TickDelta, WorldSnapshot } from '../shared/types.js';
 
 // ── State ────────────────────────────────────────────────────────────────────
 
@@ -48,10 +55,18 @@ const btnPause = document.getElementById('btn-pause')!;
 const btnPlay = document.getElementById('btn-play')!;
 const btnFast = document.getElementById('btn-fast')!;
 const overlayEl = document.getElementById('status-overlay');
+const layoutEl = document.getElementById('status-layout');
+const speedEl = document.getElementById('status-speed');
 
 // ── IPC ──────────────────────────────────────────────────────────────────────
 
 const ipc = createIpcClient();
+
+// ── Modules ──────────────────────────────────────────────────────────────────
+
+const layoutManager = new LayoutManager();
+const helpOverlay = new HelpOverlay();
+const notifications = new NotificationManager();
 
 function updateStatusBar(): void {
   tickEl.textContent = `Tick: ${totalTicks}`;
@@ -63,6 +78,9 @@ function updateSpeedButtons(): void {
   btnPause.classList.toggle('active', paused);
   btnPlay.classList.toggle('active', !paused && speed === 1);
   btnFast.classList.toggle('active', !paused && speed > 1);
+  if (speedEl !== null) {
+    speedEl.textContent = paused ? 'Speed: Paused' : `Speed: ${speed}x`;
+  }
 }
 
 function updateOverlayStatus(): void {
@@ -70,6 +88,31 @@ function updateOverlayStatus(): void {
     overlayEl.textContent = `Overlay: ${overlayManager.activeOverlay}`;
   }
 }
+
+function updateLayoutStatus(): void {
+  if (layoutEl !== null) {
+    const name = layoutManager.getCurrent();
+    layoutEl.textContent = `Layout: ${name.charAt(0).toUpperCase() + name.slice(1)}`;
+  }
+}
+
+// ── Entity type mapping ──────────────────────────────────────────────────────
+
+function mapEntityTypeToInspectorType(type: EntityType): InspectorQuery['type'] | null {
+  switch (type) {
+    case 'village': case 'town': case 'city': case 'capital':
+    case 'ruin': case 'temple': case 'academy': case 'settlement':
+      return 'site';
+    case 'army':
+      return 'faction';
+    case 'character':
+      return 'character';
+    default:
+      return null;
+  }
+}
+
+// ── Tick handling ─────────────────────────────────────────────────────────────
 
 function handleTickDelta(delta: TickDelta): void {
   totalTicks = delta.tick;
@@ -95,6 +138,13 @@ function handleTickDelta(delta: TickDelta): void {
     overlayManager.buildTradeRouteCache(currentEntities);
     tileDataProvider.updateEntities(currentEntities);
     chronicle.updateEntityNames(delta.entityUpdates);
+  }
+
+  // Notify high-significance events
+  for (const event of delta.events) {
+    if (event.significance >= 80) {
+      notifications.show(event.subtype.replace(/[._]/g, ' '), 'event');
+    }
   }
 }
 
@@ -122,21 +172,85 @@ btnFast.addEventListener('click', () => {
   updateSpeedButtons();
 });
 
-// Keyboard: space to pause/resume, N to cycle chronicle mode, R for region filter
+// ── Keyboard ─────────────────────────────────────────────────────────────────
+
 document.addEventListener('keydown', (e) => {
-  if (e.code === 'Space') {
-    e.preventDefault();
-    if (paused) {
-      btnPlay.click();
-    } else {
-      btnPause.click();
-    }
-  } else if (e.code === 'KeyN') {
-    chronicle.cycleMode();
-  } else if (e.code === 'KeyR') {
-    const viewport = tilemap.getViewport();
-    chronicle.toggleRegionFilter({ x: viewport.centerX, y: viewport.centerY });
+  // Don't intercept when typing in inputs
+  const active = document.activeElement;
+  if (active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement) return;
+
+  switch (e.code) {
+    case 'Space':
+      e.preventDefault();
+      if (paused) {
+        btnPlay.click();
+      } else {
+        btnPause.click();
+      }
+      break;
+
+    case 'KeyN':
+      chronicle.cycleMode();
+      break;
+
+    case 'KeyR':
+      chronicle.toggleRegionFilter({
+        x: tilemap.getViewport().centerX,
+        y: tilemap.getViewport().centerY,
+      });
+      break;
+
+    case 'KeyL':
+      layoutManager.cycle();
+      updateLayoutStatus();
+      // Trigger PixiJS resize after layout change
+      requestAnimationFrame(() => {
+        const container = document.getElementById('map-container')!;
+        tilemap.resize(container.clientWidth, container.clientHeight);
+      });
+      break;
+
+    case 'F1':
+      e.preventDefault();
+      helpOverlay.toggle();
+      break;
+
+    case 'Escape':
+      if (helpOverlay.isVisible()) {
+        helpOverlay.hide();
+      } else {
+        inspector.clear();
+        tilemap.clearSelectedTile();
+      }
+      break;
+
+    case 'KeyG':
+      // Center map on currently inspected entity
+      {
+        const loc = inspector.getCurrentLocation();
+        if (loc !== null) {
+          tilemap.getViewport().centerOn(loc.x, loc.y);
+          tilemap.markDirty();
+        }
+      }
+      break;
   }
+});
+
+// ── UI Event Bus ─────────────────────────────────────────────────────────────
+
+// Inspector placeholder (set in init)
+let inspector: InspectorPanel;
+
+uiEvents.on('inspect-entity', (data) => {
+  if (inspector !== undefined) {
+    void inspector.inspect({ type: data.type, id: data.id });
+  }
+});
+
+uiEvents.on('center-map', (data) => {
+  tilemap.getViewport().centerOn(data.x, data.y);
+  tilemap.markDirty();
 });
 
 // ── Render loop ──────────────────────────────────────────────────────────────
@@ -166,6 +280,12 @@ async function init(): Promise<void> {
 
   // Add tilemap to stage
   app.stage.addChild(tilemap.getContainer());
+
+  // Initialize inspector panel
+  inspector = new InspectorPanel(ipc);
+
+  // Initialize panel divider (drag resize)
+  initPanelDivider();
 
   // Subscribe to tick deltas
   ipc.onTickDelta(handleTickDelta);
@@ -202,13 +322,24 @@ async function init(): Promise<void> {
   // Build trade route cache for Economic overlay
   overlayManager.buildTradeRouteCache(snapshot.entities);
 
-  // Bind input
+  // Bind input with click-to-inspect
   bindMapInput(tilemap.getViewport(), canvas, {
     onDirty: () => tilemap.markDirty(),
     onCycleOverlay: () => {
       overlayManager.cycle();
       tilemap.markDirty();
       updateOverlayStatus();
+    },
+    onTileClick: (wx, wy) => {
+      tilemap.setSelectedTile(wx, wy);
+      const entities = tilemap.getEntitiesAt(wx, wy);
+      if (entities.length > 0) {
+        const entity = entities[0]!;
+        const type = mapEntityTypeToInspectorType(entity.type);
+        if (type !== null) {
+          void inspector.inspect({ type, id: entity.id });
+        }
+      }
     },
   });
 
@@ -234,6 +365,7 @@ async function init(): Promise<void> {
   updateStatusBar();
   updateSpeedButtons();
   updateOverlayStatus();
+  updateLayoutStatus();
 
   // Start render loop
   requestAnimationFrame(renderLoop);

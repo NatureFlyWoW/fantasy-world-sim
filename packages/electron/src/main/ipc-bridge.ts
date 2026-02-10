@@ -9,6 +9,7 @@ import type { BrowserWindow } from 'electron';
 import { IPC_CHANNELS } from '../shared/ipc-channels.js';
 import type { SimulationRunner } from './simulation-runner.js';
 import type { SimulationCommand, InspectorQuery, InspectorResponse } from '../shared/types.js';
+import { inspectEntity } from './entity-inspector.js';
 
 export function registerIpcHandlers(
   runner: SimulationRunner,
@@ -39,11 +40,12 @@ export function registerIpcHandlers(
 
   // Inspector queries (invoke/handle)
   ipcMain.handle(IPC_CHANNELS.INSPECTOR_QUERY, (_event, query: InspectorQuery): InspectorResponse => {
-    // Phase 0: stub response — full inspector wiring in Phase 4
-    return {
-      sections: [{ title: 'Overview', content: `Inspecting ${query.type} #${query.id}` }],
-      prose: [`No detailed information available yet for ${query.type} #${query.id}.`],
-      relatedEntities: [],
-    };
+    const world = runner.getWorld();
+    const eventLog = runner.getEventLog();
+    const clock = runner.getClock();
+    if (world === null || eventLog === null || clock === null) {
+      return { entityType: query.type, entityName: 'Unknown', summary: '', sections: [], prose: [], relatedEntities: [] };
+    }
+    return inspectEntity(query, world, eventLog, clock);
   });
 }

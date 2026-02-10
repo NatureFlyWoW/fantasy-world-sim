@@ -365,6 +365,10 @@ export class SimulationRunner {
     this.tickDeltaCallbacks.push(callback);
   }
 
+  getWorld(): World | null { return this.world; }
+  getEventLog(): EventLog | null { return this.eventLog; }
+  getClock(): WorldClock | null { return this.clock; }
+
   getTickCount(): number {
     return this.engine?.getTickCount() ?? 0;
   }

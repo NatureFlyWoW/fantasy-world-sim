@@ -1,0 +1,244 @@
+/**
+ * Inspector panel — breadcrumbs, type header, entity details,
+ * collapsible sections, data rows, prose, progress bars.
+ * BEM naming. All colors from variables.css.
+ */
+
+/* ── Breadcrumbs ───────────────────────────────────────────────────────── */
+
+.inspector-breadcrumbs {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-md) var(--space-lg);
+  border-bottom: 1px solid var(--border-default);
+  font-size: var(--text-sm);
+}
+
+.inspector-breadcrumbs__back {
+  cursor: pointer;
+  color: var(--text-link);
+}
+
+.inspector-breadcrumbs__back:hover {
+  text-decoration: underline;
+}
+
+.inspector-breadcrumbs__separator {
+  color: var(--n0);
+}
+
+.inspector-breadcrumbs__current {
+  color: var(--pa1);
+  font-weight: 600;
+}
+
+/* ── Type header ───────────────────────────────────────────────────────── */
+
+.inspector-type-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-lg) var(--space-lg) 0;
+}
+
+.inspector-type-icon {
+  font-family: var(--font-mono);
+  font-size: var(--text-lg);
+}
+
+.inspector-type-label {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-tertiary);
+}
+
+.inspector-type-line {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, var(--au1), transparent);
+}
+
+/* ── Entity name and summary ───────────────────────────────────────────── */
+
+.inspector-entity-name {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  color: var(--n3);
+  padding: var(--space-sm) var(--space-lg);
+  margin: 0;
+  font-weight: 700;
+}
+
+.inspector-entity-summary {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  padding: 0 var(--space-lg) var(--space-md);
+  margin: 0;
+}
+
+/* ── Collapsible sections ──────────────────────────────────────────────── */
+
+.inspector-section {
+  border-bottom: 1px solid var(--bg3);
+}
+
+.inspector-section__header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-md) var(--space-lg);
+  cursor: pointer;
+  user-select: none;
+}
+
+.inspector-section__header:hover {
+  background: var(--bg2);
+}
+
+.inspector-section__arrow {
+  display: inline-block;
+  width: 10px;
+  font-size: var(--text-xs);
+  color: var(--n1);
+  transition: transform 200ms ease;
+}
+
+.inspector-section__arrow--collapsed {
+  transform: rotate(-90deg);
+}
+
+.inspector-section__number {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--au1);
+  min-width: 14px;
+}
+
+.inspector-section__title {
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  color: var(--pa1);
+}
+
+.inspector-section__hint {
+  margin-left: auto;
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+}
+
+.inspector-section__body {
+  padding: var(--space-md) var(--space-lg) var(--space-lg);
+  font-size: var(--text-base);
+  color: var(--text-secondary);
+  line-height: 1.55;
+}
+
+.inspector-section__body--collapsed {
+  display: none;
+}
+
+/* ── Prose blocks ──────────────────────────────────────────────────────── */
+
+.inspector-prose {
+  padding: var(--space-lg);
+}
+
+.inspector-prose p {
+  font-size: var(--text-base);
+  color: var(--n2);
+  line-height: 1.55;
+  margin: 0 0 var(--space-md);
+}
+
+.inspector-prose strong {
+  color: var(--n3);
+}
+
+/* ── Entity links (clickable names) ────────────────────────────────────── */
+
+.inspector-prose .entity-link,
+.inspector-section .entity-link {
+  color: var(--cs);
+  cursor: pointer;
+}
+
+.inspector-prose .entity-link:hover,
+.inspector-section .entity-link:hover {
+  text-decoration: underline;
+}
+
+/* ── Data rows (key-value pairs) ───────────────────────────────────────── */
+
+.inspector-data-row {
+  display: flex;
+  justify-content: space-between;
+  padding: var(--space-xs) 0;
+  font-size: var(--text-sm);
+}
+
+.inspector-data-row:nth-child(odd) {
+  background: rgba(42, 42, 56, 0.3);
+}
+
+.inspector-data-row__label {
+  color: var(--text-secondary);
+}
+
+.inspector-data-row__value {
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+}
+
+/* ── Progress bars ─────────────────────────────────────────────────────── */
+
+.inspector-bar {
+  height: 6px;
+  background: var(--bg0);
+  margin: var(--space-xs) 0;
+}
+
+.inspector-bar__fill {
+  height: 100%;
+  background: var(--au2);
+}
+
+/* ── Empty state ───────────────────────────────────────────────────────── */
+
+.inspector-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  font-style: italic;
+  color: var(--text-tertiary);
+  font-size: var(--text-sm);
+}
+
+/* ── Inspector panel scrollbar ─────────────────────────────────────────── */
+
+#inspector-panel .panel-content {
+  overflow-y: auto;
+}
+
+#inspector-panel .panel-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+#inspector-panel .panel-content::-webkit-scrollbar-track {
+  background: var(--bg1);
+}
+
+#inspector-panel .panel-content::-webkit-scrollbar-thumb {
+  background: var(--n0);
+}
+
+#inspector-panel .panel-content::-webkit-scrollbar-thumb:hover {
+  background: var(--n1);
+}
+
+#inspector-panel .panel-content::-webkit-scrollbar-thumb:active {
+  background: var(--au1);
+}
