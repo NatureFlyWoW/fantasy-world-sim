@@ -1,0 +1,35 @@
+/* ============================================
+   ANIMATIONS.CSS — UI motion definitions
+   ============================================ */
+
+/* Event card entry animation */
+@keyframes card-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Legendary event pulse (significance >= 90) */
+@keyframes legendary-pulse {
+  0%, 100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1.0;
+  }
+}
+
+/* Fade-in for modals */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}

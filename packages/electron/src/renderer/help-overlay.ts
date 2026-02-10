@@ -33,7 +33,7 @@ export class HelpOverlay {
   private buildContent(): string {
     return `
       <div class="help-overlay__backdrop"></div>
-      <div class="help-overlay__content">
+      <div class="help-overlay__content" role="dialog" aria-label="Keyboard shortcuts">
         <h2>Keyboard Shortcuts</h2>
         ${this.buildSection('Global', [
           ['Space', 'Pause / Resume'],
@@ -55,6 +55,11 @@ export class HelpOverlay {
         ${this.buildSection('Chronicle', [
           ['N', 'Cycle display mode'],
           ['R', 'Toggle region filter'],
+        ])}
+        ${this.buildSection('Accessibility', [
+          ['Ctrl+=', '2x scale mode'],
+          ['Ctrl+-', '1x scale mode'],
+          ['Ctrl+B', 'Cycle colorblind modes'],
         ])}
       </div>
     `;

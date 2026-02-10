@@ -156,6 +156,7 @@
   position: relative;
   overflow: hidden;
   background: var(--bg0);
+  transition: width var(--transition-panel), flex var(--transition-panel);
 }
 
 #pixi-canvas {
@@ -172,6 +173,7 @@
   background: var(--bg1);
   border-left: 1px solid var(--border-default);
   overflow: hidden;
+  transition: width var(--transition-panel), flex var(--transition-panel);
 }
 
 /* ── Status Bar ──────────────────────────────────────────────────────────── */

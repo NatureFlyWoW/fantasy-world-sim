@@ -48,3 +48,13 @@ button {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--n1);
 }
+
+/* Focus indicators (keyboard navigation) */
+*:focus {
+  outline: none;
+}
+
+*:focus-visible {
+  outline: 2px solid var(--au1);
+  outline-offset: 1px;
+}

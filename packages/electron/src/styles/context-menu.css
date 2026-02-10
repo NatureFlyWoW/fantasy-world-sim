@@ -1,0 +1,46 @@
+/* ============================================
+   CONTEXT-MENU.CSS — Right-click menus
+   ============================================ */
+
+.context-menu {
+  position: fixed;
+  z-index: 1000;
+  min-width: 160px;
+  background: var(--bg2);
+  border: 1px solid var(--n0);
+  padding: 4px 0;
+}
+
+.context-menu__item {
+  padding: 6px 12px;
+  color: var(--n3);
+  font-family: var(--font-body);
+  font-size: 13px;
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.context-menu__item:hover {
+  background: var(--bg3);
+  color: var(--fg, var(--n3));
+}
+
+.context-menu__item:active {
+  color: var(--au1);
+}
+
+.context-menu__item--disabled {
+  color: var(--n1);
+  cursor: not-allowed;
+}
+
+.context-menu__item--disabled:hover {
+  background: transparent;
+  color: var(--n1);
+}
+
+.context-menu__divider {
+  height: 1px;
+  background: var(--n0);
+  margin: 4px 0;
+}

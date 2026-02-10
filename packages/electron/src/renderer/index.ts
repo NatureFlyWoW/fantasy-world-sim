@@ -21,6 +21,9 @@ import { uiEvents } from './ui-events.js';
 import { ChroniclePanel } from './chronicle/chronicle-panel.js';
 import { initChargeAtlas } from './procgen/charge-atlas.js';
 import { generateIconAtlas } from './procgen/icon-atlas.js';
+import { WelcomeScreen } from './welcome-screen.js';
+import { ContextMenu } from './context-menu.js';
+import type { ContextMenuItem } from './context-menu.js';
 import type { EntityType, InspectorQuery, TickDelta, WorldSnapshot } from '../shared/types.js';
 
 // ── State ────────────────────────────────────────────────────────────────────
@@ -62,6 +65,26 @@ const overlayEl = document.getElementById('status-overlay');
 const layoutEl = document.getElementById('status-layout');
 const speedEl = document.getElementById('status-speed');
 
+// Restore scale mode from localStorage
+const savedScale = localStorage.getItem('aeternum-scale-mode');
+if (savedScale === '2') {
+  document.getElementById('app')?.classList.add('scale-2x');
+}
+
+// Colorblind mode state
+type ColorblindMode = 'none' | 'deuteranopia' | 'protanopia' | 'achromatopsia';
+const COLORBLIND_MODES: ColorblindMode[] = ['none', 'deuteranopia', 'protanopia', 'achromatopsia'];
+let colorblindMode: ColorblindMode = 'none';
+
+// Restore colorblind mode from localStorage
+const savedColorblind = localStorage.getItem('aeternum-colorblind-mode') as ColorblindMode | null;
+if (savedColorblind !== null && COLORBLIND_MODES.includes(savedColorblind)) {
+  colorblindMode = savedColorblind;
+  if (colorblindMode !== 'none') {
+    document.documentElement.classList.add(`colorblind-${colorblindMode}`);
+  }
+}
+
 // ── IPC ──────────────────────────────────────────────────────────────────────
 
 const ipc = createIpcClient();
@@ -71,6 +94,7 @@ const ipc = createIpcClient();
 const layoutManager = new LayoutManager();
 const helpOverlay = new HelpOverlay();
 const notifications = new NotificationManager();
+const contextMenu = new ContextMenu();
 
 function updateStatusBar(): void {
   tickEl.textContent = `Tick: ${totalTicks}`;
@@ -229,6 +253,38 @@ document.addEventListener('keydown', (e) => {
   // Don't intercept when typing in inputs
   const active = document.activeElement;
   if (active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement) return;
+
+  // Scale mode toggle (Ctrl+= / Ctrl+-)
+  if (e.ctrlKey && (e.key === '=' || e.key === '+')) {
+    e.preventDefault();
+    document.getElementById('app')?.classList.add('scale-2x');
+    localStorage.setItem('aeternum-scale-mode', '2');
+    window.dispatchEvent(new Event('resize'));
+    return;
+  }
+  if (e.ctrlKey && e.key === '-') {
+    e.preventDefault();
+    document.getElementById('app')?.classList.remove('scale-2x');
+    localStorage.setItem('aeternum-scale-mode', '1');
+    window.dispatchEvent(new Event('resize'));
+    return;
+  }
+
+  // Colorblind mode toggle (Ctrl+B)
+  if (e.ctrlKey && e.key === 'b') {
+    e.preventDefault();
+    if (colorblindMode !== 'none') {
+      document.documentElement.classList.remove(`colorblind-${colorblindMode}`);
+    }
+    const currentIndex = COLORBLIND_MODES.indexOf(colorblindMode);
+    colorblindMode = COLORBLIND_MODES[(currentIndex + 1) % COLORBLIND_MODES.length]!;
+    if (colorblindMode !== 'none') {
+      document.documentElement.classList.add(`colorblind-${colorblindMode}`);
+    }
+    localStorage.setItem('aeternum-colorblind-mode', colorblindMode);
+    notifications.show(`Color mode: ${colorblindMode === 'none' ? 'Default' : colorblindMode.charAt(0).toUpperCase() + colorblindMode.slice(1)}`, 'info');
+    return;
+  }
 
   switch (e.code) {
     case 'Space':
@@ -428,6 +484,9 @@ function renderLoop(): void {
 // ── Init ─────────────────────────────────────────────────────────────────────
 
 async function init(): Promise<void> {
+  const welcomeScreen = new WelcomeScreen();
+  welcomeScreen.show();
+
   const canvas = document.getElementById('pixi-canvas') as HTMLCanvasElement;
   const container = document.getElementById('map-container')!;
 
@@ -501,6 +560,35 @@ async function init(): Promise<void> {
         }
       }
     },
+    onRightClick: (wx, wy, screenX, screenY) => {
+      const items: ContextMenuItem[] = [];
+
+      const entities = tilemap.getEntitiesAt(wx, wy);
+      if (entities.length > 0) {
+        const entity = entities[0]!;
+        const type = mapEntityTypeToInspectorType(entity.type);
+        if (type !== null) {
+          items.push({
+            label: `Inspect ${entity.name}`,
+            onClick: () => {
+              void inspector.inspect({ type, id: entity.id });
+            },
+          });
+        }
+      }
+
+      items.push({
+        label: 'Center Map Here',
+        onClick: () => {
+          tilemap.getViewport().centerOn(wx, wy);
+          tilemap.markDirty();
+        },
+      });
+
+      if (items.length > 0) {
+        contextMenu.show(screenX, screenY, items);
+      }
+    },
   });
 
   // Initialize tile data provider
@@ -530,6 +618,10 @@ async function init(): Promise<void> {
   // Initialize panel focus and view navigation
   initializePanelFocus();
   initializeViewNavigation();
+
+  // Hide welcome screen now that everything is initialized
+  welcomeScreen.hide();
+  setTimeout(() => welcomeScreen.destroy(), 200);
 
   // Start render loop
   requestAnimationFrame(renderLoop);

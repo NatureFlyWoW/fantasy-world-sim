@@ -6,6 +6,8 @@
  */
 import { TILE_W, TILE_H } from './glyph-atlas.js';
 import type { Viewport } from './viewport.js';
+import { ContextMenu } from '../context-menu.js';
+import type { ContextMenuItem } from '../context-menu.js';
 
 const PAN_SPEED = 3; // tiles per keypress
 
@@ -13,6 +15,7 @@ export interface InputCallbacks {
   onDirty: () => void;
   onCycleOverlay?: () => void;
   onTileClick?: (wx: number, wy: number) => void;
+  onRightClick?: (wx: number, wy: number, screenX: number, screenY: number) => void;
 }
 
 /**
@@ -25,6 +28,8 @@ export function bindMapInput(
   callbacks: InputCallbacks,
 ): () => void {
   const { onDirty, onCycleOverlay, onTileClick } = callbacks;
+
+  const contextMenu = new ContextMenu();
 
   // ── Keyboard ──────────────────────────────────────────────────────────
 
@@ -118,6 +123,19 @@ export function bindMapInput(
     }
   }
 
+  // ── Right-click (context menu) ────────────────────────────────────────
+
+  function handleContextMenu(e: MouseEvent): void {
+    e.preventDefault();
+    if (callbacks.onRightClick === undefined) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const px = e.clientX - rect.left;
+    const py = e.clientY - rect.top;
+    const { wx, wy } = viewport.screenToWorld(px, py);
+    callbacks.onRightClick(wx, wy, e.clientX, e.clientY);
+  }
+
   // ── Bind events ───────────────────────────────────────────────────────
 
   document.addEventListener('keydown', handleKeyDown);
@@ -125,6 +143,7 @@ export function bindMapInput(
   canvas.addEventListener('mousedown', handleMouseDown);
   document.addEventListener('mousemove', handleMouseMove);
   document.addEventListener('mouseup', handleMouseUp);
+  canvas.addEventListener('contextmenu', handleContextMenu);
 
   // Return cleanup function
   return () => {
@@ -133,5 +152,7 @@ export function bindMapInput(
     canvas.removeEventListener('mousedown', handleMouseDown);
     document.removeEventListener('mousemove', handleMouseMove);
     document.removeEventListener('mouseup', handleMouseUp);
+    canvas.removeEventListener('contextmenu', handleContextMenu);
+    contextMenu.destroy();
   };
 }

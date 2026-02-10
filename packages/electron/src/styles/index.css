@@ -1,5 +1,6 @@
 /* Style imports in order */
 @import './variables.css';
+@import './animations.css';
 @import './reset.css';
 @import './typography.css';
 @import './layout.css';
@@ -9,3 +10,4 @@
 @import './inspector.css';
 @import './help.css';
 @import './toast.css';
+@import './context-menu.css';

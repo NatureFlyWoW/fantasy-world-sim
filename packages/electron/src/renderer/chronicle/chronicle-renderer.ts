@@ -1,4 +1,6 @@
 import type { ChronicleEntry } from './event-aggregator.js';
+import { ContextMenu } from '../context-menu.js';
+import type { ContextMenuItem } from '../context-menu.js';
 
 /**
  * Virtual-scroll DOM renderer for Chronicle entries.
@@ -9,6 +11,7 @@ export class ChronicleRenderer {
   private readonly contentDiv: HTMLElement;
   private readonly newEventsIndicator: HTMLElement;
   private readonly cardPool: HTMLElement[] = [];
+  private readonly contextMenu = new ContextMenu();
   private entries: readonly ChronicleEntry[] = [];
   private mode: 'prose' | 'compact' = 'prose';
   private entityNames: ReadonlyMap<number, string> = new Map();
@@ -46,6 +49,7 @@ export class ChronicleRenderer {
 
     // Event delegation for entity links
     this.scrollContainer.addEventListener('click', this.handleClick);
+    this.scrollContainer.addEventListener('contextmenu', this.handleContextMenu);
     this.scrollContainer.addEventListener('scroll', this.handleScroll);
     this.newEventsIndicator.addEventListener('click', () => this.scrollToBottom());
   }
@@ -91,6 +95,7 @@ export class ChronicleRenderer {
 
   public destroy(): void {
     this.scrollContainer.removeEventListener('click', this.handleClick);
+    this.scrollContainer.removeEventListener('contextmenu', this.handleContextMenu);
     this.scrollContainer.removeEventListener('scroll', this.handleScroll);
     this.cardPool.length = 0;
   }
@@ -171,6 +176,11 @@ export class ChronicleRenderer {
     } else {
       card.className = this.mode === 'compact' ? 'event-card event-card--compact' : 'event-card';
 
+      // Add legendary class for high significance events
+      if (entry.formatted.significanceTier === 'legendary') {
+        card.classList.add('event-card--legendary');
+      }
+
       const sigDiv = document.createElement('div');
       sigDiv.className = 'event-card__sig';
       sigDiv.setAttribute('data-tier', entry.formatted.significanceTier);
@@ -224,6 +234,49 @@ export class ChronicleRenderer {
         }
       }
     }
+  };
+
+  private readonly handleContextMenu = (e: MouseEvent): void => {
+    e.preventDefault();
+    const target = e.target as HTMLElement;
+    const card = target.closest('.event-card');
+    if (!(card instanceof HTMLElement)) return;
+
+    // Find the entry index from the card position
+    const poolIdx = this.cardPool.indexOf(card);
+    if (poolIdx === -1) return;
+
+    // Get the visible range to determine the entry
+    const { scrollTop, clientHeight } = this.scrollContainer;
+    let firstVisible = 0;
+    let left = 0;
+    let right = this.cumulativeHeights.length - 1;
+    while (left <= right) {
+      const mid = Math.floor((left + right) / 2);
+      const height = this.cumulativeHeights[mid];
+      if (height === undefined) break;
+      if (height < scrollTop) {
+        left = mid + 1;
+      } else {
+        firstVisible = mid;
+        right = mid - 1;
+      }
+    }
+    const startIdx = Math.max(0, firstVisible - 10);
+    const entryIdx = startIdx + poolIdx;
+    const entry = this.entries[entryIdx];
+    if (!entry || entry.kind !== 'event') return;
+
+    const items: ContextMenuItem[] = [
+      {
+        label: 'Inspect Event',
+        onClick: () => {
+          this.onEntityClick?.(entry.formatted.entityIds[0] ?? 0);
+        },
+      },
+    ];
+
+    this.contextMenu.show(e.clientX, e.clientY, items);
   };
 
   private readonly handleScroll = (): void => {

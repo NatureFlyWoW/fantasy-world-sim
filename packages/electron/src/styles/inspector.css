@@ -134,10 +134,14 @@
   font-size: var(--text-base);
   color: var(--text-secondary);
   line-height: 1.55;
+  overflow: hidden;
+  transition: max-height 200ms ease, opacity 150ms ease;
 }
 
 .inspector-section__body--collapsed {
-  display: none;
+  max-height: 0 !important;
+  opacity: 0;
+  padding: 0 var(--space-lg);
 }
 
 /* ── Prose blocks ──────────────────────────────────────────────────────── */

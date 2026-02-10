@@ -97,3 +97,76 @@
   --transition-slow: 250ms ease;
   --transition-panel: 200ms ease-out;
 }
+
+/* ============================================
+   2X SCALE MODE (accessibility)
+   ============================================ */
+
+.scale-2x {
+  --text-xs: 14px;
+  --text-sm: 15px;
+  --text-base: 17px;
+  --text-md: 18px;
+  --text-lg: 20px;
+  --text-xl: 22px;
+  --text-2xl: 28px;
+
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-2xl: 48px;
+}
+
+.scale-2x #pixi-canvas {
+  transform: scale(2);
+  transform-origin: top left;
+}
+
+.scale-2x #map-container {
+  overflow: hidden;
+}
+
+/* ============================================
+   COLORBLIND PALETTE MODES (accessibility)
+   ============================================ */
+
+/* Deuteranopia (green-blind): remap greens to blues */
+.colorblind-deuteranopia {
+  --ce: #40b0c8;
+  --tg: #4a7a5f;
+  --tf: #2a5f70;
+  --cg: #40b0c8;
+}
+
+/* Protanopia (red-blind): remap reds to darker shades */
+.colorblind-protanopia {
+  --cm: #8a3030;
+  --fl: #d18844;
+  --au1: #b8761a;
+  --au2: #8a5510;
+}
+
+/* Achromatopsia (total colorblind): grayscale */
+.colorblind-achromatopsia {
+  --ce: #888888;
+  --cm: #777777;
+  --fl: #999999;
+  --au1: #7a7a7a;
+  --au2: #5e5e5e;
+  --cp: #909090;
+  --cs: #808080;
+  --cr: #858585;
+  --cc: #8a8a8a;
+  --cg: #888888;
+  --cy: #909090;
+  --tw: #2a2a3a;
+  --ts: #3a3a4a;
+  --tg: #6a6a5a;
+  --tf: #4a4a3a;
+  --tm: #5a5a6a;
+  --td: #7a7a6a;
+  --fs: #d0d0d8;
+  --fm: #858585;
+}

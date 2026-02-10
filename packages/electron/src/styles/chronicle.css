@@ -91,10 +91,20 @@
   background: var(--bg-card);
   border-left: 3px solid var(--border-default);
   transition: background var(--transition-fast);
+  animation: card-enter 200ms ease-out;
 }
 
 .event-card:hover {
   background: var(--bg-hover);
+}
+
+/* Legendary events (significance >= 90) */
+.event-card--legendary {
+  border-left: 2px solid var(--au1);
+}
+
+.event-card--legendary .event-card__sig {
+  animation: legendary-pulse 2s infinite;
 }
 
 .event-card--compact {

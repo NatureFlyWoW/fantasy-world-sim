@@ -35,5 +35,10 @@ export class LayoutManager {
     if (this.current !== 'default') {
       this.appEl.classList.add(`layout--${this.current}`);
     }
+
+    // Defer canvas resize until CSS transition completes (200ms + buffer)
+    setTimeout(() => {
+      window.dispatchEvent(new Event('resize'));
+    }, 220);
   }
 }

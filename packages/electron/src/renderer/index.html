@@ -13,7 +13,7 @@
 <body>
   <div id="app">
     <!-- Top Bar -->
-    <header id="topbar">
+    <header id="topbar" role="banner">
       <div class="topbar__logo">AETERNUM</div>
 
       <!-- View Navigation Tabs -->
@@ -24,38 +24,38 @@
 
       <!-- Date Display -->
       <div class="topbar__date">
-        <span id="date-display">Year 1, 1st Moon</span>
+        <span id="date-display" role="timer" aria-live="polite">Year 1, 1st Moon</span>
       </div>
 
       <!-- Speed Controls -->
-      <div class="topbar__speed-controls">
-        <button id="btn-pause" class="speed-btn speed-btn--pause" title="Pause">
+      <nav class="topbar__speed-controls" aria-label="Simulation controls">
+        <button id="btn-pause" class="speed-btn speed-btn--pause" title="Pause" aria-label="Pause simulation">
           <span class="speed-btn__icon">⏸</span>
           <span class="speed-btn__label">Pause</span>
         </button>
-        <button id="btn-speed-1" class="speed-btn speed-btn--1x speed-btn--active" title="Normal Speed (1 tick/sec)">
+        <button id="btn-speed-1" class="speed-btn speed-btn--1x speed-btn--active" title="Normal Speed (1 tick/sec)" aria-label="Normal speed">
           <span class="speed-btn__icon">▶</span>
           <span class="speed-btn__label">1×</span>
         </button>
-        <button id="btn-speed-7" class="speed-btn speed-btn--7x" title="Fast (7 ticks/sec)">
+        <button id="btn-speed-7" class="speed-btn speed-btn--7x" title="Fast (7 ticks/sec)" aria-label="Fast speed">
           <span class="speed-btn__icon">▶▶</span>
           <span class="speed-btn__label">7×</span>
         </button>
-        <button id="btn-speed-30" class="speed-btn speed-btn--30x" title="Very Fast (30 ticks/sec)">
+        <button id="btn-speed-30" class="speed-btn speed-btn--30x" title="Very Fast (30 ticks/sec)" aria-label="Very fast speed">
           <span class="speed-btn__icon">⏩</span>
           <span class="speed-btn__label">30×</span>
         </button>
-        <button id="btn-speed-365" class="speed-btn speed-btn--365x" title="Hyperspeed (365 ticks/sec)">
+        <button id="btn-speed-365" class="speed-btn speed-btn--365x" title="Hyperspeed (365 ticks/sec)" aria-label="Hyperspeed">
           <span class="speed-btn__icon">⚡</span>
           <span class="speed-btn__label">365×</span>
         </button>
-      </div>
+      </nav>
     </header>
 
     <!-- Main content: Map + Panels -->
     <main id="content">
       <div id="map-container">
-        <canvas id="pixi-canvas"></canvas>
+        <canvas id="pixi-canvas" aria-label="World map"></canvas>
       </div>
       <aside id="panel-column">
         <div class="panel" id="event-log-panel">
@@ -79,7 +79,7 @@
     </main>
 
     <!-- Status Bar -->
-    <footer id="statusbar">
+    <footer id="statusbar" role="status" aria-live="polite">
       <span class="status-item" id="status-tick">Tick: 0</span>
       <span class="status-separator">|</span>
       <span class="status-item" id="status-entities">Entities: 0</span>
