@@ -25,7 +25,7 @@ Procedural fantasy world simulator inspired by Dwarf Fortress Legends Mode. Gene
 - `@fws/renderer` — Terminal ASCII UI (blessed): 8 panels, 5 layouts, 30fps
 - `@fws/narrative` — 281 templates, 5 tones, chronicler system, vignettes
 - `@fws/cli` — Entry point, controls, influence system, save/load
-- `@fws/electron` — Electron + PixiJS graphical frontend (Phase 9, in progress)
+- `@fws/electron` — Electron + PixiJS graphical frontend (primary renderer)
 
 ## Conventions
 - **TypeScript**: Strict mode, no `any`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, `verbatimModuleSyntax`
@@ -58,8 +58,10 @@ pnpm run start:electron  # Launch Electron graphical UI
 - **5**: Narrative engine (281 templates, 5 tones, chronicler, vignettes)
 - **6**: Simulation controls, influence system (17 actions, 3 categories, IP economy)
 - **7**: World fingerprint, timeline branching, save/load, heraldry, dreaming
-- **8 (COMPLETE)**: UX Overhaul — prose-first chronicle (4 modes, aggregation, region filter), 6 polymorphic inspectors (Character/Faction/Site/Artifact/Event/Region), dynamic map overlays (6 layers, 7 presets, territory flood-fill, trade routes), click-to-inspect navigation
-- **9 (IN PROGRESS)**: Graphics Overhaul — Electron + PixiJS frontend. Phase 0: package structure, IPC bridge, CSS Grid layout, PixiJS canvas mount. Phase 1: glyph atlas, biome tilemap rendering, viewport pan/zoom, overlays (Political/Climate), tooltips, entity markers
+- **8**: UX Overhaul — prose-first chronicle (4 modes, aggregation, region filter), 6 polymorphic inspectors (Character/Faction/Site/Artifact/Event/Region), dynamic map overlays (6 layers, 7 presets, territory flood-fill, trade routes), click-to-inspect navigation
+- **9 (COMPLETE)**: Graphics Overhaul — Electron + PixiJS frontend (primary renderer). IPC bridge, CSS Grid, PixiJS tilemap, pan/zoom, overlays, entity markers, panel chrome, world animations, procedural art (heraldry, tile variants, icon atlas), final polish & accessibility
+- **10 (IN PROGRESS)**: Code Improvement — Split entity-inspector.ts monolith, extract world/engine factories, data-driven InfluenceSystem, type block extraction, shared algorithm deduplication. Design: `docs/plans/2026-02-10-post-phase9-code-improvement-design.md`
+- **11 (PLANNED)**: Code Review — Post-improvement review and validation
 
 ## Common Pitfalls
 - `TerrainTile` has NO `freshwater` — use `tile.riverId !== undefined`
