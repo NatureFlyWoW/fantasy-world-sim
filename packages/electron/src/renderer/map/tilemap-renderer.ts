@@ -5,7 +5,7 @@
  * viewport. On each frame, updates textures and tints based on the world tile
  * data and current viewport position/zoom.
  */
-import { Container, Sprite, Graphics } from 'pixi.js';
+import { Container, Sprite, Graphics, ColorMatrixFilter } from 'pixi.js';
 import { TILE_W, TILE_H, glyphIndex, getGlyphTexture, initGlyphAtlas } from './glyph-atlas.js';
 import { Viewport } from './viewport.js';
 import { BIOME_CONFIGS, ENTITY_MARKERS, selectGlyph } from './biome-config.js';
@@ -85,12 +85,23 @@ export class TilemapRenderer {
   private lastCenterY = -1;
   private lastZoom = -1;
 
+  // Animation tick counter (15fps cadence)
+  private animationTick = 0;
+  private framesSinceAnimationTick = 0;
+
+  // Seasonal color filter
+  private readonly seasonalFilter = new ColorMatrixFilter();
+  private currentSeason = 'Summer';
+
   constructor() {
     this.container.addChild(this.bgLayer);
     this.container.addChild(this.glyphLayer);
     this.container.addChild(this.routeLayer);
     this.container.addChild(this.markerLayer);
     this.container.addChild(this.highlightLayer);
+
+    // Apply seasonal filter to entire map container
+    this.container.filters = [this.seasonalFilter];
   }
 
   /** The PixiJS container to add to stage */
@@ -183,7 +194,57 @@ export class TilemapRenderer {
       }
     }
 
+    // Update seasonal filter based on current month
+    this.updateSeasonalFilter(delta.time.month);
+
     this.dirty = true;
+  }
+
+  /** Update seasonal color filter based on month */
+  private updateSeasonalFilter(month: number): void {
+    let season: string;
+    if (month >= 1 && month <= 3) {
+      season = 'Spring';
+    } else if (month >= 4 && month <= 6) {
+      season = 'Summer';
+    } else if (month >= 7 && month <= 9) {
+      season = 'Autumn';
+    } else {
+      season = 'Winter';
+    }
+
+    // Only update filter if season changed
+    if (season === this.currentSeason) return;
+    this.currentSeason = season;
+
+    // Reset to identity matrix
+    this.seasonalFilter.reset();
+
+    switch (season) {
+      case 'Spring':
+        this.seasonalFilter.saturate(1.1);       // +10% saturation
+        this.seasonalFilter.hue(-5, false);      // -5° hue shift
+        this.seasonalFilter.brightness(1.05, false);  // +5% brightness
+        break;
+
+      case 'Summer':
+        // Baseline — no adjustments (identity matrix already applied via reset)
+        break;
+
+      case 'Autumn':
+        this.seasonalFilter.saturate(0.85);      // -15% saturation
+        this.seasonalFilter.hue(25, false);      // +25° hue shift (warmer)
+        this.seasonalFilter.brightness(0.95, false);  // -5% brightness
+        break;
+
+      case 'Winter':
+        this.seasonalFilter.saturate(0.65);      // -35% saturation (desaturated)
+        this.seasonalFilter.hue(-10, false);     // -10° hue shift (cooler)
+        this.seasonalFilter.brightness(1.1, false);   // +10% brightness (snowy glare)
+        break;
+    }
+
+    console.log(`[TilemapRenderer] Season changed to ${season} (month ${month})`);
   }
 
   /** Get accumulated events for a tile position */
@@ -198,6 +259,14 @@ export class TilemapRenderer {
 
   /** Main render call — invoke from requestAnimationFrame */
   render(): void {
+    // Increment animation tick at 15fps (every 4 frames at 60fps)
+    this.framesSinceAnimationTick++;
+    if (this.framesSinceAnimationTick >= 4) {
+      this.animationTick++;
+      this.framesSinceAnimationTick = 0;
+      this.dirty = true;  // Mark dirty on animation tick boundaries
+    }
+
     if (!this.dirty && !this.viewportChanged()) return;
 
     this.dirty = false;
@@ -300,14 +369,46 @@ export class TilemapRenderer {
     let bgColor = config.bg;
     let fgColor = config.fg;
 
+    // Lava pulse: Volcano tiles cycle foreground color
+    if (tileData.biome === 'Volcano') {
+      const lavaFrame = Math.floor(this.animationTick / 22) % 2;
+      fgColor = lavaFrame === 0 ? '#e04020' : '#c9a84c';  // FL ↔ AU2
+    }
+
+    // Magic shimmer: MagicWasteland biome
+    if (tileData.biome === 'MagicWasteland') {
+      const magicFrame = Math.floor(this.animationTick / 45) % 2;
+      fgColor = magicFrame === 0 ? '#9040cc' : '#b87acc';  // FM ↔ CR
+    }
+
     // River overlay
     let char: string;
     if (tileData.riverId !== undefined) {
       char = '~';
       fgColor = '#2868a0'; // TS
     } else {
-      const noise = tileNoise(wx, wy, this.seed);
-      char = selectGlyph(config, noise);
+      // Check if biome is animated (water shimmer)
+      const isAnimated = (
+        tileData.biome === 'Ocean' ||
+        tileData.biome === 'DeepOcean' ||
+        tileData.biome === 'Coast'
+      );
+
+      if (isAnimated) {
+        // Water shimmer: cycle between 2 glyphs every 2 seconds (30 ticks at 15fps)
+        const waterFrame = Math.floor(this.animationTick / 30) % 2;
+
+        if (tileData.biome === 'Ocean') {
+          char = waterFrame === 0 ? '\u2248' : '~';  // ≈ ↔ ~
+        } else if (tileData.biome === 'DeepOcean') {
+          char = waterFrame === 0 ? '\u2248' : '\u223C';  // ≈ ↔ ∼
+        } else {  // Coast
+          char = waterFrame === 0 ? '~' : '.';  // ~ ↔ .
+        }
+      } else {
+        const noise = tileNoise(wx, wy, this.seed);
+        char = selectGlyph(config, noise);
+      }
     }
 
     // Apply overlay modification
@@ -317,6 +418,12 @@ export class TilemapRenderer {
         if (mod.bg !== undefined) bgColor = mod.bg;
         if (mod.fg !== undefined) fgColor = mod.fg;
       }
+    }
+
+    // Ley line shimmer (overrides other foreground colors when active)
+    if (tileData.leyLine === true) {
+      const magicFrame = Math.floor(this.animationTick / 45) % 2;
+      fgColor = magicFrame === 0 ? '#9040cc' : '#b87acc';  // FM ↔ CR
     }
 
     tile.bg.clear().rect(0, 0, TILE_W, TILE_H).fill({ color: hexToNum(bgColor) });
@@ -410,8 +517,14 @@ export class TilemapRenderer {
       const screenPos = this.viewport.worldToScreen(entity.x, entity.y);
       if (screenPos === null) continue;
 
-      // Use directional arrow for moving armies
+      // Flag waving for capitals
       let char = markerConfig.char;
+      if (entity.type === 'capital') {
+        const flagFrame = Math.floor(this.animationTick / 15) % 2;
+        char = flagFrame === 0 ? '\u2691' : '\u2690';  // ⚑ ↔ ⚐
+      }
+
+      // Use directional arrow for moving armies
       if (entity.type === 'army' && entity.movementDirection !== undefined && entity.movementDirection !== 'stationary') {
         char = TilemapRenderer.DIRECTION_ARROWS[entity.movementDirection] ?? markerConfig.char;
       }
