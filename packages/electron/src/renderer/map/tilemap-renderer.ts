@@ -230,9 +230,9 @@ export class TilemapRenderer {
 
     switch (season) {
       case 'Spring':
-        this.seasonalFilter.saturate(1.1);       // +10% saturation
-        this.seasonalFilter.hue(-5, false);      // -5° hue shift
-        this.seasonalFilter.brightness(1.05, false);  // +5% brightness
+        this.seasonalFilter.saturate(1.1);        // +10% saturation
+        this.seasonalFilter.hue(-5, true);        // -5° hue shift (compose)
+        this.seasonalFilter.brightness(1.05, true);   // +5% brightness (compose)
         break;
 
       case 'Summer':
@@ -240,15 +240,15 @@ export class TilemapRenderer {
         break;
 
       case 'Autumn':
-        this.seasonalFilter.saturate(0.85);      // -15% saturation
-        this.seasonalFilter.hue(25, false);      // +25° hue shift (warmer)
-        this.seasonalFilter.brightness(0.95, false);  // -5% brightness
+        this.seasonalFilter.saturate(0.85);       // -15% saturation
+        this.seasonalFilter.hue(25, true);        // +25° hue shift (compose)
+        this.seasonalFilter.brightness(0.95, true);   // -5% brightness (compose)
         break;
 
       case 'Winter':
-        this.seasonalFilter.saturate(0.65);      // -35% saturation (desaturated)
-        this.seasonalFilter.hue(-10, false);     // -10° hue shift (cooler)
-        this.seasonalFilter.brightness(1.1, false);   // +10% brightness (snowy glare)
+        this.seasonalFilter.saturate(0.65);       // -35% saturation (compose)
+        this.seasonalFilter.hue(-10, true);       // -10° hue shift (compose)
+        this.seasonalFilter.brightness(1.1, true);    // +10% brightness (compose)
         break;
     }
 
