@@ -3,7 +3,7 @@
  */
 #app {
   display: grid;
-  grid-template-rows: 36px 1fr 24px;
+  grid-template-rows: 48px 1fr 24px;
   grid-template-columns: 1fr minmax(420px, 35%);
   grid-template-areas:
     "topbar   topbar"
@@ -18,54 +18,131 @@
 
 #topbar {
   grid-area: topbar;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--n0);
   display: flex;
   align-items: center;
-  gap: var(--space-xl);
-  padding: 0 var(--space-xl);
-  background: var(--bg0);
-  border-bottom: 1px solid var(--border-default);
+  justify-content: space-between;
+  padding: 0 16px;
+  height: 48px;
+  gap: 24px;
 }
 
-.topbar-logo {
+/* Logo */
+.topbar__logo {
   font-family: var(--font-display);
-  font-size: var(--text-lg);
+  font-size: 18px;
   font-weight: 700;
-  color: var(--au2);
+  color: var(--au1);
   letter-spacing: 0.15em;
+  text-transform: uppercase;
 }
 
-.topbar-date {
-  font-family: var(--font-mono);
-  font-size: var(--text-sm);
-  color: var(--text-secondary);
-}
-
-.topbar-controls {
-  margin-left: auto;
+/* View Navigation Tabs */
+.topbar__view-nav {
   display: flex;
-  gap: var(--space-sm);
+  gap: 4px;
+}
+
+.view-tab {
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--pa2);
+  background: transparent;
+  border: none;
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: color var(--transition-fast), background var(--transition-fast);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.view-tab:hover {
+  color: var(--pa1);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.view-tab--active {
+  color: var(--n3);
+  background: var(--bg1);
+  border-bottom: 2px solid var(--au1);
+}
+
+/* Date Display */
+.topbar__date {
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--pa1);
+  flex: 1;
+  text-align: center;
+}
+
+/* Speed Controls */
+.topbar__speed-controls {
+  display: flex;
+  gap: 8px;
 }
 
 .speed-btn {
-  width: 28px;
-  height: 28px;
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--n2);
+  background: var(--bg1);
+  border: 1px solid var(--n0);
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
   display: flex;
   align-items: center;
-  justify-content: center;
-  border-radius: 4px;
-  font-size: var(--text-md);
-  color: var(--text-secondary);
-  transition: background var(--transition-fast), color var(--transition-fast);
+  gap: 6px;
 }
 
 .speed-btn:hover {
-  background: var(--bg3);
-  color: var(--text-primary);
+  background: var(--bg2);
+  border-color: var(--n1);
 }
 
-.speed-btn.active {
+.speed-btn__icon {
+  font-size: 14px;
+}
+
+.speed-btn__label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+/* Speed Tier Coloring (when active) */
+.speed-btn--pause.speed-btn--active {
+  background: var(--cm);
+  border-color: var(--cm);
+  color: var(--n3);
+}
+
+.speed-btn--1x.speed-btn--active {
   background: var(--au0);
-  color: var(--au2);
+  border-color: var(--au0);
+  color: var(--n3);
+}
+
+.speed-btn--7x.speed-btn--active {
+  background: var(--au1);
+  border-color: var(--au1);
+  color: var(--n3);
+}
+
+.speed-btn--30x.speed-btn--active {
+  background: var(--au2);
+  border-color: var(--au2);
+  color: var(--n3);
+}
+
+.speed-btn--365x.speed-btn--active {
+  background: var(--cp);
+  border-color: var(--cp);
+  color: var(--n3);
 }
 
 /* ── Map Container ───────────────────────────────────────────────────────── */
@@ -153,7 +230,7 @@
 /* Split: horizontal stacking — map top, panels bottom */
 .layout--split {
   grid-template-columns: 1fr;
-  grid-template-rows: 36px 1fr 1fr 24px;
+  grid-template-rows: 48px 1fr 1fr 24px;
   grid-template-areas:
     "topbar"
     "map"

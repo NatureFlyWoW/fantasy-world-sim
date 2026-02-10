@@ -14,12 +14,41 @@
   <div id="app">
     <!-- Top Bar -->
     <header id="topbar">
-      <div class="topbar-logo">AETERNUM</div>
-      <div class="topbar-date" id="date-display">Year 1, Month 1, Day 1</div>
-      <div class="topbar-controls">
-        <button class="speed-btn" id="btn-pause" title="Pause">&#x23F8;</button>
-        <button class="speed-btn" id="btn-play" title="Play">&#x25B6;</button>
-        <button class="speed-btn" id="btn-fast" title="Fast (7x)">&#x23E9;</button>
+      <div class="topbar__logo">AETERNUM</div>
+
+      <!-- View Navigation Tabs -->
+      <div class="topbar__view-nav">
+        <button class="view-tab view-tab--active" data-view="map">Map</button>
+        <button class="view-tab" data-view="chronicle">Chronicle</button>
+      </div>
+
+      <!-- Date Display -->
+      <div class="topbar__date">
+        <span id="date-display">Year 1, 1st Moon</span>
+      </div>
+
+      <!-- Speed Controls -->
+      <div class="topbar__speed-controls">
+        <button id="btn-pause" class="speed-btn speed-btn--pause" title="Pause">
+          <span class="speed-btn__icon">⏸</span>
+          <span class="speed-btn__label">Pause</span>
+        </button>
+        <button id="btn-speed-1" class="speed-btn speed-btn--1x speed-btn--active" title="Normal Speed (1 tick/sec)">
+          <span class="speed-btn__icon">▶</span>
+          <span class="speed-btn__label">1×</span>
+        </button>
+        <button id="btn-speed-7" class="speed-btn speed-btn--7x" title="Fast (7 ticks/sec)">
+          <span class="speed-btn__icon">▶▶</span>
+          <span class="speed-btn__label">7×</span>
+        </button>
+        <button id="btn-speed-30" class="speed-btn speed-btn--30x" title="Very Fast (30 ticks/sec)">
+          <span class="speed-btn__icon">⏩</span>
+          <span class="speed-btn__label">30×</span>
+        </button>
+        <button id="btn-speed-365" class="speed-btn speed-btn--365x" title="Hyperspeed (365 ticks/sec)">
+          <span class="speed-btn__icon">⚡</span>
+          <span class="speed-btn__label">365×</span>
+        </button>
       </div>
     </header>
 
@@ -41,7 +70,7 @@
         </div>
         <div class="panel-divider" id="panel-divider"></div>
         <div class="panel" id="inspector-panel">
-          <div class="panel-titlebar">Inspector</div>
+          <div class="panel-titlebar"><span>Inspector</span></div>
           <div class="panel-content">
             <div class="panel-placeholder">Select an entity to inspect...</div>
           </div>

@@ -52,8 +52,10 @@ const eventsEl = document.getElementById('status-events')!;
 const fpsEl = document.getElementById('status-fps')!;
 const dateEl = document.getElementById('date-display')!;
 const btnPause = document.getElementById('btn-pause')!;
-const btnPlay = document.getElementById('btn-play')!;
-const btnFast = document.getElementById('btn-fast')!;
+const btnSpeed1 = document.getElementById('btn-speed-1')!;
+const btnSpeed7 = document.getElementById('btn-speed-7')!;
+const btnSpeed30 = document.getElementById('btn-speed-30')!;
+const btnSpeed365 = document.getElementById('btn-speed-365')!;
 const overlayEl = document.getElementById('status-overlay');
 const layoutEl = document.getElementById('status-layout');
 const speedEl = document.getElementById('status-speed');
@@ -75,11 +77,35 @@ function updateStatusBar(): void {
 }
 
 function updateSpeedButtons(): void {
-  btnPause.classList.toggle('active', paused);
-  btnPlay.classList.toggle('active', !paused && speed === 1);
-  btnFast.classList.toggle('active', !paused && speed > 1);
+  // Remove active class from all buttons
+  btnPause.classList.remove('speed-btn--active');
+  btnSpeed1.classList.remove('speed-btn--active');
+  btnSpeed7.classList.remove('speed-btn--active');
+  btnSpeed30.classList.remove('speed-btn--active');
+  btnSpeed365.classList.remove('speed-btn--active');
+
+  // Add active class to current button
+  if (paused) {
+    btnPause.classList.add('speed-btn--active');
+  } else {
+    switch (speed) {
+      case 1:
+        btnSpeed1.classList.add('speed-btn--active');
+        break;
+      case 7:
+        btnSpeed7.classList.add('speed-btn--active');
+        break;
+      case 30:
+        btnSpeed30.classList.add('speed-btn--active');
+        break;
+      case 365:
+        btnSpeed365.classList.add('speed-btn--active');
+        break;
+    }
+  }
+
   if (speedEl !== null) {
-    speedEl.textContent = paused ? 'Speed: Paused' : `Speed: ${speed}x`;
+    speedEl.textContent = paused ? 'Speed: Paused' : `Speed: ${speed}×`;
   }
 }
 
@@ -114,10 +140,19 @@ function mapEntityTypeToInspectorType(type: EntityType): InspectorQuery['type'] 
 
 // ── Tick handling ─────────────────────────────────────────────────────────────
 
+/**
+ * Format month number as ordinal (1 → "1st", 2 → "2nd", etc.)
+ */
+function getOrdinalSuffix(n: number): string {
+  const s = ['th', 'st', 'nd', 'rd'];
+  const v = n % 100;
+  return n + (s[(v - 20) % 10] || s[v] || s[0]);
+}
+
 function handleTickDelta(delta: TickDelta): void {
   totalTicks = delta.tick;
   totalEvents += delta.events.length;
-  dateEl.textContent = `Year ${delta.time.year}, Month ${delta.time.month}, Day ${delta.time.day}`;
+  dateEl.textContent = `Year ${delta.time.year}, ${getOrdinalSuffix(delta.time.month)} Moon`;
   updateStatusBar();
   tilemap.handleTickDelta(delta);
 
@@ -150,26 +185,40 @@ function handleTickDelta(delta: TickDelta): void {
 
 // ── Controls ─────────────────────────────────────────────────────────────────
 
+/**
+ * Set simulation speed and update button states
+ */
+function setSpeed(newSpeed: 'pause' | 1 | 7 | 30 | 365): void {
+  if (newSpeed === 'pause') {
+    paused = true;
+    ipc.sendCommand({ type: 'pause' });
+  } else {
+    paused = false;
+    speed = newSpeed;
+    ipc.sendCommand({ type: 'resume' });
+    ipc.sendCommand({ type: 'set-speed', ticksPerSecond: newSpeed });
+  }
+  updateSpeedButtons();
+}
+
 btnPause.addEventListener('click', () => {
-  paused = true;
-  ipc.sendCommand({ type: 'pause' });
-  updateSpeedButtons();
+  setSpeed('pause');
 });
 
-btnPlay.addEventListener('click', () => {
-  paused = false;
-  speed = 1;
-  ipc.sendCommand({ type: 'resume' });
-  ipc.sendCommand({ type: 'set-speed', ticksPerSecond: 1 });
-  updateSpeedButtons();
+btnSpeed1.addEventListener('click', () => {
+  setSpeed(1);
 });
 
-btnFast.addEventListener('click', () => {
-  paused = false;
-  speed = 7;
-  ipc.sendCommand({ type: 'resume' });
-  ipc.sendCommand({ type: 'set-speed', ticksPerSecond: 7 });
-  updateSpeedButtons();
+btnSpeed7.addEventListener('click', () => {
+  setSpeed(7);
+});
+
+btnSpeed30.addEventListener('click', () => {
+  setSpeed(30);
+});
+
+btnSpeed365.addEventListener('click', () => {
+  setSpeed(365);
 });
 
 // ── Keyboard ─────────────────────────────────────────────────────────────────
@@ -183,9 +232,10 @@ document.addEventListener('keydown', (e) => {
     case 'Space':
       e.preventDefault();
       if (paused) {
-        btnPlay.click();
+        // Resume at last known speed (default to 1 if paused from start)
+        setSpeed(speed === 1 || speed === 7 || speed === 30 || speed === 365 ? speed : 1);
       } else {
-        btnPause.click();
+        setSpeed('pause');
       }
       break;
 
@@ -237,6 +287,99 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
+// ============================================
+// PANEL FOCUS TRACKING
+// ============================================
+
+let currentFocusedPanel: string | null = null;
+
+/**
+ * Set which panel has focus
+ */
+function setPanelFocus(panelId: 'chronicle' | 'inspector' | 'map' | null): void {
+  // Remove focus from all panels
+  document.querySelectorAll('.panel').forEach((panel) => {
+    panel.classList.remove('panel--focused');
+  });
+
+  // Add focus to target panel
+  if (panelId !== null) {
+    let targetPanel: Element | null = null;
+    if (panelId === 'chronicle') {
+      targetPanel = document.getElementById('event-log-panel');
+    } else if (panelId === 'inspector') {
+      targetPanel = document.getElementById('inspector-panel');
+    }
+    // Map doesn't use .panel class, so no focus styling
+
+    if (targetPanel !== null) {
+      targetPanel.classList.add('panel--focused');
+      currentFocusedPanel = panelId;
+    }
+  } else {
+    currentFocusedPanel = null;
+  }
+}
+
+/**
+ * Initialize panel focus handlers
+ */
+function initializePanelFocus(): void {
+  // Chronicle panel title bar click
+  const chronicleTitleBar = document.querySelector('#event-log-panel .panel-titlebar');
+  chronicleTitleBar?.addEventListener('click', () => {
+    setPanelFocus('chronicle');
+  });
+
+  // Inspector panel title bar click
+  const inspectorTitleBar = document.querySelector('#inspector-panel .panel-titlebar');
+  inspectorTitleBar?.addEventListener('click', () => {
+    setPanelFocus('inspector');
+  });
+
+  // Map panel canvas click
+  const mapCanvas = document.getElementById('pixi-canvas');
+  mapCanvas?.addEventListener('click', () => {
+    setPanelFocus('map');
+  });
+
+  // Set initial focus to Chronicle
+  setPanelFocus('chronicle');
+}
+
+// ============================================
+// VIEW NAVIGATION TABS
+// ============================================
+
+/**
+ * Switch between Map and Chronicle view focus
+ */
+function setViewFocus(view: 'map' | 'chronicle'): void {
+  // Update tab states
+  document.querySelectorAll('.view-tab').forEach((tab) => {
+    tab.classList.remove('view-tab--active');
+  });
+  document.querySelector(`.view-tab[data-view="${view}"]`)?.classList.add('view-tab--active');
+
+  // Set panel focus
+  setPanelFocus(view);
+}
+
+/**
+ * Initialize view navigation handlers
+ */
+function initializeViewNavigation(): void {
+  document.querySelectorAll('.view-tab').forEach((tab) => {
+    tab.addEventListener('click', (e) => {
+      const target = e.currentTarget as HTMLElement;
+      const view = target.dataset.view as 'map' | 'chronicle' | undefined;
+      if (view !== undefined) {
+        setViewFocus(view);
+      }
+    });
+  });
+}
+
 // ── UI Event Bus ─────────────────────────────────────────────────────────────
 
 // Inspector placeholder (set in init)
@@ -259,7 +402,18 @@ function renderLoop(): void {
   frameCount++;
   const now = performance.now();
   if (now - lastFpsTime >= 1000) {
-    fpsEl.textContent = `FPS: ${frameCount}`;
+    const fps = frameCount;
+    fpsEl.textContent = `FPS: ${fps}`;
+
+    // Color based on performance tier
+    if (fps >= 30) {
+      fpsEl.style.color = 'var(--cg)'; // Green
+    } else if (fps >= 15) {
+      fpsEl.style.color = 'var(--cy)'; // Yellow
+    } else {
+      fpsEl.style.color = 'var(--cm)'; // Red
+    }
+
     frameCount = 0;
     lastFpsTime = now;
   }
@@ -366,6 +520,10 @@ async function init(): Promise<void> {
   updateSpeedButtons();
   updateOverlayStatus();
   updateLayoutStatus();
+
+  // Initialize panel focus and view navigation
+  initializePanelFocus();
+  initializeViewNavigation();
 
   // Start render loop
   requestAnimationFrame(renderLoop);

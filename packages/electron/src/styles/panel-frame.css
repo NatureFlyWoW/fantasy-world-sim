@@ -11,15 +11,70 @@
 
 .panel-titlebar {
   flex-shrink: 0;
-  padding: var(--space-sm) var(--space-md);
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 12px;
   font-family: var(--font-display);
-  font-size: var(--text-sm);
-  font-weight: 700;
-  letter-spacing: 0.1em;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: var(--au2);
-  background: var(--bg2);
-  border-bottom: 1px solid var(--border-default);
+  color: var(--pa1);
+  /* Gradient background: BG2 → BG1 top to bottom */
+  background: linear-gradient(
+    to bottom,
+    var(--bg2) 0%,
+    var(--bg1) 100%
+  );
+  border-bottom: 1px solid var(--n0);
+  cursor: pointer; /* Clickable for focus */
+  user-select: none;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+/* Title bar text with gold line accents */
+.panel-titlebar > span:first-child {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Gold line accent before title */
+.panel-titlebar > span:first-child::before {
+  content: '';
+  display: inline-block;
+  width: 16px;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--au1) 100%
+  );
+}
+
+/* Gold line accent after title */
+.panel-titlebar > span:first-child::after {
+  content: '';
+  display: inline-block;
+  width: 16px;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    var(--au1) 0%,
+    transparent 100%
+  );
+}
+
+/* Chronicle titlebar has mode tabs, so handle differently */
+.panel-titlebar--chronicle {
+  justify-content: space-between;
+}
+
+.panel-titlebar--chronicle > span:first-child::before,
+.panel-titlebar--chronicle > span:first-child::after {
+  display: none; /* Don't add lines when tabs are present */
 }
 
 .panel-content {
@@ -48,4 +103,137 @@
 
 .panel-divider:hover {
   background: var(--au1);
+}
+
+/* ============================================
+   PANEL CORNER ORNAMENTS
+   ============================================ */
+
+/* Container for corners - only on Chronicle and Inspector */
+#event-log-panel,
+#inspector-panel {
+  position: relative;
+  border: 1px solid var(--n0);
+}
+
+/* Top-left corner */
+#event-log-panel::before,
+#inspector-panel::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: -1px;
+  width: 24px;
+  height: 24px;
+  border-top: 2px solid var(--au1);
+  border-left: 2px solid var(--au1);
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* Top-right corner (mirrored horizontally) */
+#event-log-panel::after,
+#inspector-panel::after {
+  content: '';
+  position: absolute;
+  top: -1px;
+  right: -1px;
+  width: 24px;
+  height: 24px;
+  border-top: 2px solid var(--au1);
+  border-right: 2px solid var(--au1);
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* Bottom corners require wrapper element */
+/* Add .panel-content::before and ::after for bottom corners */
+#event-log-panel .panel-content,
+#inspector-panel .panel-content {
+  position: relative;
+}
+
+#event-log-panel .panel-content::before,
+#inspector-panel .panel-content::before {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: -1px;
+  width: 24px;
+  height: 24px;
+  border-bottom: 2px solid var(--au1);
+  border-left: 2px solid var(--au1);
+  pointer-events: none;
+  z-index: 10;
+}
+
+#event-log-panel .panel-content::after,
+#inspector-panel .panel-content::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  right: -1px;
+  width: 24px;
+  height: 24px;
+  border-bottom: 2px solid var(--au1);
+  border-right: 2px solid var(--au1);
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* ============================================
+   PANEL FOCUS STATES
+   ============================================ */
+
+/* Default: no box-shadow */
+.panel {
+  box-shadow: none;
+  transition: box-shadow var(--transition-fast);
+}
+
+/* Focused panel: subtle inset glow */
+.panel--focused {
+  box-shadow: inset 0 0 0 1px rgba(139, 105, 20, 0.3);
+}
+
+/* Focused panel: brighter gradient + white title */
+.panel--focused .panel-titlebar {
+  background: linear-gradient(
+    to bottom,
+    #2a2a34 0%,
+    var(--bg2) 100%
+  );
+  color: var(--n3);
+}
+
+/* ============================================
+   CUSTOM SCROLLBARS
+   ============================================ */
+
+.panel-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.panel-content::-webkit-scrollbar-track {
+  background: var(--bg1);
+}
+
+.panel-content::-webkit-scrollbar-thumb {
+  background: var(--n0);
+  border-radius: 0;
+  transition: background var(--transition-fast);
+}
+
+.panel-content::-webkit-scrollbar-thumb:hover {
+  background: var(--n1);
+}
+
+.panel-content::-webkit-scrollbar-thumb:active {
+  background: var(--au1);
+}
+
+/* Firefox scrollbar support */
+.panel-content {
+  scrollbar-width: thin;
+  scrollbar-color: var(--n0) var(--bg1);
 }

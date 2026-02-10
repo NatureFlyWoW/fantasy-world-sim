@@ -25,6 +25,7 @@
   /* Parchment */
   --pa0: #8a7856;
   --pa1: #c9b896;
+  --pa2: #a39678;
 
   /* World - Terrain */
   --tw: #1a3860;
@@ -46,6 +47,10 @@
   --cs: #6888c8;
   --cr: #b87acc;
   --cc: #40b0c8;
+
+  /* Performance colors */
+  --cg: #3aad6a; /* Green - alias for --ce */
+  --cy: #d4a832; /* Yellow - alias for --cp */
 
   /* ===== SEMANTIC ALIASES ===== */
   --text-primary: var(--n3);
