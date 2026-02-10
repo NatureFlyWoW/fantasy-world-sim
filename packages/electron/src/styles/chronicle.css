@@ -1,0 +1,268 @@
+/**
+ * Chronicle panel — event stream, mode tabs, virtual scroll.
+ * BEM naming. All colors from variables.css.
+ */
+
+/* ── Titlebar override for mode tabs ────────────────────────────────────── */
+
+.panel-titlebar--chronicle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.chronicle-mode-tabs {
+  display: flex;
+  gap: var(--space-xs);
+  margin-left: auto;
+}
+
+.chronicle-mode-tab {
+  padding: var(--space-xs) var(--space-md);
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: color var(--transition-fast), border-color var(--transition-fast);
+}
+
+.chronicle-mode-tab:hover {
+  color: var(--text-secondary);
+  border-color: var(--border-default);
+}
+
+.chronicle-mode-tab--active {
+  color: var(--text-accent);
+  border-color: var(--border-ornament);
+}
+
+/* ── Virtual scroll container ───────────────────────────────────────────── */
+
+.chronicle-scroll {
+  position: relative;
+  overflow-y: auto;
+  height: 100%;
+}
+
+.chronicle-scroll__content {
+  position: relative;
+}
+
+/* ── Temporal headers ───────────────────────────────────────────────────── */
+
+.temporal-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  height: 36px;
+  padding: 0 var(--space-md);
+}
+
+.temporal-header::before,
+.temporal-header::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border-default);
+}
+
+.temporal-header__text {
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  color: var(--au2);
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  white-space: nowrap;
+}
+
+/* ── Event cards ────────────────────────────────────────────────────────── */
+
+.event-card {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  height: 80px;
+  overflow: hidden;
+  margin-bottom: var(--space-xs);
+  padding: var(--space-sm) var(--space-md);
+  background: var(--bg-card);
+  border-left: 3px solid var(--border-default);
+  transition: background var(--transition-fast);
+}
+
+.event-card:hover {
+  background: var(--bg-hover);
+}
+
+.event-card--compact {
+  height: 28px;
+  align-items: center;
+}
+
+.event-card--compact .event-card__title {
+  font-size: var(--text-sm);
+}
+
+.event-card--compact .event-card__desc,
+.event-card--compact .event-card__time {
+  display: none;
+}
+
+.event-card--aggregated {
+  opacity: 0.75;
+  border-left-width: 2px;
+  font-style: italic;
+}
+
+/* Category border colors — set via data attribute */
+.event-card[data-cat="political"]  { border-left-color: var(--cp); }
+.event-card[data-cat="military"]   { border-left-color: var(--cm); }
+.event-card[data-cat="economic"]   { border-left-color: var(--ce); }
+.event-card[data-cat="social"]     { border-left-color: var(--cs); }
+.event-card[data-cat="religious"]  { border-left-color: var(--cr); }
+.event-card[data-cat="cultural"]   { border-left-color: var(--cc); }
+
+/* ── Significance dot ───────────────────────────────────────────────────── */
+
+.event-card__sig {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: var(--space-sm);
+  align-self: center;
+  background: var(--n1);
+}
+
+.event-card__sig[data-tier="trivial"]   { width: 6px;  height: 6px;  background: var(--n0); }
+.event-card__sig[data-tier="minor"]     { width: 7px;  height: 7px;  background: var(--n1); }
+.event-card__sig[data-tier="moderate"]  { width: 8px;  height: 8px;  background: var(--cp); }
+.event-card__sig[data-tier="major"]     { width: 9px;  height: 9px;  background: var(--ce); }
+.event-card__sig[data-tier="critical"]  { width: 10px; height: 10px; background: var(--cm); }
+.event-card__sig[data-tier="legendary"] {
+  width: 12px; height: 12px;
+  background: var(--cr);
+  box-shadow: 0 0 4px var(--cr), 0 0 8px var(--cr);
+}
+
+/* ── Badge ──────────────────────────────────────────────────────────────── */
+
+.event-card__badge {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  text-align: center;
+  line-height: 22px;
+  font-size: var(--text-md);
+  margin-right: var(--space-sm);
+  border-radius: 2px;
+  align-self: center;
+}
+
+/* ── Body ───────────────────────────────────────────────────────────────── */
+
+.event-card__body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.event-card__title {
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.event-card__desc {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: var(--space-xs);
+}
+
+.event-card__time {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  margin-top: var(--space-xs);
+}
+
+/* ── Aggregate cards ────────────────────────────────────────────────────── */
+
+.aggregate-card {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  height: 52px;
+  overflow: hidden;
+  margin-bottom: var(--space-xs);
+  padding: var(--space-sm) var(--space-md);
+  background: var(--bg-panel);
+  border-left: 3px dashed var(--border-default);
+}
+
+.aggregate-card__theme {
+  flex: 1;
+  min-width: 0;
+  font-style: italic;
+  font-size: var(--text-base);
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.aggregate-card__count {
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  margin-left: var(--space-md);
+}
+
+/* ── Entity links ───────────────────────────────────────────────────────── */
+
+.entity-link {
+  color: var(--text-link);
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.entity-link:hover {
+  text-decoration: underline dotted;
+}
+
+/* ── New events indicator ───────────────────────────────────────────────── */
+
+.chronicle-new-events {
+  position: absolute;
+  bottom: var(--space-md);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg3);
+  color: var(--text-accent);
+  padding: var(--space-sm) var(--space-lg);
+  border-radius: 12px;
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  border: 1px solid var(--border-ornament);
+  box-shadow: 0 0 6px var(--au0);
+  transition: background var(--transition-fast);
+  z-index: 10;
+}
+
+.chronicle-new-events:hover {
+  background: var(--bg2);
+}

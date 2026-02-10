@@ -12,6 +12,7 @@ import { TileDataProvider } from './map/tile-data-provider.js';
 import { OverlayManager } from './map/overlay-manager.js';
 import { bindMapInput } from './map/input-handler.js';
 import type { TickDelta, WorldSnapshot } from '../shared/types.js';
+import { ChroniclePanel } from './chronicle/chronicle-panel.js';
 
 // ── State ────────────────────────────────────────────────────────────────────
 
@@ -31,6 +32,10 @@ const tooltip = new MapTooltip();
 const tileDataProvider = new TileDataProvider();
 const overlayManager = new OverlayManager();
 const factionColorMap = new Map<number, string>();
+
+// Chronicle
+const chronicleContainer = document.getElementById('event-log-panel')!;
+const chronicle = new ChroniclePanel(chronicleContainer);
 
 // ── DOM refs ─────────────────────────────────────────────────────────────────
 
@@ -78,12 +83,18 @@ function handleTickDelta(delta: TickDelta): void {
     tileDataProvider.addEvents(delta.events, tilemap.getEntities());
   }
 
+  // Feed events to chronicle panel
+  if (delta.events.length > 0) {
+    chronicle.addEvents(delta.events);
+  }
+
   // Rebuild overlay caches when entities change
   if (delta.entityUpdates.length > 0 || delta.removedEntities.length > 0) {
     const currentEntities = tilemap.getEntities();
     overlayManager.buildTerritoryCache(currentEntities, factionColorMap);
     overlayManager.buildTradeRouteCache(currentEntities);
     tileDataProvider.updateEntities(currentEntities);
+    chronicle.updateEntityNames(delta.entityUpdates);
   }
 }
 
@@ -111,7 +122,7 @@ btnFast.addEventListener('click', () => {
   updateSpeedButtons();
 });
 
-// Keyboard: space to pause/resume
+// Keyboard: space to pause/resume, N to cycle chronicle mode, R for region filter
 document.addEventListener('keydown', (e) => {
   if (e.code === 'Space') {
     e.preventDefault();
@@ -120,6 +131,11 @@ document.addEventListener('keydown', (e) => {
     } else {
       btnPause.click();
     }
+  } else if (e.code === 'KeyN') {
+    chronicle.cycleMode();
+  } else if (e.code === 'KeyR') {
+    const viewport = tilemap.getViewport();
+    chronicle.toggleRegionFilter({ x: viewport.centerX, y: viewport.centerY });
   }
 });
 
@@ -172,6 +188,12 @@ async function init(): Promise<void> {
   // Initialize overlay manager
   overlayManager.buildTerritoryCache(snapshot.entities, factionColorMap);
   tilemap.setOverlayManager(overlayManager);
+
+  // Initialize chronicle with snapshot data
+  chronicle.updateEntityNames(snapshot.entities);
+  if (snapshot.events.length > 0) {
+    chronicle.addEvents(snapshot.events);
+  }
 
   // Initialize map
   tilemap.init(snapshot);

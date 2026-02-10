@@ -30,10 +30,14 @@
       </div>
       <aside id="panel-column">
         <div class="panel" id="event-log-panel">
-          <div class="panel-titlebar">Chronicle</div>
-          <div class="panel-content">
-            <div class="panel-placeholder">Events will appear here...</div>
+          <div class="panel-titlebar panel-titlebar--chronicle">
+            <span>Chronicle</span>
+            <div class="chronicle-mode-tabs">
+              <button class="chronicle-mode-tab chronicle-mode-tab--active" data-mode="prose">Prose</button>
+              <button class="chronicle-mode-tab" data-mode="compact">Compact</button>
+            </div>
           </div>
+          <div class="panel-content" id="chronicle-content"></div>
         </div>
         <div class="panel-divider" id="panel-divider"></div>
         <div class="panel" id="inspector-panel">
