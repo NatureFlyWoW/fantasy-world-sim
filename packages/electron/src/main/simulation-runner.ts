@@ -12,45 +12,19 @@ import {
   WorldClock,
   EventBus,
   EventLog,
-  CascadeEngine,
   SimulationEngine,
-  SystemRegistry,
   SpatialIndex,
   LevelOfDetailManager,
   resetEntityIdCounter,
-  CharacterAISystem,
-  ReputationSystem,
-  GrudgeSystem,
-  FactionPoliticalSystem,
-  EconomicSystem,
-  WarfareSystem,
-  MagicSystem,
-  ReligionSystem,
-  CulturalEvolutionSystem,
-  EcologySystem,
-  OralTraditionSystem,
-  DreamingSystem,
-  CharacterMemoryStore,
+  createSimulationEngine,
 } from '@fws/core';
-import type { WorldEvent, EntityId, CharacterId, SiteId } from '@fws/core';
+import type { WorldEvent, EntityId, CharacterId, SiteId, CharacterInitData } from '@fws/core';
 
 import {
-  SeededRNG,
-  WorldMap,
-  PantheonGenerator,
-  MagicSystemGenerator,
-  RaceGenerator,
-  InitialPopulationPlacer,
-  SettlementPlacer,
-  FactionInitializer,
-  CharacterGenerator,
-  TensionSeeder,
-  NameGenerator,
-  getAllCultures,
-  PreHistorySimulator,
+  generateWorld,
   populateWorldFromGenerated,
 } from '@fws/generator';
-import type { WorldConfig } from '@fws/generator';
+import type { GeneratedWorld } from '@fws/generator';
 
 import type {
   TickDelta,
@@ -98,8 +72,7 @@ export class SimulationRunner {
   private lodManager: LevelOfDetailManager | null = null;
 
   // Generated data
-  private worldMap: WorldMap | null = null;
-  private generatedFactions: Array<{ name: string; color: string; capitalIndex: number }> = [];
+  private generatedData: GeneratedWorld | null = null;
   private populationResult: { settlementIds: Map<number, SiteId>; factionIds: Map<number, unknown>; characterIds: Map<string, CharacterId>; totalEntities: number } | null = null;
 
   // Tick loop
@@ -122,141 +95,74 @@ export class SimulationRunner {
   initialize(): void {
     resetEntityIdCounter();
 
-    const config = this.makeConfig();
-    const rng = new SeededRNG(this.seed);
-
-    // Generation pipeline (mirrors CLI)
-    const worldMap = new WorldMap(config, rng);
-    worldMap.generate();
-    this.worldMap = worldMap;
-
-    const pantheonGen = new PantheonGenerator();
-    const pantheon = pantheonGen.generate(config.pantheonComplexity, rng);
-    const magicGen = new MagicSystemGenerator();
-    const magicRules = magicGen.generate(config.magicPrevalence, rng);
-
-    const raceGen = new RaceGenerator();
-    const races = raceGen.generate(config, pantheon, rng);
-    const popPlacer = new InitialPopulationPlacer();
-    const populationSeeds = popPlacer.place(worldMap, races, rng);
-
-    const preSim = new PreHistorySimulator(
-      { worldMap, races, populationSeeds, pantheon, magicRules },
-      config,
-      rng,
-    );
-    const preHistory = preSim.run();
-
-    const nameGen = new NameGenerator(getAllCultures());
-
-    const raceDominance = new Map<string, string>();
-    for (const pop of populationSeeds) {
-      const key = `${Math.floor(pop.x / 50)},${Math.floor(pop.y / 50)}`;
-      if (!raceDominance.has(key)) {
-        raceDominance.set(key, pop.race.name);
-      }
-    }
-
-    const settlementPlacer = new SettlementPlacer();
-    const settlements = settlementPlacer.place(worldMap, preHistory, raceDominance, nameGen, config, rng);
-
-    const factionInit = new FactionInitializer();
-    const factions = factionInit.initialize(settlements, races, preHistory, nameGen, config, rng);
-
-    const charGen = new CharacterGenerator(nameGen);
-    const rulers = charGen.generateRulers(factions, settlements, rng);
-    const notables = charGen.generateNotables(factions, settlements, config, rng);
-
-    const tensionSeeder = new TensionSeeder();
-    tensionSeeder.seed(factions, settlements, preHistory, rng);
+    // Generate world using factory
+    this.generatedData = generateWorld(this.seed);
 
     // ECS setup
     this.world = new World();
     this.populationResult = populateWorldFromGenerated(this.world, {
-      worldMap,
-      settlements,
-      factions,
-      rulers,
-      notables,
+      worldMap: this.generatedData.worldMap,
+      settlements: this.generatedData.settlements,
+      factions: this.generatedData.factions,
+      rulers: this.generatedData.rulers,
+      notables: this.generatedData.notables,
     }) as typeof this.populationResult;
-
-    this.generatedFactions = factions.map(f => ({
-      name: f.name,
-      color: f.color,
-      capitalIndex: f.capitalIndex,
-    }));
 
     // Simulation infrastructure
     this.clock = new WorldClock();
     this.eventBus = new EventBus();
     this.eventLog = new EventLog();
 
-    const simRng = new SeededRNG(this.seed);
-    const cascadeRng = simRng.fork('cascade');
-    const cascadeEngine = new CascadeEngine(this.eventBus, this.eventLog, {
-      maxCascadeDepth: 10,
-      randomFn: () => cascadeRng.next(),
-    });
-    const systemRegistry = new SystemRegistry();
-
-    const reputationSystem = new ReputationSystem(undefined, simRng.fork('reputation'));
-    const grudgeSystem = new GrudgeSystem();
-    const dreamingSystem = new DreamingSystem(undefined, this.seed);
-
-    systemRegistry.register(new CharacterAISystem(simRng.fork('character')));
-    systemRegistry.register(new FactionPoliticalSystem(reputationSystem, grudgeSystem, simRng.fork('faction')));
-    systemRegistry.register(new EconomicSystem());
-    systemRegistry.register(new WarfareSystem(simRng.fork('warfare')));
-    systemRegistry.register(new MagicSystem(simRng.fork('magic')));
-    systemRegistry.register(new ReligionSystem(simRng.fork('religion')));
-    systemRegistry.register(new CulturalEvolutionSystem(simRng.fork('culture')));
-    systemRegistry.register(new EcologySystem(undefined, simRng.fork('ecology')));
-    systemRegistry.register(new OralTraditionSystem(undefined, simRng.fork('oral')));
-    systemRegistry.register(dreamingSystem);
-
-    this.engine = new SimulationEngine(
-      this.world, this.clock, this.eventBus, this.eventLog,
-      systemRegistry, cascadeEngine, this.seed,
-    );
-
-    // Initialize DreamingSystem
-    if (this.populationResult !== null) {
-      const settlementNameToId = new Map<string, SiteId>();
-      for (let si = 0; si < settlements.length; si++) {
-        const settlement = settlements[si];
-        const siteId = this.populationResult.settlementIds.get(si);
-        if (settlement !== undefined && siteId !== undefined) {
-          settlementNameToId.set(settlement.name, siteId);
-        }
-      }
-
-      const allChars = [...rulers, ...notables];
-      for (const [charName, charId] of this.populationResult.characterIds) {
-        const store = new CharacterMemoryStore(charId);
-        dreamingSystem.registerMemoryStore(charId, store);
-
-        const charData = allChars.find(c => c.name === charName);
-        if (charData !== undefined) {
-          dreamingSystem.registerGoalCount(charId, charData.goals.length);
-
-          if (charData.position.settlementName !== undefined) {
-            const siteId = settlementNameToId.get(charData.position.settlementName);
-            if (siteId !== undefined) {
-              dreamingSystem.registerCharacterLocation(charId, siteId);
-            }
-          }
-        }
+    // Build character initialization data for DreamingSystem
+    const settlementNameToId = new Map<string, SiteId>();
+    for (let si = 0; si < this.generatedData.settlements.length; si++) {
+      const settlement = this.generatedData.settlements[si];
+      const siteId = this.populationResult.settlementIds.get(si);
+      if (settlement !== undefined && siteId !== undefined) {
+        settlementNameToId.set(settlement.name, siteId);
       }
     }
 
-    this.spatialIndex = new SpatialIndex(worldMap.getWidth(), worldMap.getHeight());
+    const allChars = [...this.generatedData.rulers, ...this.generatedData.notables];
+    const characterInitData: CharacterInitData[] = [];
+    for (const [charName, charId] of this.populationResult.characterIds) {
+      const charData = allChars.find(c => c.name === charName);
+      if (charData !== undefined) {
+        const locationSiteId = charData.position.settlementName !== undefined
+          ? settlementNameToId.get(charData.position.settlementName)
+          : undefined;
+
+        characterInitData.push({
+          id: charId,
+          goalCount: charData.goals.length,
+          ...(locationSiteId !== undefined ? { locationSiteId } : {}),
+        });
+      }
+    }
+
+    // Create simulation engine with all systems registered (warmup handled by warmup() method)
+    const { engine } = createSimulationEngine(
+      this.world,
+      this.clock,
+      this.eventBus,
+      this.eventLog,
+      this.seed,
+      characterInitData,
+      0 // No warmup here - called explicitly via warmup() method
+    );
+    this.engine = engine;
+
+    this.spatialIndex = new SpatialIndex(
+      this.generatedData.worldMap.getWidth(),
+      this.generatedData.worldMap.getHeight()
+    );
     this.lodManager = new LevelOfDetailManager();
     this.lodManager.setFocus(
-      Math.floor(worldMap.getWidth() / 2),
-      Math.floor(worldMap.getHeight() / 2),
+      Math.floor(this.generatedData.worldMap.getWidth() / 2),
+      Math.floor(this.generatedData.worldMap.getHeight() / 2),
     );
 
-    console.log(`[main] World initialized: ${worldMap.getWidth()}x${worldMap.getHeight()}, ${this.populationResult?.totalEntities ?? 0} entities`);
+    console.log(`[main] World initialized: ${this.generatedData.worldMap.getWidth()}x${this.generatedData.worldMap.getHeight()}, ${this.populationResult?.totalEntities ?? 0} entities`);
   }
 
   warmup(ticks: number): void {
@@ -269,19 +175,19 @@ export class SimulationRunner {
   // ── Snapshot ───────────────────────────────────────────────────────────────
 
   getSnapshot(): WorldSnapshot {
-    if (this.worldMap === null || this.eventLog === null || this.populationResult === null) {
+    if (this.generatedData === null || this.eventLog === null || this.populationResult === null) {
       throw new Error('Simulation not initialized');
     }
 
-    const width = this.worldMap.getWidth();
-    const height = this.worldMap.getHeight();
+    const width = this.generatedData.worldMap.getWidth();
+    const height = this.generatedData.worldMap.getHeight();
 
     // Serialize terrain tiles
     const tiles: TileSnapshot[][] = [];
     for (let y = 0; y < height; y++) {
       const row: TileSnapshot[] = [];
       for (let x = 0; x < width; x++) {
-        const tile = this.worldMap.getTile(x, y);
+        const tile = this.generatedData.worldMap.getTile(x, y);
         if (tile !== undefined) {
           row.push({
             biome: tile.biome,
@@ -304,8 +210,8 @@ export class SimulationRunner {
     // Serialize factions (before entities so capitalIds is populated)
     const factions: FactionSnapshot[] = [];
     this.capitalIds.clear();
-    for (let fi = 0; fi < this.generatedFactions.length; fi++) {
-      const faction = this.generatedFactions[fi];
+    for (let fi = 0; fi < this.generatedData.factions.length; fi++) {
+      const faction = this.generatedData.factions[fi];
       const factionId = this.populationResult.factionIds.get(fi);
       if (faction === undefined || factionId === undefined) continue;
 
@@ -496,21 +402,6 @@ export class SimulationRunner {
   }
 
   // ── Private helpers ────────────────────────────────────────────────────────
-
-  private makeConfig(): WorldConfig {
-    return {
-      seed: this.seed,
-      worldSize: 'small',
-      magicPrevalence: 'moderate',
-      civilizationDensity: 'normal',
-      dangerLevel: 'moderate',
-      historicalDepth: 'shallow',
-      geologicalActivity: 'normal',
-      raceDiversity: 'standard',
-      pantheonComplexity: 'theistic',
-      technologyEra: 'iron_age',
-    };
-  }
 
   private restartTickLoop(): void {
     this.clearTickLoop();

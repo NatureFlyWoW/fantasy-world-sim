@@ -5,6 +5,8 @@
  * overlays will follow in Phase 2-3.
  */
 
+import { bresenhamLine } from '@fws/core';
+
 export enum OverlayType {
   None = 'None',
   Political = 'Political',
@@ -113,32 +115,30 @@ export class OverlayManager {
   }
 
   private traceRoute(x0: number, y0: number, x1: number, y1: number): void {
-    const dx = Math.abs(x1 - x0);
-    const dy = Math.abs(y1 - y0);
-    const sx = x0 < x1 ? 1 : -1;
-    const sy = y0 < y1 ? 1 : -1;
-    let err = dx - dy;
-    let cx = x0;
-    let cy = y0;
-    let prevX = x0;
-    let prevY = y0;
+    const points = bresenhamLine(x0, y0, x1, y1);
 
-    while (true) {
-      const key = `${cx},${cy}`;
+    for (let i = 0; i < points.length; i++) {
+      const point = points[i]!;
+      const key = `${point.x},${point.y}`;
       const existing = this.tradeRouteCache.get(key);
       const connections = new Set<'N' | 'S' | 'E' | 'W'>(existing?.connections ?? []);
 
-      if (cx !== x0 || cy !== y0) {
-        if (prevX < cx) connections.add('W');
-        if (prevX > cx) connections.add('E');
-        if (prevY < cy) connections.add('N');
-        if (prevY > cy) connections.add('S');
+      // Determine connections from previous point
+      if (i > 0) {
+        const prev = points[i - 1]!;
+        if (prev.x < point.x) connections.add('W');
+        if (prev.x > point.x) connections.add('E');
+        if (prev.y < point.y) connections.add('N');
+        if (prev.y > point.y) connections.add('S');
       }
-      if (cx !== x1 || cy !== y1) {
-        if (x1 > cx) connections.add('E');
-        if (x1 < cx) connections.add('W');
-        if (y1 > cy) connections.add('S');
-        if (y1 < cy) connections.add('N');
+
+      // Determine connections to next point
+      if (i < points.length - 1) {
+        const next = points[i + 1]!;
+        if (next.x > point.x) connections.add('E');
+        if (next.x < point.x) connections.add('W');
+        if (next.y > point.y) connections.add('S');
+        if (next.y < point.y) connections.add('N');
       }
 
       if (existing?.isHub !== true) {
@@ -147,13 +147,6 @@ export class OverlayManager {
           isHub: existing?.isHub ?? false,
         });
       }
-
-      if (cx === x1 && cy === y1) break;
-      prevX = cx;
-      prevY = cy;
-      const e2 = 2 * err;
-      if (e2 > -dy) { err -= dy; cx += sx; }
-      if (e2 < dx) { err += dx; cy += sy; }
     }
   }
 
