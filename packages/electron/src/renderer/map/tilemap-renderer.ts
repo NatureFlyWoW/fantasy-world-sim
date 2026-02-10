@@ -411,6 +411,55 @@ export class TilemapRenderer {
     this.renderTradeRoutes();
   }
 
+  // ── Trade route rendering ───────────────────────────────────────────
+
+  /** Box-drawing chars for trade route connections */
+  private static readonly ROUTE_CHARS: Record<string, string> = {
+    'E,W': '\u2500',     // ─
+    'N,S': '\u2502',     // │
+    'N,E': '\u2514',     // └
+    'N,W': '\u2518',     // ┘
+    'E,S': '\u250C',     // ┌
+    'S,W': '\u2510',     // ┐
+    'E,N,S': '\u251C',   // ├
+    'N,S,W': '\u2524',   // ┤
+    'E,N,W': '\u2534',   // ┴
+    'E,S,W': '\u252C',   // ┬
+    'E,N,S,W': '\u253C', // ┼
+  };
+
+  private renderTradeRoutes(): void {
+    this.routeLayer.removeChildren();
+    if (this.overlayManager === null || this.overlayManager.activeOverlay !== OverlayType.Economic) return;
+
+    const { wx: startX, wy: startY } = this.viewport.getTopLeft();
+    const zoom = this.viewport.zoom;
+    const GOLD_TINT = 0xc9a84c; // AU2
+
+    for (let r = 0; r < this.poolRows; r++) {
+      for (let c = 0; c < this.poolCols; c++) {
+        const worldX = startX + c * zoom;
+        const worldY = startY + r * zoom;
+
+        const route = this.overlayManager.getTradeRoute(worldX, worldY);
+        if (route === undefined) continue;
+
+        // Pick glyph based on connections
+        const sorted = [...route.connections].sort().join(',');
+        const char = TilemapRenderer.ROUTE_CHARS[sorted]
+          ?? (route.connections.length === 1
+            ? (route.connections[0] === 'N' || route.connections[0] === 'S' ? '\u2502' : '\u2500')
+            : '\u253C');
+
+        const sprite = new Sprite(getGlyphTexture(glyphIndex(char)));
+        sprite.x = c * TILE_W;
+        sprite.y = r * TILE_H;
+        sprite.tint = GOLD_TINT;
+        this.routeLayer.addChild(sprite);
+      }
+    }
+  }
+
   // ── Helpers ─────────────────────────────────────────────────────────
 
   private getTile(wx: number, wy: number): TileSnapshot | null {

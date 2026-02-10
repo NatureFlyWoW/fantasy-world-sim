@@ -71,14 +71,12 @@ function handleTickDelta(delta: TickDelta): void {
   updateStatusBar();
   tilemap.handleTickDelta(delta);
 
-  // Rebuild overlay territory cache when entities change
+  // Rebuild overlay caches when entities change
   if (delta.entityUpdates.length > 0 || delta.removedEntities.length > 0) {
-    overlayManager.buildTerritoryCache(
-      tilemap.getEntities(),
-      factionColorMap,
-    );
-    // Update tooltip entity data
-    tooltip.updateEntities(tilemap.getEntities());
+    const currentEntities = tilemap.getEntities();
+    overlayManager.buildTerritoryCache(currentEntities, factionColorMap);
+    overlayManager.buildTradeRouteCache(currentEntities);
+    tooltip.updateEntities(currentEntities);
   }
 }
 
@@ -171,6 +169,9 @@ async function init(): Promise<void> {
   // Initialize map
   tilemap.init(snapshot);
   tilemap.resize(app.screen.width, app.screen.height);
+
+  // Build trade route cache for Economic overlay
+  overlayManager.buildTradeRouteCache(snapshot.entities);
 
   // Bind input
   bindMapInput(tilemap.getViewport(), canvas, {
