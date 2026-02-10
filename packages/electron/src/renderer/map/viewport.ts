@@ -31,12 +31,12 @@ export class Viewport {
 
   /** Number of screen-tile columns visible (based on pixel width) */
   get viewCols(): number {
-    return Math.ceil(this._screenW / TILE_W) + 1;
+    return Math.ceil(this._screenW / TILE_W) + 2;
   }
 
   /** Number of screen-tile rows visible (based on pixel height) */
   get viewRows(): number {
-    return Math.ceil(this._screenH / TILE_H) + 1;
+    return Math.ceil(this._screenH / TILE_H) + 2;
   }
 
   setWorldSize(w: number, h: number): void {
@@ -82,8 +82,10 @@ export class Viewport {
    */
   screenToWorld(px: number, py: number): { wx: number; wy: number } {
     const tl = this.getTopLeft();
-    const col = Math.floor(px / TILE_W);
-    const row = Math.floor(py / TILE_H);
+    const { ox, oy } = this.getPixelOffset();
+    // Subtract pixel offset so the fractional shift is accounted for
+    const col = Math.floor((px - ox) / TILE_W);
+    const row = Math.floor((py - oy) / TILE_H);
     return {
       wx: Math.floor(tl.wx + col * this._zoom),
       wy: Math.floor(tl.wy + row * this._zoom),
@@ -111,6 +113,24 @@ export class Viewport {
     return {
       wx: Math.floor(this._centerX - (this.viewCols * this._zoom) / 2),
       wy: Math.floor(this._centerY - (this.viewRows * this._zoom) / 2),
+    };
+  }
+
+  /**
+   * Sub-pixel offset for smooth scrolling.
+   * Returns the fractional pixel shift to apply to the tile container
+   * so tiles don't snap to whole-tile boundaries.
+   */
+  getPixelOffset(): { ox: number; oy: number } {
+    const halfW = (this.viewCols * this._zoom) / 2;
+    const halfH = (this.viewRows * this._zoom) / 2;
+    const rawX = this._centerX - halfW;
+    const rawY = this._centerY - halfH;
+    const fracX = rawX - Math.floor(rawX);
+    const fracY = rawY - Math.floor(rawY);
+    return {
+      ox: -(fracX / this._zoom) * TILE_W,
+      oy: -(fracY / this._zoom) * TILE_H,
     };
   }
 

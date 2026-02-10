@@ -45,6 +45,11 @@ export class MapTooltip {
     this.mapHeight = mapHeight;
   }
 
+  /** Update entity data from tick deltas */
+  updateEntities(entities: EntitySnapshot[]): void {
+    this.entities = entities;
+  }
+
   /** Bind to the canvas for mouse tracking. Returns cleanup function. */
   bind(canvas: HTMLCanvasElement): () => void {
     const onMove = (e: MouseEvent): void => {

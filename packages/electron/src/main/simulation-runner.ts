@@ -57,11 +57,33 @@ import type {
   WorldSnapshot,
   SerializedEvent,
   EntitySnapshot,
+  EntityType,
+  PopulationTier,
   FactionSnapshot,
   TileSnapshot,
 } from '../shared/types.js';
 
 type TickDeltaCallback = (delta: TickDelta) => void;
+
+function classifyPopulation(count: number): PopulationTier {
+  if (count >= 2000) return 'city';
+  if (count >= 500) return 'town';
+  if (count >= 100) return 'village';
+  return 'hamlet';
+}
+
+function computeDirection(dx: number, dy: number): EntitySnapshot['movementDirection'] {
+  if (dx === 0 && dy === 0) return 'stationary';
+  const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+  if (angle >= -22.5 && angle < 22.5) return 'E';
+  if (angle >= 22.5 && angle < 67.5) return 'SE';
+  if (angle >= 67.5 && angle < 112.5) return 'S';
+  if (angle >= 112.5 && angle < 157.5) return 'SW';
+  if (angle >= 157.5 || angle < -157.5) return 'W';
+  if (angle >= -157.5 && angle < -112.5) return 'NW';
+  if (angle >= -112.5 && angle < -67.5) return 'N';
+  return 'NE';
+}
 
 export class SimulationRunner {
   private readonly seed: number;
@@ -88,6 +110,10 @@ export class SimulationRunner {
 
   // Track last event count for deltas
   private lastEventCount = 0;
+
+  // Entity change tracking
+  private previousEntityState = new Map<number, EntitySnapshot>();
+  private capitalIds = new Set<number>();
 
   constructor(seed: number) {
     this.seed = seed;
@@ -270,55 +296,18 @@ export class SimulationRunner {
       tiles.push(row);
     }
 
-    // Serialize entities (settlements and characters with positions)
-    const entities: EntitySnapshot[] = [];
-    if (this.world !== null && this.world.hasStore('Position')) {
-      for (const [eid] of this.world.getStore('Position').getAll()) {
-        const pos = this.world.getComponent(eid, 'Position') as { x: number; y: number } | undefined;
-        if (pos === undefined) continue;
-
-        let name = `Entity #${eid}`;
-        let type = 'unknown';
-        let factionId: number | undefined;
-
-        if (this.world.hasStore('Population')) {
-          const pop = this.world.getComponent(eid, 'Population');
-          if (pop !== undefined) type = 'settlement';
-        }
-
-        if (this.world.hasStore('Status')) {
-          const status = this.world.getComponent(eid, 'Status') as { titles?: string[] } | undefined;
-          if (status?.titles !== undefined && status.titles.length > 0 && status.titles[0] !== undefined) {
-            name = status.titles[0];
-          }
-        }
-
-        if (this.world.hasStore('Allegiance')) {
-          const allegiance = this.world.getComponent(eid, 'Allegiance') as { factionId?: unknown } | undefined;
-          if (allegiance?.factionId !== undefined) {
-            factionId = allegiance.factionId as number;
-          }
-        }
-
-        entities.push({
-          id: eid as unknown as number,
-          type,
-          name,
-          x: pos.x,
-          y: pos.y,
-          ...(factionId !== undefined ? { factionId } : {}),
-        });
-      }
-    }
-
-    // Serialize factions
+    // Serialize factions (before entities so capitalIds is populated)
     const factions: FactionSnapshot[] = [];
+    this.capitalIds.clear();
     for (let fi = 0; fi < this.generatedFactions.length; fi++) {
       const faction = this.generatedFactions[fi];
       const factionId = this.populationResult.factionIds.get(fi);
       if (faction === undefined || factionId === undefined) continue;
 
       const capitalSiteId = this.populationResult.settlementIds.get(faction.capitalIndex);
+      if (capitalSiteId !== undefined) {
+        this.capitalIds.add(capitalSiteId as unknown as number);
+      }
 
       factions.push({
         id: factionId as unknown as number,
@@ -327,6 +316,8 @@ export class SimulationRunner {
         ...(capitalSiteId !== undefined ? { capitalId: capitalSiteId as unknown as number } : {}),
       });
     }
+
+    const entities = this.buildEntitySnapshots();
 
     return {
       mapWidth: width,
@@ -381,6 +372,119 @@ export class SimulationRunner {
     return this.eventLog?.getAll().length ?? 0;
   }
 
+  // ── Entity snapshot building ─────────────────────────────────────────────
+
+  private buildEntitySnapshots(): EntitySnapshot[] {
+    const entities: EntitySnapshot[] = [];
+    if (this.world === null || !this.world.hasStore('Position')) return entities;
+
+    for (const [eid] of this.world.getStore('Position').getAll()) {
+      const pos = this.world.getComponent(eid, 'Position') as { x: number; y: number } | undefined;
+      if (pos === undefined) continue;
+
+      const numId = eid as unknown as number;
+      let name = `Entity #${numId}`;
+      let type: EntityType = 'unknown';
+      let factionId: number | undefined;
+      let populationCount: number | undefined;
+      let populationTier: PopulationTier | undefined;
+      let militaryStrength: number | undefined;
+      let wealth: number | undefined;
+      let structures: string[] | undefined;
+      let isCapital: boolean | undefined;
+
+      // Name from Status
+      if (this.world.hasStore('Status')) {
+        const status = this.world.getComponent(eid, 'Status') as { titles?: string[] } | undefined;
+        if (status?.titles !== undefined && status.titles.length > 0 && status.titles[0] !== undefined) {
+          name = status.titles[0];
+        }
+      }
+
+      // Faction allegiance
+      if (this.world.hasStore('Allegiance')) {
+        const allegiance = this.world.getComponent(eid, 'Allegiance') as { factionId?: unknown } | undefined;
+        if (allegiance?.factionId !== undefined) {
+          factionId = allegiance.factionId as number;
+        }
+      }
+
+      // Population → settlement type classification
+      if (this.world.hasStore('Population')) {
+        const pop = this.world.getComponent(eid, 'Population') as { total?: number; size?: number } | undefined;
+        if (pop !== undefined) {
+          populationCount = pop.total ?? pop.size ?? 0;
+          populationTier = classifyPopulation(populationCount);
+
+          if (this.capitalIds.has(numId)) {
+            type = 'capital';
+            isCapital = true;
+          } else {
+            type = populationTier === 'city' ? 'city' : populationTier === 'town' ? 'town' : 'village';
+          }
+        }
+      }
+
+      // Military → army type or military strength
+      if (this.world.hasStore('Military')) {
+        const mil = this.world.getComponent(eid, 'Military') as { strength?: number; troops?: number } | undefined;
+        if (mil !== undefined) {
+          militaryStrength = mil.strength ?? mil.troops ?? 0;
+          if (type === 'unknown') type = 'army';
+        }
+      }
+
+      // Economy → wealth
+      if (this.world.hasStore('Economy')) {
+        const econ = this.world.getComponent(eid, 'Economy') as { wealth?: number } | undefined;
+        if (econ?.wealth !== undefined) {
+          wealth = econ.wealth;
+        }
+      }
+
+      // Structure detection
+      if (this.world.hasStore('Structures')) {
+        const structs = this.world.getComponent(eid, 'Structures') as { buildings?: string[] } | undefined;
+        if (structs?.buildings !== undefined && structs.buildings.length > 0) {
+          structures = structs.buildings;
+          if (type === 'unknown') {
+            if (structs.buildings.some(b => b.toLowerCase().includes('temple'))) type = 'temple';
+            else if (structs.buildings.some(b => b.toLowerCase().includes('academy'))) type = 'academy';
+          }
+        }
+      }
+
+      // Character detection
+      if (type === 'unknown' && this.world.hasStore('Personality')) {
+        const personality = this.world.getComponent(eid, 'Personality');
+        if (personality !== undefined) type = 'character';
+      }
+
+      // Ruin detection
+      if (type !== 'unknown' && this.world.hasStore('Abandoned')) {
+        const abandoned = this.world.getComponent(eid, 'Abandoned');
+        if (abandoned !== undefined) type = 'ruin';
+      }
+
+      entities.push({
+        id: numId,
+        type,
+        name,
+        x: pos.x,
+        y: pos.y,
+        ...(factionId !== undefined ? { factionId } : {}),
+        ...(populationCount !== undefined ? { populationCount } : {}),
+        ...(populationTier !== undefined ? { populationTier } : {}),
+        ...(militaryStrength !== undefined ? { militaryStrength } : {}),
+        ...(wealth !== undefined ? { wealth } : {}),
+        ...(structures !== undefined ? { structures } : {}),
+        ...(isCapital === true ? { isCapital } : {}),
+      });
+    }
+
+    return entities;
+  }
+
   // ── Private helpers ────────────────────────────────────────────────────────
 
   private makeConfig(): WorldConfig {
@@ -425,6 +529,37 @@ export class SimulationRunner {
     const newEvents = allEvents.slice(this.lastEventCount);
     this.lastEventCount = allEvents.length;
 
+    // Build current entity state and diff against previous
+    const currentEntities = this.buildEntitySnapshots();
+    const entityUpdates: EntitySnapshot[] = [];
+    const currentEntityMap = new Map<number, EntitySnapshot>();
+
+    for (const entity of currentEntities) {
+      currentEntityMap.set(entity.id, entity);
+      const prev = this.previousEntityState.get(entity.id);
+      if (prev === undefined || this.entityChanged(prev, entity)) {
+        // Compute movement direction for armies
+        if (prev !== undefined && (prev.x !== entity.x || prev.y !== entity.y)) {
+          const dx = entity.x - prev.x;
+          const dy = entity.y - prev.y;
+          const dir = computeDirection(dx, dy);
+          entityUpdates.push({ ...entity, movementDirection: dir });
+        } else {
+          entityUpdates.push(entity);
+        }
+      }
+    }
+
+    // Detect removed entities
+    const removedEntities: number[] = [];
+    for (const prevId of this.previousEntityState.keys()) {
+      if (!currentEntityMap.has(prevId)) {
+        removedEntities.push(prevId);
+      }
+    }
+
+    this.previousEntityState = currentEntityMap;
+
     const delta: TickDelta = {
       tick: this.clock.currentTick,
       time: {
@@ -434,12 +569,22 @@ export class SimulationRunner {
       },
       events: this.serializeEvents(newEvents),
       changedEntities: [],
-      removedEntities: [],
+      removedEntities,
+      entityUpdates,
     };
 
     for (const cb of this.tickDeltaCallbacks) {
       cb(delta);
     }
+  }
+
+  private entityChanged(prev: EntitySnapshot, curr: EntitySnapshot): boolean {
+    return prev.x !== curr.x || prev.y !== curr.y
+      || prev.type !== curr.type
+      || prev.populationCount !== curr.populationCount
+      || prev.militaryStrength !== curr.militaryStrength
+      || prev.wealth !== curr.wealth
+      || prev.name !== curr.name;
   }
 
   private serializeEvents(events: readonly WorldEvent[]): SerializedEvent[] {

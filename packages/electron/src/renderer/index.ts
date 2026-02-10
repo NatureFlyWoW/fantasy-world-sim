@@ -28,6 +28,7 @@ let lastFpsTime = performance.now();
 const tilemap = new TilemapRenderer();
 const tooltip = new MapTooltip();
 const overlayManager = new OverlayManager();
+const factionColorMap = new Map<number, string>();
 
 // ── DOM refs ─────────────────────────────────────────────────────────────────
 
@@ -69,6 +70,16 @@ function handleTickDelta(delta: TickDelta): void {
   dateEl.textContent = `Year ${delta.time.year}, Month ${delta.time.month}, Day ${delta.time.day}`;
   updateStatusBar();
   tilemap.handleTickDelta(delta);
+
+  // Rebuild overlay territory cache when entities change
+  if (delta.entityUpdates.length > 0 || delta.removedEntities.length > 0) {
+    overlayManager.buildTerritoryCache(
+      tilemap.getEntities(),
+      factionColorMap,
+    );
+    // Update tooltip entity data
+    tooltip.updateEntities(tilemap.getEntities());
+  }
 }
 
 // ── Controls ─────────────────────────────────────────────────────────────────
@@ -149,13 +160,12 @@ async function init(): Promise<void> {
   console.log(`[renderer] World loaded: ${snapshot.mapWidth}x${snapshot.mapHeight}, ${snapshot.entities.length} entities`);
 
   // Build faction color map for overlays
-  const factionColors = new Map<number, string>();
   for (const f of snapshot.factions) {
-    factionColors.set(f.id, f.color);
+    factionColorMap.set(f.id, f.color);
   }
 
   // Initialize overlay manager
-  overlayManager.buildTerritoryCache(snapshot.entities, factionColors);
+  overlayManager.buildTerritoryCache(snapshot.entities, factionColorMap);
   tilemap.setOverlayManager(overlayManager);
 
   // Initialize map

@@ -84,8 +84,9 @@ export function bindMapInput(
     lastMouseY = e.clientY;
 
     // Convert pixel delta to tile delta (negative: dragging moves view opposite)
-    const tileDx = -dx / (TILE_W / viewport.zoom);
-    const tileDy = -dy / (TILE_H / viewport.zoom);
+    // viewport.pan() already multiplies by zoom, so don't apply zoom here
+    const tileDx = -dx / TILE_W;
+    const tileDy = -dy / TILE_H;
     viewport.pan(tileDx, tileDy);
     onDirty();
   }

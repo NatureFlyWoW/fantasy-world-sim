@@ -29,6 +29,7 @@ export interface TickDelta {
   readonly events: readonly SerializedEvent[];
   readonly changedEntities: readonly EntityDelta[];
   readonly removedEntities: readonly number[];
+  readonly entityUpdates: readonly EntitySnapshot[];
 }
 
 // ── World snapshot (sent once on load) ───────────────────────────────────────
@@ -43,13 +44,27 @@ export interface TileSnapshot {
   readonly resources?: readonly string[];
 }
 
+export type PopulationTier = 'hamlet' | 'village' | 'town' | 'city';
+export type EntityType =
+  | 'village' | 'town' | 'city' | 'capital' | 'ruin'
+  | 'temple' | 'academy' | 'army' | 'character' | 'settlement' | 'unknown';
+export type MovementDirection =
+  | 'N' | 'NE' | 'E' | 'SE' | 'S' | 'SW' | 'W' | 'NW' | 'stationary';
+
 export interface EntitySnapshot {
   readonly id: number;
-  readonly type: string;
+  readonly type: EntityType;
   readonly name: string;
   readonly x: number;
   readonly y: number;
   readonly factionId?: number;
+  readonly populationCount?: number;
+  readonly populationTier?: PopulationTier;
+  readonly militaryStrength?: number;
+  readonly wealth?: number;
+  readonly structures?: readonly string[];
+  readonly isCapital?: boolean;
+  readonly movementDirection?: MovementDirection;
 }
 
 export interface FactionSnapshot {

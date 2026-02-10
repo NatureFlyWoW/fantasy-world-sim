@@ -9,9 +9,10 @@ import { Container, Sprite, Graphics } from 'pixi.js';
 import { TILE_W, TILE_H, glyphIndex, getGlyphTexture, initGlyphAtlas } from './glyph-atlas.js';
 import { Viewport } from './viewport.js';
 import { BIOME_CONFIGS, ENTITY_MARKERS, selectGlyph } from './biome-config.js';
+import { OverlayType } from './overlay-manager.js';
 import type { OverlayManager, OverlayModification } from './overlay-manager.js';
 import type {
-  WorldSnapshot, TileSnapshot, EntitySnapshot, TickDelta,
+  WorldSnapshot, TileSnapshot, EntitySnapshot, TickDelta, SerializedEvent,
 } from '../../shared/types.js';
 
 /** Deterministic hash for glyph selection per world tile */
@@ -26,6 +27,23 @@ function hexToNum(hex: string): number {
   return parseInt(hex.slice(1), 16);
 }
 
+/** Weighted RGB average of biome background colors */
+function blendBiomeColors(biomeCounts: Map<string, number>, total: number): string {
+  let r = 0;
+  let g = 0;
+  let b = 0;
+  for (const [biome, count] of biomeCounts) {
+    const config = BIOME_CONFIGS[biome];
+    if (config === undefined) continue;
+    const weight = count / total;
+    const hex = config.bg;
+    r += parseInt(hex.slice(1, 3), 16) * weight;
+    g += parseInt(hex.slice(3, 5), 16) * weight;
+    b += parseInt(hex.slice(5, 7), 16) * weight;
+  }
+  return `#${Math.round(r).toString(16).padStart(2, '0')}${Math.round(g).toString(16).padStart(2, '0')}${Math.round(b).toString(16).padStart(2, '0')}`;
+}
+
 interface TileSprite {
   bg: Graphics;
   glyph: Sprite;
@@ -35,6 +53,7 @@ export class TilemapRenderer {
   private readonly container = new Container();
   private readonly bgLayer = new Container();
   private readonly glyphLayer = new Container();
+  private readonly routeLayer = new Container();
   private readonly markerLayer = new Container();
 
   private readonly viewport = new Viewport();
@@ -53,6 +72,9 @@ export class TilemapRenderer {
   // Overlay
   private overlayManager: OverlayManager | null = null;
 
+  // Event accumulation per tile
+  private tileEvents = new Map<string, SerializedEvent[]>();
+
   // Dirty tracking
   private dirty = true;
   private lastCenterX = -1;
@@ -62,6 +84,7 @@ export class TilemapRenderer {
   constructor() {
     this.container.addChild(this.bgLayer);
     this.container.addChild(this.glyphLayer);
+    this.container.addChild(this.routeLayer);
     this.container.addChild(this.markerLayer);
   }
 
@@ -80,6 +103,10 @@ export class TilemapRenderer {
 
   markDirty(): void {
     this.dirty = true;
+  }
+
+  getEntities(): EntitySnapshot[] {
+    return this.entities;
   }
 
   /** Initialize from world snapshot */
@@ -112,10 +139,46 @@ export class TilemapRenderer {
   }
 
   /** Handle tick delta updates */
-  handleTickDelta(_delta: TickDelta): void {
-    // Mark dirty so entity markers re-render on next frame.
-    // Future: only update changed entities from delta.changedEntities
+  handleTickDelta(delta: TickDelta): void {
+    // Merge entity updates into local entity list
+    if (delta.entityUpdates.length > 0) {
+      const entityMap = new Map(this.entities.map(e => [e.id, e]));
+      for (const update of delta.entityUpdates) {
+        entityMap.set(update.id, update);
+      }
+      // Remove deleted entities
+      for (const removedId of delta.removedEntities) {
+        entityMap.delete(removedId);
+      }
+      this.entities = [...entityMap.values()];
+    }
+
+    // Accumulate events per tile for tooltip use
+    for (const event of delta.events) {
+      for (const pid of event.participants) {
+        const entity = this.entities.find(e => e.id === pid);
+        if (entity !== undefined) {
+          const key = `${entity.x},${entity.y}`;
+          const existing = this.tileEvents.get(key) ?? [];
+          existing.push(event);
+          // Keep only last 5 events per tile
+          if (existing.length > 5) existing.shift();
+          this.tileEvents.set(key, existing);
+        }
+      }
+    }
+
     this.dirty = true;
+  }
+
+  /** Get accumulated events for a tile position */
+  getTileEvents(wx: number, wy: number): readonly SerializedEvent[] {
+    return this.tileEvents.get(`${wx},${wy}`) ?? [];
+  }
+
+  /** Get entities at a specific tile position */
+  getEntitiesAt(wx: number, wy: number): EntitySnapshot[] {
+    return this.entities.filter(e => e.x === wx && e.y === wy);
   }
 
   /** Main render call — invoke from requestAnimationFrame */
@@ -129,6 +192,17 @@ export class TilemapRenderer {
 
     this.renderTerrain();
     this.renderEntityMarkers();
+
+    // Apply sub-pixel offset for smooth scrolling
+    const { ox, oy } = this.viewport.getPixelOffset();
+    this.bgLayer.x = ox;
+    this.bgLayer.y = oy;
+    this.glyphLayer.x = ox;
+    this.glyphLayer.y = oy;
+    this.routeLayer.x = ox;
+    this.routeLayer.y = oy;
+    this.markerLayer.x = ox;
+    this.markerLayer.y = oy;
   }
 
   // ── Pool management ─────────────────────────────────────────────────────
@@ -239,11 +313,13 @@ export class TilemapRenderer {
     const biomeCounts = new Map<string, number>();
     let dominantBiome = 'Ocean';
     let maxCount = 0;
+    let totalTiles = 0;
 
     for (let dy = 0; dy < zoom; dy++) {
       for (let dx = 0; dx < zoom; dx++) {
         const td = this.getTile(wx + dx, wy + dy);
         if (td !== null) {
+          totalTiles++;
           const count = (biomeCounts.get(td.biome) ?? 0) + 1;
           biomeCounts.set(td.biome, count);
           if (count > maxCount) {
@@ -261,8 +337,14 @@ export class TilemapRenderer {
       return;
     }
 
-    let bgColor = config.bg;
+    // Dithered composite: blend BG colors if dominant < 75%
+    let bgColor: string;
     let fgColor = config.fg;
+    if (totalTiles > 0 && maxCount / totalTiles < 0.75) {
+      bgColor = blendBiomeColors(biomeCounts, totalTiles);
+    } else {
+      bgColor = config.bg;
+    }
 
     // Apply overlay for composite center tile
     if (this.overlayManager !== null) {
@@ -287,16 +369,21 @@ export class TilemapRenderer {
 
   // ── Entity markers ──────────────────────────────────────────────────
 
+  /** Direction → arrow glyph char for army movement */
+  private static readonly DIRECTION_ARROWS: Record<string, string> = {
+    N: '\u2191', S: '\u2193', E: '\u2192', W: '\u2190',
+    NE: '\u2197', NW: '\u2196', SE: '\u2198', SW: '\u2199',
+  };
+
   private renderEntityMarkers(): void {
     this.markerLayer.removeChildren();
     const zoom = this.viewport.zoom;
 
     for (const entity of this.entities) {
-      if (entity.type !== 'settlement') continue;
+      if (entity.type === 'unknown' || entity.type === 'character') continue;
 
-      // Default to 'city' marker — future: differentiate by population/capital
-      const markerType = 'city';
-      const markerConfig = ENTITY_MARKERS[markerType];
+      // Look up marker config by entity type
+      const markerConfig = ENTITY_MARKERS[entity.type];
       if (markerConfig === undefined) continue;
 
       // Check zoom visibility
@@ -305,7 +392,13 @@ export class TilemapRenderer {
       const screenPos = this.viewport.worldToScreen(entity.x, entity.y);
       if (screenPos === null) continue;
 
-      const marker = new Sprite(getGlyphTexture(glyphIndex(markerConfig.char)));
+      // Use directional arrow for moving armies
+      let char = markerConfig.char;
+      if (entity.type === 'army' && entity.movementDirection !== undefined && entity.movementDirection !== 'stationary') {
+        char = TilemapRenderer.DIRECTION_ARROWS[entity.movementDirection] ?? markerConfig.char;
+      }
+
+      const marker = new Sprite(getGlyphTexture(glyphIndex(char)));
       marker.x = screenPos.px;
       marker.y = screenPos.py;
       marker.tint = hexToNum(entity.factionId !== undefined
@@ -313,6 +406,9 @@ export class TilemapRenderer {
         : markerConfig.fg);
       this.markerLayer.addChild(marker);
     }
+
+    // Render trade routes when Economic overlay is active
+    this.renderTradeRoutes();
   }
 
   // ── Helpers ─────────────────────────────────────────────────────────
