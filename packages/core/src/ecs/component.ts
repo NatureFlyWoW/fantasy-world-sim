@@ -56,6 +56,11 @@ export type ComponentType =
   | 'Domain'
   | 'Power'
   | 'InterventionHistory'
+  // Population components
+  | 'Notability'
+  | 'Parentage'
+  | 'Deceased'
+  | 'HiddenLocation'
   // Cultural components
   | 'Worshiper'
   | 'HolySite'
@@ -427,6 +432,38 @@ export interface InterventionHistoryComponent extends Component {
 }
 
 // =============================================================================
+// POPULATION COMPONENTS
+// =============================================================================
+
+export interface NotabilityComponent extends Component {
+  readonly type: 'Notability';
+  score: number;
+  sparkHistory: Array<{ tick: number; description: string }>;
+}
+
+export interface ParentageComponent extends Component {
+  readonly type: 'Parentage';
+  motherId: number | null;
+  fatherId: number | null;
+}
+
+export interface DeceasedComponent extends Component {
+  readonly type: 'Deceased';
+  cause: string;
+  tick: number;
+  locationId: number;
+}
+
+export interface HiddenLocationComponent extends Component {
+  readonly type: 'HiddenLocation';
+  locationType: 'ruins' | 'resource' | 'magical' | 'lore';
+  revealed: boolean;
+  revealedTick: number | null;
+  x: number;
+  y: number;
+}
+
+// =============================================================================
 // CULTURAL COMPONENTS
 // =============================================================================
 
@@ -753,6 +790,10 @@ export type AnyComponent =
   | DomainComponent
   | PowerComponent
   | InterventionHistoryComponent
+  | NotabilityComponent
+  | ParentageComponent
+  | DeceasedComponent
+  | HiddenLocationComponent
   | WorshiperComponent
   | HolySiteComponent
   | SchismHistoryComponent
