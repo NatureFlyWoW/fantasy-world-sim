@@ -62,7 +62,7 @@ import { NameGenerator } from '../character/name-generator.js';
 import { getAllCultures } from '../character/name-culture.js';
 import { PreHistorySimulator } from '../history/pre-history.js';
 import { populateWorldFromGenerated, initializeSystemsFromGenerated } from './populate-world.js';
-import type { ExtendedGeneratedWorldData, InitializableSystems } from './populate-world.js';
+import type { ExtendedGeneratedWorldData, InitializableSystems, PopulationResult } from './populate-world.js';
 
 // Test configuration
 const TEST_SEED = 42;
@@ -282,6 +282,7 @@ let eventBus: EventBus;
 let eventLog: EventLog;
 let engine: SimulationEngine;
 let initializableSystems: InitializableSystems;
+let populationResult: PopulationResult;
 let allEvents: WorldEvent[] = [];
 
 describe('Smoke Test: 365-tick Small World Integration', { timeout: 60000 }, () => {
@@ -297,7 +298,7 @@ describe('Smoke Test: 365-tick Small World Integration', { timeout: 60000 }, () 
 
     // BRIDGE STEP 1: Populate ECS world from generated data
     // This converts plain JS objects into ECS entities with proper components
-    const populationResult = populateWorldFromGenerated(ecsWorld, {
+    populationResult = populateWorldFromGenerated(ecsWorld, {
       worldMap: generatedData.worldMap,
       settlements: generatedData.settlements,
       factions: generatedData.factions,
@@ -597,5 +598,25 @@ describe('Smoke Test: 365-tick Small World Integration', { timeout: 60000 }, () 
     if (!fs.existsSync(gitignorePath)) {
       fs.writeFileSync(gitignorePath, 'test-output/\n');
     }
+  });
+
+  it('populates non-notables for each settlement', () => {
+    let totalNonNotables = 0;
+    for (const [, siteId] of populationResult.settlementIds) {
+      const pop = ecsWorld.getComponent(siteId as unknown as import('@fws/core').EntityId, 'Population');
+      if (pop !== undefined) {
+        totalNonNotables += (pop as { nonNotableIds: number[] }).nonNotableIds.length;
+      }
+    }
+
+    console.log(`\n=== NON-NOTABLE POPULATION ===`);
+    console.log(`Total non-notables: ${totalNonNotables}`);
+    console.log(`Settlements: ${populationResult.settlementIds.size}`);
+    console.log(`Average per settlement: ${(totalNonNotables / populationResult.settlementIds.size).toFixed(1)}`);
+    console.log(`==============================\n`);
+
+    // ~30 per settlement × 40 settlements = ~1200 total
+    expect(totalNonNotables).toBeGreaterThan(100);
+    expect(totalNonNotables).toBeLessThanOrEqual(40 * 30); // Soft cap × max settlements
   });
 });
