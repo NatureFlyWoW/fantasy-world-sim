@@ -521,6 +521,23 @@ export {
   type RaceLifespan,
 } from './population-utils.js';
 
+// Migration
+export {
+  scoreMigrationTargets,
+  executeMigration,
+  type MigrationScore,
+} from './migration.js';
+
+// Settlement lifecycle system
+export {
+  SettlementLifecycleSystem,
+  SETTLEMENT_TIERS,
+  ABANDONMENT_THRESHOLD,
+  ABANDONMENT_DURATION,
+  POPULATION_PRESSURE_FACTOR,
+  MIN_PIONEERS,
+} from './settlement-lifecycle.js';
+
 // Dreaming system
 export {
   DreamingSystem,

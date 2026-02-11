@@ -30,6 +30,7 @@ import { EcologySystem } from '../systems/ecology.js';
 import { OralTraditionSystem } from '../systems/oral-tradition.js';
 import { DreamingSystem } from '../systems/dreaming.js';
 import { PopulationSystem } from '../systems/population-system.js';
+import { SettlementLifecycleSystem } from '../systems/settlement-lifecycle.js';
 import { CharacterMemoryStore } from '../systems/memory-store.js';
 import { SeededRNG } from '../utils/seeded-rng.js';
 import type { CharacterId, SiteId } from '../ecs/types.js';
@@ -94,6 +95,7 @@ export function createSimulationEngine(
   systemRegistry.register(new FactionPoliticalSystem(reputationSystem, grudgeSystem, rng.fork('faction')));
   systemRegistry.register(new EconomicSystem());
   systemRegistry.register(new PopulationSystem(rng.fork('population')));
+  systemRegistry.register(new SettlementLifecycleSystem(rng.fork('settlement')));
   systemRegistry.register(new WarfareSystem(rng.fork('warfare')));
   systemRegistry.register(new MagicSystem(rng.fork('magic')));
   systemRegistry.register(new ReligionSystem(rng.fork('religion')));
