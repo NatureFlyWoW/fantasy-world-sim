@@ -505,6 +505,16 @@ export type {
   WorldFingerprint,
 } from './world-fingerprint.js';
 
+// Population utilities
+export {
+  createNonNotable,
+  DEFAULT_RACE_LIFESPANS,
+  FALLBACK_LIFESPAN,
+  PROFESSIONS,
+  type NonNotableConfig,
+  type RaceLifespan,
+} from './population-utils.js';
+
 // Dreaming system
 export {
   DreamingSystem,

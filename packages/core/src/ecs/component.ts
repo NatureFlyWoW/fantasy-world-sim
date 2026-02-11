@@ -439,6 +439,7 @@ export interface InterventionHistoryComponent extends Component {
 export interface NotabilityComponent extends Component {
   readonly type: 'Notability';
   score: number;
+  birthTick: number;
   sparkHistory: Array<{ tick: number; description: string }>;
 }
 
