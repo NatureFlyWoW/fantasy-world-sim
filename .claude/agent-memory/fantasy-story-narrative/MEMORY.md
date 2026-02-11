@@ -1,5 +1,16 @@
 # Fantasy Story Narrative Agent Memory
 
+## Key Files
+- Templates: `packages/narrative/src/templates/` (11+ category files, 281+ templates)
+- Template types: `packages/narrative/src/templates/types.ts` (NarrativeTemplate)
+- Engine: `packages/narrative/src/transforms/narrative-engine.ts`
+- Parser: `packages/narrative/src/transforms/template-parser.ts`
+- Chronicler: `packages/narrative/src/chronicler/chronicler.ts`, bias-filter.ts, lost-history.ts
+- Vignettes: `packages/narrative/src/vignettes/`
+- Chronicle (terminal): `packages/renderer/src/panels/event-log-panel.ts`
+- Chronicle (electron): `packages/electron/src/renderer/chronicle/`
+- Full map: `docs/CODEBASE_MAP.md`
+
 ## Key Architecture Notes
 
 ### EventLogPanel (Chronicle View) - Phase 8.9

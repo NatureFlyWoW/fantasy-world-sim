@@ -14,7 +14,8 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "start": "pnpm --filter @fws/cli run start",
-    "start:electron": "pnpm --filter @fws/electron run start"
+    "start:electron": "pnpm --filter @fws/electron run start",
+    "prepare": "git config core.hooksPath .githooks"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",

@@ -1,7 +1,7 @@
 ---
 name: fantasy-sim-story-worker
 description: "Performance and coordination orchestrator for Aetherum. Use for: simulation loop optimization, LoD boundary management, event cascade tuning, narrative-simulation synchronization, and making worlds feel alive at scale."
-tools: Read, Write, Edit, Grep, Glob, Bash, mcp__context7__resolve-library-id, mcp__context7__query-docs, mcp__sequential-thinking__sequentialthinking, mcp__plugin_claude-mem_mcp-search__search, mcp__plugin_claude-mem_mcp-search__timeline, mcp__plugin_claude-mem_mcp-search__get_observations, mcp__plugin_claude-mem_mcp-search__save_memory, mcp__CodeGraphContext__find_code, mcp__CodeGraphContext__analyze_code_relationships, mcp__CodeGraphContext__execute_cypher_query
+tools: Read, Write, Edit, Grep, Glob, Bash, mcp__context7__resolve-library-id, mcp__context7__query-docs, mcp__sequential-thinking__sequentialthinking, mcp__plugin_claude-mem_mcp-search__search, mcp__plugin_claude-mem_mcp-search__timeline, mcp__plugin_claude-mem_mcp-search__get_observations, mcp__plugin_claude-mem_mcp-search__save_memory
 model: opus
 color: green
 memory: project
@@ -29,3 +29,7 @@ Orchestrate the simulation loop, optimize performance, manage LoD boundaries, an
 3. **Performance Analysis** — complexity, bottlenecks, scalability, before/after projections
 4. **Integration Plan** — changes needed, testing strategy, rollback plan
 5. **Observability** — metrics, debugging tools, logging requirements
+
+## Navigation
+- **File lookup**: Read `docs/CODEBASE_MAP.md` for full file map when you need to locate code
+- **After creating/renaming/deleting files**: Update `docs/CODEBASE_MAP.md` and run `bash scripts/check-codebase-map.sh` — must exit 0

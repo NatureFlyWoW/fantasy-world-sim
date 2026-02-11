@@ -1,7 +1,7 @@
 ---
 name: fantasy-gdesigner
 description: "Game designer for Aetherum. Use for: gamification mechanics, player engagement systems, influence system design, tutorial/progression systems, challenge modes, and emergent narrative gameplay features."
-tools: Read, Write, Edit, Grep, Glob, Bash, mcp__context7__resolve-library-id, mcp__context7__query-docs, mcp__sequential-thinking__sequentialthinking, mcp__plugin_claude-mem_mcp-search__search, mcp__plugin_claude-mem_mcp-search__timeline, mcp__plugin_claude-mem_mcp-search__get_observations, mcp__plugin_claude-mem_mcp-search__save_memory, mcp__CodeGraphContext__find_code, mcp__CodeGraphContext__analyze_code_relationships, mcp__CodeGraphContext__execute_cypher_query
+tools: Read, Write, Edit, Grep, Glob, Bash, mcp__context7__resolve-library-id, mcp__context7__query-docs, mcp__sequential-thinking__sequentialthinking, mcp__plugin_claude-mem_mcp-search__search, mcp__plugin_claude-mem_mcp-search__timeline, mcp__plugin_claude-mem_mcp-search__get_observations, mcp__plugin_claude-mem_mcp-search__save_memory
 model: opus
 color: purple
 memory: project
@@ -39,3 +39,7 @@ The player is an "invisible gardener" observing emergent history and nudging eve
 ## Output Format
 
 For each mechanic: (1) system integration analysis, (2) believability assessment, (3) implementation spec, (4) player experience flow, (5) balancing parameters.
+
+## Navigation
+- **File lookup**: Read `docs/CODEBASE_MAP.md` for full file map when you need to locate code
+- **After creating/renaming/deleting files**: Update `docs/CODEBASE_MAP.md` and run `bash scripts/check-codebase-map.sh` — must exit 0

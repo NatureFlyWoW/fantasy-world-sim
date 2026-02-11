@@ -25,8 +25,11 @@ Orchestrates simulation loop execution, optimizes performance across interconnec
 - Cross-domain transitions map categories to consequence types
 
 ## Key Files
-- `packages/core/src/engine/` — SimulationEngine, System interface, ExecutionOrder
-- `packages/core/src/time/` — TimeController, 7 speed modes
-- `packages/core/src/events/` — EventBus, CascadeEngine, ConsequenceRule
-- `packages/core/src/spatial/` — SpatialIndex (Quadtree)
-- `packages/core/src/lod/` — LoD zone management
+- Engine: `packages/core/src/engine/simulation-engine.ts`, `system.ts`, `system-registry.ts`, `engine-factory.ts`
+- Time: `packages/core/src/time/` — tick-scheduler.ts, time-controller.ts, world-clock.ts
+- Events: `packages/core/src/events/` — event-bus.ts, cascade-engine.ts, event-queue.ts
+- LoD: `packages/core/src/engine/lod-manager.ts`
+- Spatial: `packages/core/src/spatial/spatial-index.ts`, `quadtree.ts`
+- CLI loop: `packages/cli/src/index.ts`
+- Electron loop: `packages/electron/src/main/simulation-runner.ts`
+- Full map: `docs/CODEBASE_MAP.md`

@@ -1,7 +1,7 @@
 ---
 name: hifi-ui-designer
 description: "Invoke when designing pixel art UI, creating isometric world views, designing faction heraldry, improving visual hierarchy, creating medieval-fantasy themed interfaces, or when working on Aetherum's graphical presentation layer. Specializes in pixel art strategy game aesthetics."
-tools: Read, Write, Edit, Grep, Glob, Bash, mcp__context7__resolve-library-id, mcp__context7__query-docs, mcp__sequential-thinking__sequentialthinking, mcp__plugin_claude-mem_mcp-search__search, mcp__plugin_claude-mem_mcp-search__timeline, mcp__plugin_claude-mem_mcp-search__get_observations, mcp__plugin_claude-mem_mcp-search__save_memory, mcp__CodeGraphContext__find_code, mcp__CodeGraphContext__analyze_code_relationships, mcp__CodeGraphContext__execute_cypher_query
+tools: Read, Write, Edit, Grep, Glob, Bash, mcp__context7__resolve-library-id, mcp__context7__query-docs, mcp__sequential-thinking__sequentialthinking, mcp__plugin_claude-mem_mcp-search__search, mcp__plugin_claude-mem_mcp-search__timeline, mcp__plugin_claude-mem_mcp-search__get_observations, mcp__plugin_claude-mem_mcp-search__save_memory
 model: opus
 color: yellow
 memory: project
@@ -38,3 +38,5 @@ Design immersive medieval-fantasy interfaces combining isometric pixel art, parc
 - Faction colors for semantic meaning only, not decoration
 - Minimum 16x16px click targets, 24px preferred
 - No text on busy backgrounds without container/shadow
+- **File lookup**: Read `docs/CODEBASE_MAP.md` for full file map when you need to locate code
+- **After creating/renaming/deleting files**: Update `docs/CODEBASE_MAP.md` and run `bash scripts/check-codebase-map.sh` — must exit 0

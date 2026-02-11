@@ -33,6 +33,14 @@
 - 281 templates across 11 category files
 - ChroniclerBiasFilter applies perspective filtering
 
+## Key Files
+- Influence: `packages/core/src/systems/influence-system.ts`, `influence-types.ts`, `influence-event-mapping.ts`
+- Inspector (terminal): `packages/renderer/src/panels/` — inspector-panel.ts + 6 sub-inspectors
+- Inspector (electron): `packages/electron/src/main/inspectors/` (8 sub-inspectors)
+- Templates: `packages/narrative/src/templates/` (11+ category files)
+- Game design docs: `all_docs/game_design/game_design_index.md`
+- Full map: `docs/CODEBASE_MAP.md`
+
 ## Design Principles for Aeternum
 - Prose-first, data-available (narrative paragraph before raw numbers)
 - Every name is a door (clickable navigation)

@@ -27,6 +27,21 @@ Procedural fantasy world simulator inspired by Dwarf Fortress Legends Mode. Gene
 - `@fws/cli` — Entry point, controls, influence system, save/load
 - `@fws/electron` — Electron + PixiJS graphical frontend (primary renderer)
 
+## File Navigation
+- **Components/IDs**: `core/src/ecs/component.ts` (104 types), `types.ts` (branded IDs)
+- **Systems**: `core/src/systems/{name}.ts` + `{name}-types.ts`
+- **Events**: `core/src/events/types.ts` (WorldEvent, EventCategory), `event-bus.ts`, `cascade-engine.ts`
+- **Engine**: `core/src/engine/simulation-engine.ts`, `system.ts` (BaseSystem, ExecutionOrder)
+- **Templates**: `narrative/src/templates/{category}.ts` (11 files), `types.ts`
+- **Chronicler**: `narrative/src/chronicler/`
+- **Generator bridge**: `generator/src/integration/populate-world.ts`
+- **Entry points**: `cli/src/index.ts`, `electron/src/main/index.ts`
+- **Electron main**: `electron/src/main/` — simulation-runner, ipc-bridge, `inspectors/` (7 files)
+- **Electron renderer**: `electron/src/renderer/` — `chronicle/`, `inspector/`, `map/`, `legends/`, `procgen/`
+- **Renderer (terminal)**: `renderer/src/app.ts`, `panels/` (8 panels + 6 inspectors), `map/`
+- **Persistence**: `core/src/persistence/` (NOT in barrel — import from path)
+- Full file map: `docs/CODEBASE_MAP.md` (verify: `bash scripts/check-codebase-map.sh`)
+
 ## Conventions
 - **TypeScript**: Strict mode, no `any`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, `verbatimModuleSyntax`
 - **ESM**: `.js` extensions in imports; `export type` for type-only exports
@@ -34,6 +49,7 @@ Procedural fantasy world simulator inspired by Dwarf Fortress Legends Mode. Gene
 - **Events**: Immutable records; systems communicate ONLY through EventBus + components
 - **Testing**: Vitest, tests alongside source (`*.test.ts`)
 - **Context7**: Always use for library/API docs
+- **Codebase map**: After creating, renaming, moving, or deleting `.ts` source files, update `docs/CODEBASE_MAP.md`. A pre-commit hook (`scripts/check-codebase-map.sh`) blocks commits when the map is out of sync — fix the map, stage it, and commit again
 
 ## Commands
 ```bash

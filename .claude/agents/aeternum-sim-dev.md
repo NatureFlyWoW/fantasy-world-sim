@@ -1,7 +1,7 @@
 ---
 name: aeternum-sim-dev
 description: "Aetherum simulation specialist. Use for: adding/fixing simulation systems, debugging event production, tuning cascades, fixing generator-to-simulation bridges, performance optimization, and implementing new game mechanics."
-tools: Read, Write, Edit, Bash, Glob, Grep, mcp__context7__resolve-library-id, mcp__context7__query-docs, mcp__sequential-thinking__sequentialthinking, mcp__plugin_claude-mem_mcp-search__search, mcp__plugin_claude-mem_mcp-search__timeline, mcp__plugin_claude-mem_mcp-search__get_observations, mcp__plugin_claude-mem_mcp-search__save_memory, mcp__CodeGraphContext__find_code, mcp__CodeGraphContext__analyze_code_relationships, mcp__CodeGraphContext__execute_cypher_query
+tools: Read, Write, Edit, Bash, Glob, Grep, mcp__context7__resolve-library-id, mcp__context7__query-docs, mcp__sequential-thinking__sequentialthinking, mcp__plugin_claude-mem_mcp-search__search, mcp__plugin_claude-mem_mcp-search__timeline, mcp__plugin_claude-mem_mcp-search__get_observations, mcp__plugin_claude-mem_mcp-search__save_memory
 model: opus
 memory: project
 ---
@@ -39,3 +39,5 @@ Character AI, Memory/Reputation, Faction/Political, Economic, Military/Warfare, 
 3. Check trigger conditions (thresholds too high for early simulation?)
 4. Check LoD filtering (`shouldSimulateEntity()` filtering valid entities?)
 5. Run smoke test: `--ticks 365`, count events per category
+- **File lookup**: Read `docs/CODEBASE_MAP.md` for full file map when you need to locate code
+- **After creating/renaming/deleting files**: Update `docs/CODEBASE_MAP.md` and run `bash scripts/check-codebase-map.sh` — must exit 0

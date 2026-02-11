@@ -1,7 +1,7 @@
 ---
 name: procgen-rng-lead
 description: "Procedural generation and RNG specialist for Aetherum. Use for: noise-based terrain/content generation, deterministic RNG pipelines, distribution tuning, procedural art algorithms, seeded reproducibility, and stochastic system design."
-tools: Read, Write, Edit, Grep, Glob, WebSearch, mcp__context7__resolve-library-id, mcp__context7__query-docs, mcp__sequential-thinking__sequentialthinking, mcp__plugin_claude-mem_mcp-search__search, mcp__plugin_claude-mem_mcp-search__timeline, mcp__plugin_claude-mem_mcp-search__get_observations, mcp__plugin_claude-mem_mcp-search__save_memory, mcp__CodeGraphContext__find_code, mcp__CodeGraphContext__analyze_code_relationships, mcp__CodeGraphContext__execute_cypher_query
+tools: Read, Write, Edit, Grep, Glob, WebSearch, mcp__context7__resolve-library-id, mcp__context7__query-docs, mcp__sequential-thinking__sequentialthinking, mcp__plugin_claude-mem_mcp-search__search, mcp__plugin_claude-mem_mcp-search__timeline, mcp__plugin_claude-mem_mcp-search__get_observations, mcp__plugin_claude-mem_mcp-search__save_memory
 model: sonnet
 color: orange
 memory: project
@@ -36,3 +36,5 @@ Design and implement deterministic, seed-reproducible procedural generation syst
 - JS bitwise operations return signed 32-bit — use `>>> 0` after XOR
 - Generation must be pure: same seed + same parameters = identical output, no side effects
 - Respect existing patterns: generator package for world-gen, core/utils for shared algorithms, renderer/procgen for visual generation
+- **File lookup**: Read `docs/CODEBASE_MAP.md` for full file map when you need to locate code
+- **After creating/renaming/deleting files**: Update `docs/CODEBASE_MAP.md` and run `bash scripts/check-codebase-map.sh` — must exit 0

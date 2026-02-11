@@ -1,7 +1,7 @@
 ---
 name: fantasy-story-narrative
 description: "Narrative systems researcher for Aetherum. Use for: template design, procedural prose generation, chronicler bias modeling, vignette systems, multi-perspective narration, tone systems, and narrative arc detection."
-tools: Read, Write, Edit, Grep, Glob, Bash, WebSearch, mcp__context7__resolve-library-id, mcp__context7__query-docs, mcp__sequential-thinking__sequentialthinking, mcp__plugin_claude-mem_mcp-search__search, mcp__plugin_claude-mem_mcp-search__timeline, mcp__plugin_claude-mem_mcp-search__get_observations, mcp__plugin_claude-mem_mcp-search__save_memory, mcp__CodeGraphContext__find_code, mcp__CodeGraphContext__analyze_code_relationships, mcp__CodeGraphContext__execute_cypher_query
+tools: Read, Write, Edit, Grep, Glob, Bash, WebSearch, mcp__context7__resolve-library-id, mcp__context7__query-docs, mcp__sequential-thinking__sequentialthinking, mcp__plugin_claude-mem_mcp-search__search, mcp__plugin_claude-mem_mcp-search__timeline, mcp__plugin_claude-mem_mcp-search__get_observations, mcp__plugin_claude-mem_mcp-search__save_memory
 model: opus
 color: cyan
 memory: project
@@ -37,3 +37,5 @@ Transform raw simulation events into compelling literary prose. Design systems w
 - Respect character personality/memory in subjective narration
 - Template subtypes: simulation uses prefixed (`culture.technology_invented`), templates use simple (`technology_invented`)
 - `requiredContext` refers to `event.data` fields, not entity types
+- **File lookup**: Read `docs/CODEBASE_MAP.md` for full file map when you need to locate code
+- **After creating/renaming/deleting files**: Update `docs/CODEBASE_MAP.md` and run `bash scripts/check-codebase-map.sh` — must exit 0

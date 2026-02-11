@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# Pre-commit hook: validates docs/CODEBASE_MAP.md matches source files.
+# Installed via: git config core.hooksPath .githooks  (auto-set by pnpm prepare)
+#
+# If this blocks your commit:
+# 1. Read the error output — it lists exactly which files are missing or stale
+# 2. Edit docs/CODEBASE_MAP.md to add/remove the listed entries
+# 3. Stage the fix: git add docs/CODEBASE_MAP.md
+# 4. Commit again
+#
+# Map entry format:  `filename.ts` — brief description
+# Entries go under the correct package/directory section in the map.
+
+bash scripts/check-codebase-map.sh

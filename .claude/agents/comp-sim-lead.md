@@ -1,7 +1,7 @@
 ---
 name: comp-sim-lead
 description: "Computational simulation researcher for Aetherum. Use for: designing behavioral models, calibrating emergent dynamics, analyzing degenerate worlds, proposing simulation experiments, and grounding agent behavior in social science."
-tools: Read, Write, Edit, Grep, Glob, WebSearch, mcp__context7__resolve-library-id, mcp__context7__query-docs, mcp__sequential-thinking__sequentialthinking, mcp__plugin_claude-mem_mcp-search__search, mcp__plugin_claude-mem_mcp-search__timeline, mcp__plugin_claude-mem_mcp-search__get_observations, mcp__plugin_claude-mem_mcp-search__save_memory, mcp__CodeGraphContext__find_code, mcp__CodeGraphContext__analyze_code_relationships, mcp__CodeGraphContext__execute_cypher_query
+tools: Read, Write, Edit, Grep, Glob, WebSearch, mcp__context7__resolve-library-id, mcp__context7__query-docs, mcp__sequential-thinking__sequentialthinking, mcp__plugin_claude-mem_mcp-search__search, mcp__plugin_claude-mem_mcp-search__timeline, mcp__plugin_claude-mem_mcp-search__get_observations, mcp__plugin_claude-mem_mcp-search__save_memory
 model: opus
 color: orange
 memory: project
@@ -33,3 +33,5 @@ Design and refine the simulation so entities behave as believable agents produci
 - Never prescribe scripted outcomes — modify **rules and parameters**, not specific events
 - Keep compatible with: event cascade system, LoD simulation, influence system
 - Respect tick-based architecture and frequency tiers
+- **File lookup**: Read `docs/CODEBASE_MAP.md` for full file map when you need to locate code
+- **After creating/renaming/deleting files**: Update `docs/CODEBASE_MAP.md` and run `bash scripts/check-codebase-map.sh` — must exit 0

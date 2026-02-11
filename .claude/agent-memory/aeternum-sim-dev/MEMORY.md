@@ -1,5 +1,17 @@
 # Aeternum Sim Dev - Agent Memory
 
+## Key Files
+- Systems: `packages/core/src/systems/` — character-ai.ts, faction-system.ts, economics.ts, warfare.ts, magic.ts, religion.ts, culture.ts, ecology.ts, secret.ts, oral-tradition.ts
+- Phase 13 systems: population-system.ts, settlement-lifecycle.ts, exploration-system.ts, migration.ts, promotion.ts
+- Components: `packages/core/src/ecs/component.ts` (104 ComponentType discriminants)
+- Branded IDs: `packages/core/src/ecs/types.ts`
+- Events: `packages/core/src/events/types.ts` (WorldEvent, EventCategory), `event-bus.ts`, `cascade-engine.ts`
+- Engine: `packages/core/src/engine/simulation-engine.ts`, `system.ts` (BaseSystem, ExecutionOrder)
+- Bridge: `packages/generator/src/integration/populate-world.ts`
+- CLI wiring: `packages/cli/src/index.ts`
+- Electron wiring: `packages/electron/src/main/simulation-runner.ts`
+- Full map: `docs/CODEBASE_MAP.md`
+
 ## Inspector System Architecture
 - Polymorphic Context View: 6 sub-inspectors (Character, Location, Faction, Artifact, Event, Region)
 - Each has `getSections()`, `render()`, `getEntitySpans()` methods
