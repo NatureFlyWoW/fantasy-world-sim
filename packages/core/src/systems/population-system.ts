@@ -18,6 +18,7 @@ import type { World } from '../ecs/world.js';
 import type { WorldClock } from '../time/world-clock.js';
 import type { EventBus } from '../events/event-bus.js';
 import type { SeededRNG } from '../utils/seeded-rng.js';
+import type { WorldEvent } from '../events/types.js';
 import type { EntityId } from '../ecs/types.js';
 import type {
   DeceasedComponent,
@@ -29,6 +30,18 @@ import type {
 } from '../ecs/component.js';
 
 const TICKS_PER_YEAR = 360;
+
+/**
+ * Demographic signal — queued from external system events.
+ */
+interface DemographicSignal {
+  type: 'casualties' | 'prosperity' | 'catastrophe';
+  casualties?: number;
+  prosperityDelta?: number;
+  settlementId?: number;
+  regionId?: number;
+  sourceTick: number;
+}
 
 /**
  * Spark type definitions — micro-events that increase a non-notable's Notability score.
@@ -71,6 +84,8 @@ export class PopulationSystem extends BaseSystem {
   // Internal Maps (Phase 3 pattern)
   private settlementIds: EntityId[] = [];
   private raceLifespans: Map<string, RaceLifespan> = new Map();
+  private pendingSignals: DemographicSignal[] = [];
+  private subscribed = false;
 
   constructor(private readonly rng?: SeededRNG) {
     super();
@@ -81,7 +96,69 @@ export class PopulationSystem extends BaseSystem {
     this.loadSettlementData(world);
   }
 
+  /**
+   * Subscribe to EventBus for demographic signals from other systems.
+   * Called lazily on first execute since EventBus isn't available at initialize.
+   */
+  private subscribeToSignals(events: EventBus): void {
+    if (this.subscribed) return;
+    this.subscribed = true;
+
+    // Military casualties
+    events.on(EventCategory.Military, (event: WorldEvent) => {
+      const data = event.data as Record<string, unknown>;
+      if (data.civilianCasualties !== undefined && typeof data.civilianCasualties === 'number') {
+        this.pendingSignals.push({
+          type: 'casualties',
+          casualties: data.civilianCasualties,
+          ...(typeof data.affectedSiteId === 'number' ? { settlementId: data.affectedSiteId } : {}),
+          sourceTick: event.timestamp,
+        });
+      }
+    });
+
+    // Ecological disasters
+    events.on(EventCategory.Disaster, (event: WorldEvent) => {
+      const data = event.data as Record<string, unknown>;
+      if (data.estimatedCasualties !== undefined && typeof data.estimatedCasualties === 'number') {
+        this.pendingSignals.push({
+          type: 'catastrophe',
+          casualties: data.estimatedCasualties,
+          ...(typeof data.regionId === 'number' ? { regionId: data.regionId } : {}),
+          sourceTick: event.timestamp,
+        });
+      }
+    });
+
+    // Economic signals
+    events.on(EventCategory.Economic, (event: WorldEvent) => {
+      const data = event.data as Record<string, unknown>;
+      if (data.prosperityDelta !== undefined && typeof data.prosperityDelta === 'number') {
+        this.pendingSignals.push({
+          type: 'prosperity',
+          prosperityDelta: data.prosperityDelta,
+          ...(typeof data.settlementId === 'number' ? { settlementId: data.settlementId } : {}),
+          sourceTick: event.timestamp,
+        });
+      }
+    });
+
+    // Magic catastrophes
+    events.on(EventCategory.Magical, (event: WorldEvent) => {
+      const data = event.data as Record<string, unknown>;
+      if (data.magicCasualties !== undefined && typeof data.magicCasualties === 'number') {
+        this.pendingSignals.push({
+          type: 'catastrophe',
+          casualties: data.magicCasualties,
+          sourceTick: event.timestamp,
+        });
+      }
+    });
+  }
+
   execute(world: World, clock: WorldClock, events: EventBus): void {
+    this.subscribeToSignals(events);
+    this.processDemographicSignals(world, clock, events);
     this.processAging(world, clock);
     this.processNaturalDeath(world, clock, events);
     this.processBirths(world, clock, events);
@@ -364,6 +441,107 @@ export class PopulationSystem extends BaseSystem {
         if (notability.score >= PROMOTION_THRESHOLD) {
           promote(world, nnId as EntityId, clock.currentTick, events, this.rng);
         }
+      }
+    }
+  }
+
+  /**
+   * Process queued demographic signals from other systems.
+   * Casualties kill non-notables, survivors gain Notability.
+   */
+  private processDemographicSignals(world: World, clock: WorldClock, events: EventBus): void {
+    if (this.pendingSignals.length === 0) return;
+
+    const signals = this.pendingSignals.splice(0);
+
+    for (const signal of signals) {
+      if (signal.type === 'casualties' || signal.type === 'catastrophe') {
+        this.applyCasualties(world, clock, events, signal);
+      }
+      // Prosperity signals modify birth rate — stored for processBirths
+      // (handled implicitly through settlement prosperity state)
+    }
+  }
+
+  /**
+   * Apply casualty signals: kill N non-notables, boost survivors' Notability.
+   */
+  private applyCasualties(
+    world: World,
+    clock: WorldClock,
+    _events: EventBus,
+    signal: DemographicSignal,
+  ): void {
+    const casualties = signal.casualties ?? 0;
+    if (casualties <= 0) return;
+
+    // Find the affected settlement (specific or random)
+    let targetSettlement: EntityId | undefined;
+    if (signal.settlementId !== undefined) {
+      targetSettlement = signal.settlementId as EntityId;
+    } else if (this.settlementIds.length > 0) {
+      // Spread casualties across a random settlement if no specific target
+      const idx = this.rng !== undefined
+        ? Math.floor(this.rng.next() * this.settlementIds.length)
+        : Math.floor(Math.random() * this.settlementIds.length);
+      targetSettlement = this.settlementIds[idx];
+    }
+
+    if (targetSettlement === undefined) return;
+
+    const pop = world.getComponent<PopulationComponent>(targetSettlement, 'Population');
+    if (pop === undefined || pop.nonNotableIds.length === 0) return;
+
+    const actualCasualties = Math.min(casualties, pop.nonNotableIds.length);
+    const killed: number[] = [];
+
+    // Kill random non-notables
+    for (let i = 0; i < actualCasualties; i++) {
+      const idx = this.rng !== undefined
+        ? Math.floor(this.rng.next() * pop.nonNotableIds.length)
+        : Math.floor(Math.random() * pop.nonNotableIds.length);
+
+      const victimId = pop.nonNotableIds[idx];
+      if (victimId === undefined) continue;
+      if (world.hasComponent(victimId as EntityId, 'Deceased')) continue;
+
+      const cause = signal.type === 'catastrophe' ? 'magical catastrophe' : 'war casualties';
+      const deceasedCause = cause;
+      const deceasedTick = clock.currentTick;
+      const deceasedLocationId = targetSettlement as number;
+      const deceased: DeceasedComponent & { serialize(): Record<string, unknown> } = {
+        type: 'Deceased' as const,
+        cause: deceasedCause,
+        tick: deceasedTick,
+        locationId: deceasedLocationId,
+        serialize() {
+          return { type: 'Deceased', cause: deceasedCause, tick: deceasedTick, locationId: deceasedLocationId };
+        },
+      };
+      world.addComponent(victimId as EntityId, deceased);
+      killed.push(victimId);
+    }
+
+    // Remove killed from population
+    if (killed.length > 0) {
+      pop.nonNotableIds = pop.nonNotableIds.filter(id => !killed.includes(id));
+      pop.count = Math.max(0, pop.count - killed.length);
+
+      // Boost survivors' Notability (Task 15: surviving trauma)
+      const traumaBoost = 20 + Math.floor((this.rng !== undefined ? this.rng.next() : Math.random()) * 20);
+      const traumaDesc = signal.type === 'catastrophe'
+        ? 'survived a magical catastrophe'
+        : 'survived the ravages of war';
+
+      for (const nnId of pop.nonNotableIds) {
+        const notability = world.getComponent<NotabilityComponent>(nnId as EntityId, 'Notability');
+        if (notability === undefined) continue;
+
+        notability.score += traumaBoost;
+        notability.sparkHistory.push({
+          tick: clock.currentTick,
+          description: traumaDesc,
+        });
       }
     }
   }

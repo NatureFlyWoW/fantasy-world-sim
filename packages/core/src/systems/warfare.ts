@@ -339,6 +339,7 @@ export class WarfareSystem extends BaseSystem {
         attackerCasualties: result.attackerCasualties,
         defenderCasualties: result.defenderCasualties,
         keyMoments: result.keyMoments,
+        civilianCasualties: Math.floor((result.attackerCasualties + result.defenderCasualties) * 0.1),
       },
     }));
 

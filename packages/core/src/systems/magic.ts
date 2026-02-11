@@ -492,6 +492,7 @@ export class MagicSystem extends BaseSystem {
         location: catastrophe.location,
         radius: catastrophe.radius,
         severity: catastrophe.severity,
+        magicCasualties: Math.floor(catastrophe.severity * 3),
       },
     }));
   }

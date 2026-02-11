@@ -825,6 +825,8 @@ export class EconomicSystem extends BaseSystem {
         resource,
         magnitude,
         duration,
+        ...(type === EconomicEventType.Boom ? { prosperityDelta: 0.5 } : type === EconomicEventType.Bust ? { prosperityDelta: -0.5 } : {}),
+        settlementId,
       },
     }));
   }
