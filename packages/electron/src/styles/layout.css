@@ -215,6 +215,38 @@
   border-left: none;
 }
 
+/* Legends view: hide map, show legends browser + inspector sidebar */
+/* NOTE: #app prefix required so these override the #app base rules (ID > class specificity). */
+#app.view--legends {
+  grid-template-columns: 1fr minmax(320px, 30%);
+  grid-template-areas:
+    "topbar   topbar"
+    "map      panels"
+    "status   status";
+}
+
+#app.view--legends #map-container {
+  display: none;
+}
+
+#app.view--legends #legends-container {
+  display: flex;
+}
+
+/* In legends view, hide the chronicle panel and divider; show only inspector */
+#app.view--legends #event-log-panel,
+#app.view--legends #panel-divider {
+  display: none;
+}
+
+#app.view--legends #inspector-panel {
+  flex: 1;
+}
+
+#app.view--legends #panel-column {
+  border-left: 1px solid var(--border-default);
+}
+
 /* ── Layout Presets ─────────────────────────────────────────────────── */
 
 /* Narrative: panels take more space */

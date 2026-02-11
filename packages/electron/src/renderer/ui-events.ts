@@ -4,6 +4,8 @@ export type UIEventMap = {
   'inspect-entity': { type: InspectorQuery['type']; id: number };
   'center-map': { x: number; y: number };
   'panel-focus': { panelId: 'map' | 'chronicle' | 'inspector' };
+  'favorite-changed': { entityId: number; isFavorite: boolean };
+  'view-in-legends': { entityId: number; entityType: string };
 };
 
 class UIEventBus {

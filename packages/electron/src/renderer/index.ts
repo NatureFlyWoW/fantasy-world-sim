@@ -19,12 +19,14 @@ import { NotificationManager } from './notification-toast.js';
 import { initPanelDivider } from './panel-divider.js';
 import { uiEvents } from './ui-events.js';
 import { ChroniclePanel } from './chronicle/chronicle-panel.js';
+import { LegendsPanel } from './legends/legends-panel.js';
 import { initChargeAtlas } from './procgen/charge-atlas.js';
 import { generateIconAtlas } from './procgen/icon-atlas.js';
 import { WelcomeScreen } from './welcome-screen.js';
 import { ContextMenu } from './context-menu.js';
 import type { ContextMenuItem } from './context-menu.js';
-import type { EntitySnapshot, EntityType, FactionSnapshot, InspectorQuery, TickDelta, WorldSnapshot } from '../shared/types.js';
+import { FavoritesManager } from './favorites-manager.js';
+import type { EntitySnapshot, EntityType, FactionSnapshot, InspectorQuery, TickDelta, WorldSnapshot, LegendsSummary } from '../shared/types.js';
 
 // ── State ────────────────────────────────────────────────────────────────────
 
@@ -48,9 +50,16 @@ const tileDataProvider = new TileDataProvider();
 const overlayManager = new OverlayManager();
 const factionColorMap = new Map<number, string>();
 
+// Favorites manager (shared across components)
+const favoritesManager = new FavoritesManager();
+
 // Chronicle
 const chronicleContainer = document.getElementById('event-log-panel')!;
-const chronicle = new ChroniclePanel(chronicleContainer);
+const chronicle = new ChroniclePanel(chronicleContainer, favoritesManager);
+
+// Legends
+const legendsContainer = document.getElementById('legends-container')!;
+let legendsPanel: LegendsPanel | null = null;
 
 // ── DOM refs ─────────────────────────────────────────────────────────────────
 
@@ -335,9 +344,16 @@ document.addEventListener('keydown', (e) => {
       }
       break;
 
-    case 'KeyN':
-      chronicle.cycleMode();
+    case 'KeyN': {
+      // Toggle between map and legends views
+      const appEl = document.getElementById('app');
+      if (appEl?.classList.contains('view--legends')) {
+        setViewFocus('map');
+      } else {
+        setViewFocus('legends');
+      }
       break;
+    }
 
     case 'KeyR':
       chronicle.toggleRegionFilter({
@@ -448,9 +464,9 @@ function initializePanelFocus(): void {
 // ============================================
 
 /**
- * Switch between Map and Chronicle view focus
+ * Switch between Map, Chronicle, and Legends view focus.
  */
-function setViewFocus(view: 'map' | 'chronicle'): void {
+function setViewFocus(view: 'map' | 'chronicle' | 'legends'): void {
   const appEl = document.getElementById('app');
 
   // Update tab states
@@ -459,15 +475,22 @@ function setViewFocus(view: 'map' | 'chronicle'): void {
   });
   document.querySelector(`.view-tab[data-view="${view}"]`)?.classList.add('view-tab--active');
 
-  // Toggle chronicle-fullscreen layout mode
+  // Remove all view classes
+  appEl?.classList.remove('view--chronicle', 'view--legends');
+
+  // Apply the requested view class
   if (view === 'chronicle') {
     appEl?.classList.add('view--chronicle');
-  } else {
-    appEl?.classList.remove('view--chronicle');
+  } else if (view === 'legends') {
+    appEl?.classList.add('view--legends');
+    // Refresh legends data when switching to legends view
+    if (legendsPanel !== null) {
+      void legendsPanel.refresh();
+    }
   }
 
   // Set panel focus
-  setPanelFocus(view);
+  setPanelFocus(view === 'legends' ? 'inspector' : view);
 }
 
 /**
@@ -477,7 +500,7 @@ function initializeViewNavigation(): void {
   document.querySelectorAll('.view-tab').forEach((tab) => {
     tab.addEventListener('click', (e) => {
       const target = e.currentTarget as HTMLElement;
-      const view = target.dataset.view as 'map' | 'chronicle' | undefined;
+      const view = target.dataset.view as 'map' | 'chronicle' | 'legends' | undefined;
       if (view !== undefined) {
         setViewFocus(view);
       }
@@ -499,6 +522,15 @@ uiEvents.on('inspect-entity', (data) => {
 uiEvents.on('center-map', (data) => {
   tilemap.getViewport().centerOn(data.x, data.y);
   tilemap.markDirty();
+});
+
+uiEvents.on('view-in-legends', (data) => {
+  // Switch to legends view
+  setViewFocus('legends');
+  // Navigate to the entity
+  if (legendsPanel !== null) {
+    legendsPanel.navigateToEntity(data.entityId, data.entityType);
+  }
 });
 
 // ── Render loop ──────────────────────────────────────────────────────────────
@@ -544,7 +576,7 @@ async function init(): Promise<void> {
   app.stage.addChild(tilemap.getContainer());
 
   // Initialize inspector panel
-  inspector = new InspectorPanel(ipc);
+  inspector = new InspectorPanel(ipc, favoritesManager);
 
   // Initialize panel divider (drag resize)
   initPanelDivider();
@@ -589,6 +621,13 @@ async function init(): Promise<void> {
 
   // Build entity type map for chronicle click resolution
   buildEntityTypeMap(snapshot.entities, snapshot.factions);
+
+  // Initialize favorites manager with world seed
+  favoritesManager.setSeed(snapshot.seed);
+
+  // Initialize legends panel
+  legendsPanel = new LegendsPanel(legendsContainer, ipc, favoritesManager);
+  void legendsPanel.init(snapshot.seed);
 
   // Wire chronicle click handlers to inspector
   chronicle.onEntityClick = (entityId: number) => {

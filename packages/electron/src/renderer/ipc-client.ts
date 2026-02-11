@@ -3,7 +3,7 @@
  *
  * Wraps the `window.aeternum` API exposed by the preload script.
  */
-import type { AeternumAPI, SimulationCommand, InspectorQuery, WorldSnapshot, TickDelta, InspectorResponse } from '../shared/types.js';
+import type { AeternumAPI, SimulationCommand, InspectorQuery, WorldSnapshot, TickDelta, InspectorResponse, LegendsSummary } from '../shared/types.js';
 
 declare global {
   interface Window {
@@ -16,6 +16,7 @@ export interface IpcClient {
   sendCommand(command: SimulationCommand): void;
   onTickDelta(callback: (delta: TickDelta) => void): void;
   queryInspector(query: InspectorQuery): Promise<InspectorResponse>;
+  queryLegends(): Promise<LegendsSummary>;
 }
 
 export function createIpcClient(): IpcClient {
@@ -26,5 +27,6 @@ export function createIpcClient(): IpcClient {
     sendCommand: (command) => api.sendCommand(command),
     onTickDelta: (callback) => api.onTickDelta(callback),
     queryInspector: (query) => api.queryInspector(query),
+    queryLegends: () => api.queryLegends(),
   };
 }

@@ -26,6 +26,10 @@ const api: AeternumAPI = {
   queryInspector(query: InspectorQuery) {
     return ipcRenderer.invoke(IPC_CHANNELS.INSPECTOR_QUERY, query);
   },
+
+  queryLegends() {
+    return ipcRenderer.invoke(IPC_CHANNELS.LEGENDS_SUMMARY);
+  },
 };
 
 contextBridge.exposeInMainWorld('aeternum', api);

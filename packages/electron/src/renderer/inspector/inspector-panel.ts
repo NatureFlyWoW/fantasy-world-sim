@@ -8,6 +8,8 @@
  */
 import type { IpcClient } from '../ipc-client.js';
 import type { InspectorQuery, InspectorResponse, InspectorSection } from '../../shared/types.js';
+import type { FavoritesManager } from '../favorites-manager.js';
+import { uiEvents } from '../ui-events.js';
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -65,9 +67,11 @@ export class InspectorPanel {
   private currentResponse: InspectorResponse | null = null;
   private readonly ipc: IpcClient;
   private readonly contentEl: HTMLDivElement;
+  private readonly favoritesManager: FavoritesManager;
 
-  constructor(ipc: IpcClient) {
+  constructor(ipc: IpcClient, favoritesManager: FavoritesManager) {
     this.ipc = ipc;
+    this.favoritesManager = favoritesManager;
 
     const el = document.querySelector('#inspector-panel .panel-content');
     if (!(el instanceof HTMLDivElement)) {
@@ -77,6 +81,14 @@ export class InspectorPanel {
 
     this.bindClicks();
     this.bindKeyboard();
+
+    // Listen for favorite changes from other components
+    uiEvents.on('favorite-changed', () => {
+      // Re-render to update the star button if currently viewing a favorited entity
+      if (this.currentResponse !== null) {
+        this.render();
+      }
+    });
   }
 
   // ── Public API ───────────────────────────────────────────────────────────
@@ -191,8 +203,32 @@ export class InspectorPanel {
       '</div>',
     );
 
-    // Entity name
-    parts.push(`<h2 class="inspector-entity-name">${this.escapeHtml(response.entityName)}</h2>`);
+    // Entity name header with favorite star button and "View in Legends" button
+    const currentEntry = this.history[this.historyIndex];
+    const entityId = currentEntry?.query.id;
+    const isFavorite = entityId !== undefined && this.favoritesManager.isFavorite(entityId);
+    const starIcon = isFavorite ? '\u2605' : '\u2606'; // ★ or ☆
+    const starClass = isFavorite ? 'inspector-favorite-star inspector-favorite-star--active' : 'inspector-favorite-star';
+
+    // Only show "View in Legends" button for entity types that appear in legends (not events/regions)
+    const showLegendsButton = ['character', 'faction', 'site', 'artifact'].includes(response.entityType) && entityId !== undefined;
+
+    parts.push('<div class="inspector-entity-header">');
+    parts.push(`  <h2 class="inspector-entity-name">${this.escapeHtml(response.entityName)}</h2>`);
+    parts.push('  <div class="inspector-entity-actions">');
+    if (entityId !== undefined) {
+      parts.push(`    <button class="${starClass}" data-entity-id="${entityId}" title="${isFavorite ? 'Remove from favorites' : 'Add to favorites'}">${starIcon}</button>`);
+    }
+    if (showLegendsButton) {
+      parts.push(
+        `    <button class="inspector-legends-btn" data-entity-id="${entityId}" data-entity-type="${this.escapeHtml(response.entityType)}" title="View in Legends Viewer">`,
+        '      <span class="inspector-legends-btn__icon">\u2726</span>',
+        '      <span class="inspector-legends-btn__label">Legends</span>',
+        '    </button>',
+      );
+    }
+    parts.push('  </div>');
+    parts.push('</div>');
 
     // Summary
     if (response.summary.length > 0) {
@@ -339,6 +375,34 @@ export class InspectorPanel {
     // Entity link clicks (event delegation)
     this.contentEl.addEventListener('click', (e) => {
       const target = e.target as HTMLElement;
+
+      // Favorite star button
+      const starBtn = target.closest('.inspector-favorite-star') as HTMLElement | null;
+      if (starBtn !== null) {
+        const idStr = starBtn.dataset.entityId;
+        if (idStr !== undefined) {
+          const id = Number(idStr);
+          if (!Number.isNaN(id)) {
+            this.favoritesManager.toggleFavorite(id);
+            // Render will be triggered by the favorite-changed event listener
+          }
+        }
+        return;
+      }
+
+      // "View in Legends" button
+      const legendsBtn = target.closest('.inspector-legends-btn') as HTMLElement | null;
+      if (legendsBtn !== null) {
+        const idStr = legendsBtn.dataset.entityId;
+        const typeStr = legendsBtn.dataset.entityType;
+        if (idStr !== undefined && typeStr !== undefined) {
+          const id = Number(idStr);
+          if (!Number.isNaN(id)) {
+            uiEvents.emit('view-in-legends', { entityId: id, entityType: typeStr });
+          }
+        }
+        return;
+      }
 
       // Entity link navigation
       const link = target.closest('.entity-link') as HTMLElement | null;

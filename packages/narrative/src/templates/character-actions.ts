@@ -10,7 +10,7 @@ export const characterActionTemplates: NarrativeTemplate[] = [
     subtype: 'character.befriend',
     tone: NarrativeTone.EpicHistorical,
     significanceRange: { min: 0, max: 40 },
-    template: '{character.name} found common ground with a fellow traveler.',
+    template: '{character.name} found common ground with {#if event.data.targetId}{target.name}{#else}a fellow traveler{/if}.',
     requiredContext: [],
   },
   {
@@ -19,7 +19,7 @@ export const characterActionTemplates: NarrativeTemplate[] = [
     subtype: 'character.befriend',
     tone: NarrativeTone.EpicHistorical,
     significanceRange: { min: 41, max: 70 },
-    template: '{character.name} forged a new friendship in the lands of {faction.name}. What began as chance encounter became a bond of mutual respect.',
+    template: '{character.name} forged a new friendship with {#if event.data.targetId}{target.name}{#else}a kindred spirit{/if} in the lands of {faction.name}. {#if event.data.motivation}{event.data.motivation}. {/if}What began as chance encounter became a bond of mutual respect.',
     requiredContext: [],
   },
   {
@@ -28,7 +28,7 @@ export const characterActionTemplates: NarrativeTemplate[] = [
     subtype: 'character.befriend',
     tone: NarrativeTone.EpicHistorical,
     significanceRange: { min: 71, max: 100 },
-    template: 'In the halls of {site.name}, {character.name} forged a bond that would echo through the annals of {faction.name}. Two souls, once strangers, now stood united against whatever darkness the world might bring. The chroniclers would remember this friendship as the foundation of deeds yet to come.',
+    template: 'In the halls of {site.name}, {character.name} and {#if event.data.targetId}{target.name}{#else}an unlikely companion{/if} forged a bond that would echo through the annals of {faction.name}. {#if event.data.relationshipToTarget}Where once stood {event.data.relationshipToTarget}, now blossomed kinship. {/if}{#if event.data.contextDetail}{event.data.contextDetail} {/if}Two souls, once strangers, now stood united against whatever darkness the world might bring.',
     requiredContext: [],
   },
 
@@ -39,7 +39,7 @@ export const characterActionTemplates: NarrativeTemplate[] = [
     subtype: 'character.trade',
     tone: NarrativeTone.EpicHistorical,
     significanceRange: { min: 0, max: 40 },
-    template: '{character.name} completed a modest exchange of goods.',
+    template: '{character.name} completed a modest exchange{#if event.data.targetId} with {target.name}{/if}.',
     requiredContext: [],
   },
   {
@@ -48,7 +48,7 @@ export const characterActionTemplates: NarrativeTemplate[] = [
     subtype: 'character.trade',
     tone: NarrativeTone.EpicHistorical,
     significanceRange: { min: 41, max: 70 },
-    template: '{character.name} negotiated a favorable trade at {site.name}. The exchange brought profit and new connections across the realm.',
+    template: '{character.name} negotiated a favorable trade{#if event.data.targetId} with {target.name}{/if} at {site.name}. {#if event.data.motivation}{event.data.motivation}. {/if}The exchange brought profit and new connections across the realm.',
     requiredContext: [],
   },
   {
@@ -57,7 +57,7 @@ export const characterActionTemplates: NarrativeTemplate[] = [
     subtype: 'character.trade',
     tone: NarrativeTone.EpicHistorical,
     significanceRange: { min: 71, max: 100 },
-    template: 'The markets of {site.name} bore witness to a deal that would reshape fortunes. {character.name} negotiated with the cunning of a master merchant, and when the bargain was struck, both parties knew the world had shifted beneath their feet. Gold changed hands, but so too did the very currents of power.',
+    template: 'The markets of {site.name} bore witness to a deal that would reshape fortunes. {character.name} negotiated with {#if event.data.targetId}{target.name}{#else}a cunning counterpart{/if}, and when the bargain was struck, both parties knew the world had shifted beneath their feet. {#if event.data.contextDetail}{event.data.contextDetail} {/if}Gold changed hands, but so too did the very currents of power.',
     requiredContext: [],
   },
 
@@ -68,7 +68,7 @@ export const characterActionTemplates: NarrativeTemplate[] = [
     subtype: 'character.craft_item',
     tone: NarrativeTone.EpicHistorical,
     significanceRange: { min: 0, max: 40 },
-    template: '{character.name} crafted a serviceable item.',
+    template: '{character.name} crafted a serviceable item{#if event.data.personalityDriver}, guided by {event.data.personalityDriver}{/if}.',
     requiredContext: [],
   },
   {
@@ -77,7 +77,7 @@ export const characterActionTemplates: NarrativeTemplate[] = [
     subtype: 'character.craft_item',
     tone: NarrativeTone.EpicHistorical,
     significanceRange: { min: 41, max: 70 },
-    template: 'In {pronoun.possessive} workshop, {character.name} labored over a new creation. Skill and patience yielded an item worthy of remark.',
+    template: 'In {pronoun.possessive} workshop at {site.name}, {character.name} labored over a new creation. {#if event.data.motivation}{event.data.motivation}. {/if}Skill and patience yielded an item worthy of remark.',
     requiredContext: [],
   },
   {
@@ -86,7 +86,7 @@ export const characterActionTemplates: NarrativeTemplate[] = [
     subtype: 'character.craft_item',
     tone: NarrativeTone.EpicHistorical,
     significanceRange: { min: 71, max: 100 },
-    template: 'The forge-fires of {site.name} burned bright as {character.name} wrought a masterwork. Every hammer-strike carried intention, every detail bore {pronoun.possessive} signature. When at last the work was complete, those who beheld it whispered that such craftsmanship had not been seen since the elder days.',
+    template: 'The forge-fires of {site.name} burned bright as {character.name} wrought a masterwork. {#if event.data.personalityDriver}{pronoun.possessive} {event.data.personalityDriver} drove every hammer-strike with unrelenting purpose. {/if}Every detail bore {pronoun.possessive} signature. When at last the work was complete, those who beheld it whispered that such craftsmanship had not been seen since the elder days. {#if event.data.contextDetail}{event.data.contextDetail}{/if}',
     requiredContext: [],
   },
 
@@ -97,7 +97,7 @@ export const characterActionTemplates: NarrativeTemplate[] = [
     subtype: 'character.study_lore',
     tone: NarrativeTone.EpicHistorical,
     significanceRange: { min: 0, max: 40 },
-    template: '{character.name} pored over ancient texts.',
+    template: '{character.name} pored over ancient texts{#if event.data.motivation}, driven by {event.data.motivation}{/if}.',
     requiredContext: [],
   },
   {
@@ -106,7 +106,7 @@ export const characterActionTemplates: NarrativeTemplate[] = [
     subtype: 'character.study_lore',
     tone: NarrativeTone.EpicHistorical,
     significanceRange: { min: 41, max: 70 },
-    template: '{character.name} delved into forgotten lore at {site.name}. The wisdom of ages past began to reveal itself to {pronoun.object}.',
+    template: '{character.name} delved into forgotten lore at {site.name}. {#if event.data.motivation}{event.data.motivation}. {/if}The wisdom of ages past began to reveal itself to {pronoun.object}.',
     requiredContext: [],
   },
   {
@@ -115,7 +115,7 @@ export const characterActionTemplates: NarrativeTemplate[] = [
     subtype: 'character.study_lore',
     tone: NarrativeTone.EpicHistorical,
     significanceRange: { min: 71, max: 100 },
-    template: 'Within the archives of {site.name}, {character.name} uncovered knowledge that had slumbered for centuries. Page by page, {pronoun.subject} pieced together truths that the world had forgotten. The implications of what {pronoun.subject} learned would ripple through {faction.name} and beyond, for some knowledge, once awakened, cannot be put to rest.',
+    template: 'Within the archives of {site.name}, {character.name} uncovered knowledge that had slumbered for centuries. {#if event.data.personalityDriver}{pronoun.possessive} {event.data.personalityDriver} compelled {pronoun.object} deeper into the stacks than any had ventured before. {/if}Page by page, {pronoun.subject} pieced together truths that the world had forgotten. {#if event.data.contextDetail}{event.data.contextDetail} {/if}The implications would ripple through {faction.name} and beyond, for some knowledge, once awakened, cannot be put to rest.',
     requiredContext: [],
   },
 
@@ -126,7 +126,7 @@ export const characterActionTemplates: NarrativeTemplate[] = [
     subtype: 'character.pray',
     tone: NarrativeTone.EpicHistorical,
     significanceRange: { min: 0, max: 40 },
-    template: '{character.name} offered prayers to the divine.',
+    template: '{character.name} offered prayers to {#if event.data.targetId}{target.name}{#else}the divine{/if}.',
     requiredContext: [],
   },
   {
@@ -135,7 +135,7 @@ export const characterActionTemplates: NarrativeTemplate[] = [
     subtype: 'character.pray',
     tone: NarrativeTone.EpicHistorical,
     significanceRange: { min: 41, max: 70 },
-    template: 'At {site.name}, {character.name} knelt in supplication. {pronoun.possessive} devotion burned bright as {pronoun.subject} sought the favor of the gods.',
+    template: 'At {site.name}, {character.name} knelt in supplication{#if event.data.targetId} before {target.name}{/if}. {#if event.data.motivation}{event.data.motivation}. {/if}{pronoun.possessive} devotion burned bright as {pronoun.subject} sought divine favor.',
     requiredContext: [],
   },
   {
@@ -144,7 +144,7 @@ export const characterActionTemplates: NarrativeTemplate[] = [
     subtype: 'character.pray',
     tone: NarrativeTone.EpicHistorical,
     significanceRange: { min: 71, max: 100 },
-    template: 'The sacred halls of {site.name} echoed with {character.name}\'s fervent prayer. Such was {pronoun.possessive} devotion that the very air seemed to shimmer with divine presence. Whether the gods heard, none could say for certain, but those who witnessed {pronoun.possessive} communion spoke of it for years thereafter.',
+    template: 'The sacred halls of {site.name} echoed with {character.name}\'s fervent prayer{#if event.data.targetId} to {target.name}{/if}. {#if event.data.personalityDriver}{pronoun.possessive} {event.data.personalityDriver} drove {pronoun.object} to kneel long after others had risen. {/if}Such was {pronoun.possessive} devotion that the very air seemed to shimmer with divine presence. {#if event.data.contextDetail}{event.data.contextDetail} {/if}Whether the gods heard, none could say for certain, but those who witnessed {pronoun.possessive} communion spoke of it for years thereafter.',
     requiredContext: [],
   },
 
@@ -155,7 +155,7 @@ export const characterActionTemplates: NarrativeTemplate[] = [
     subtype: 'character.journey',
     tone: NarrativeTone.EpicHistorical,
     significanceRange: { min: 0, max: 40 },
-    template: '{character.name} set forth on a journey.',
+    template: '{character.name} set forth on a journey{#if event.data.motivation}, {event.data.motivation}{/if}.',
     requiredContext: [],
   },
   {
@@ -164,7 +164,7 @@ export const characterActionTemplates: NarrativeTemplate[] = [
     subtype: 'character.journey',
     tone: NarrativeTone.EpicHistorical,
     significanceRange: { min: 41, max: 70 },
-    template: '{character.name} departed from {site.name}, seeking new horizons. The road ahead promised both peril and discovery.',
+    template: '{character.name} departed from {site.name}, seeking new horizons. {#if event.data.motivation}{event.data.motivation}. {/if}The road ahead promised both peril and discovery.',
     requiredContext: [],
   },
   {
@@ -173,7 +173,7 @@ export const characterActionTemplates: NarrativeTemplate[] = [
     subtype: 'character.journey',
     tone: NarrativeTone.EpicHistorical,
     significanceRange: { min: 71, max: 100 },
-    template: 'When {character.name} turned {pronoun.possessive} back upon {site.name}, all who knew {pronoun.object} understood that {pronoun.subject} would return changed, if indeed {pronoun.subject} returned at all. The journey ahead would test {pronoun.object} in ways {pronoun.subject} could not yet foresee. Thus began an odyssey that bards would one day sing of.',
+    template: 'When {character.name} turned {pronoun.possessive} back upon {site.name}, all who knew {pronoun.object} understood that {pronoun.subject} would return changed, if indeed {pronoun.subject} returned at all. {#if event.data.personalityDriver}{pronoun.possessive} {event.data.personalityDriver} would not let {pronoun.object} rest in comfort while the world called. {/if}{#if event.data.contextDetail}{event.data.contextDetail} {/if}The journey ahead would test {pronoun.object} in ways {pronoun.subject} could not yet foresee. Thus began an odyssey that bards would one day sing of.',
     requiredContext: [],
   },
 
@@ -184,7 +184,7 @@ export const characterActionTemplates: NarrativeTemplate[] = [
     subtype: 'character.experiment',
     tone: NarrativeTone.EpicHistorical,
     significanceRange: { min: 0, max: 40 },
-    template: '{character.name} conducted an experiment.',
+    template: '{character.name} conducted an experiment{#if event.data.personalityDriver}, spurred by {event.data.personalityDriver}{/if}.',
     requiredContext: [],
   },
   {
@@ -193,7 +193,7 @@ export const characterActionTemplates: NarrativeTemplate[] = [
     subtype: 'character.experiment',
     tone: NarrativeTone.EpicHistorical,
     significanceRange: { min: 41, max: 70 },
-    template: 'In {pronoun.possessive} laboratory, {character.name} pushed the boundaries of known practice. The results were... illuminating.',
+    template: 'In {pronoun.possessive} laboratory at {site.name}, {character.name} pushed the boundaries of known practice. {#if event.data.motivation}{event.data.motivation}. {/if}The results were illuminating.',
     requiredContext: [],
   },
   {
@@ -202,7 +202,7 @@ export const characterActionTemplates: NarrativeTemplate[] = [
     subtype: 'character.experiment',
     tone: NarrativeTone.EpicHistorical,
     significanceRange: { min: 71, max: 100 },
-    template: 'The chambers beneath {site.name} crackled with arcane energies as {character.name} pursued knowledge that others deemed too dangerous. When the experiment concluded, the fundamental understanding of {faction.name} had been altered forever. Some praised {pronoun.possessive} boldness; others whispered that {pronoun.subject} had ventured too far into realms mortals were not meant to tread.',
+    template: 'The chambers beneath {site.name} crackled with arcane energies as {character.name} pursued knowledge that others deemed too dangerous. {#if event.data.personalityDriver}{pronoun.possessive} {event.data.personalityDriver} drove {pronoun.object} past every boundary of caution. {/if}When the experiment concluded, the fundamental understanding of {faction.name} had been altered forever. {#if event.data.contextDetail}{event.data.contextDetail} {/if}Some praised {pronoun.possessive} boldness; others whispered that {pronoun.subject} had ventured too far into realms mortals were not meant to tread.',
     requiredContext: [],
   },
 
@@ -213,7 +213,7 @@ export const characterActionTemplates: NarrativeTemplate[] = [
     subtype: 'character.steal',
     tone: NarrativeTone.EpicHistorical,
     significanceRange: { min: 0, max: 40 },
-    template: '{character.name} pilfered an item of modest value.',
+    template: '{character.name} pilfered an item{#if event.data.targetId} from {target.name}{/if}.',
     requiredContext: [],
   },
   {
@@ -222,7 +222,7 @@ export const characterActionTemplates: NarrativeTemplate[] = [
     subtype: 'character.steal',
     tone: NarrativeTone.EpicHistorical,
     significanceRange: { min: 41, max: 70 },
-    template: 'Under cover of darkness, {character.name} made off with a prize from {site.name}. The theft would not go unnoticed for long.',
+    template: 'Under cover of darkness at {site.name}, {character.name} made off with a prize{#if event.data.targetId} belonging to {target.name}{/if}. {#if event.data.motivation}{event.data.motivation}. {/if}The theft would not go unnoticed for long.',
     requiredContext: [],
   },
   {
@@ -231,7 +231,7 @@ export const characterActionTemplates: NarrativeTemplate[] = [
     subtype: 'character.steal',
     tone: NarrativeTone.EpicHistorical,
     significanceRange: { min: 71, max: 100 },
-    template: 'In a daring act that would be spoken of in hushed tones, {character.name} infiltrated the guarded vaults of {site.name} and emerged with a treasure of legendary worth. The heist was executed with such cunning that none suspected {pronoun.object} until it was far too late. The reverberations of this theft would shake {faction.name} to its foundations.',
+    template: 'In a daring act that would be spoken of in hushed tones, {character.name} infiltrated the guarded vaults of {site.name} and emerged with a treasure of legendary worth{#if event.data.targetId}, wrested from the grasp of {target.name}{/if}. {#if event.data.relationshipToTarget}The theft was made all the more brazen given they were {event.data.relationshipToTarget}. {/if}{#if event.data.contextDetail}{event.data.contextDetail} {/if}The heist was executed with such cunning that none suspected {pronoun.object} until it was far too late. The reverberations of this theft would shake {faction.name} to its foundations.',
     requiredContext: [],
   },
 
@@ -242,7 +242,7 @@ export const characterActionTemplates: NarrativeTemplate[] = [
     subtype: 'character.proselytize',
     tone: NarrativeTone.EpicHistorical,
     significanceRange: { min: 0, max: 40 },
-    template: '{character.name} preached to a small gathering.',
+    template: '{character.name} preached to a small gathering{#if event.data.targetId}, bringing {target.name} into the fold{/if}.',
     requiredContext: [],
   },
   {
@@ -251,7 +251,7 @@ export const characterActionTemplates: NarrativeTemplate[] = [
     subtype: 'character.proselytize',
     tone: NarrativeTone.EpicHistorical,
     significanceRange: { min: 41, max: 70 },
-    template: '{character.name} spread the faith through {site.name}, winning converts with impassioned words. The old ways began to give ground to new devotion.',
+    template: '{character.name} spread the faith through {site.name}{#if event.data.targetId}, swaying even {target.name} with impassioned words{/if}. {#if event.data.motivation}{event.data.motivation}. {/if}The old ways began to give ground to new devotion.',
     requiredContext: [],
   },
   {
@@ -260,7 +260,7 @@ export const characterActionTemplates: NarrativeTemplate[] = [
     subtype: 'character.proselytize',
     tone: NarrativeTone.EpicHistorical,
     significanceRange: { min: 71, max: 100 },
-    template: 'Standing before the multitudes of {site.name}, {character.name} proclaimed truth with such fervor that hearts were transformed. Skeptics became believers, the wayward found purpose, and the faithful wept with renewed devotion. The religious landscape of {faction.name} would never be the same, for {pronoun.subject} had planted seeds that would grow into a movement.',
+    template: 'Standing before the multitudes of {site.name}, {character.name} proclaimed truth with such fervor that hearts were transformed. {#if event.data.targetId}Even {target.name}, once a skeptic, found {pronoun.reflexive} kneeling. {/if}{#if event.data.personalityDriver}{pronoun.possessive} {event.data.personalityDriver} lent {pronoun.possessive} words a conviction that could not be denied. {/if}The religious landscape of {faction.name} would never be the same, for {pronoun.subject} had planted seeds that would grow into a movement. {#if event.data.contextDetail}{event.data.contextDetail}{/if}',
     requiredContext: [],
   },
 
@@ -271,7 +271,7 @@ export const characterActionTemplates: NarrativeTemplate[] = [
     subtype: 'character.research_spell',
     tone: NarrativeTone.EpicHistorical,
     significanceRange: { min: 0, max: 40 },
-    template: '{character.name} studied the arcane formulae.',
+    template: '{character.name} studied the arcane formulae{#if event.data.motivation}, {event.data.motivation}{/if}.',
     requiredContext: [],
   },
   {
@@ -280,7 +280,7 @@ export const characterActionTemplates: NarrativeTemplate[] = [
     subtype: 'character.research_spell',
     tone: NarrativeTone.EpicHistorical,
     significanceRange: { min: 41, max: 70 },
-    template: 'Through tireless effort, {character.name} unraveled the mysteries of a potent spell. Magical theory gave way to practical mastery.',
+    template: 'Through tireless effort at {site.name}, {character.name} unraveled the mysteries of a potent spell. {#if event.data.motivation}{event.data.motivation}. {/if}Magical theory gave way to practical mastery.',
     requiredContext: [],
   },
   {
@@ -289,7 +289,7 @@ export const characterActionTemplates: NarrativeTemplate[] = [
     subtype: 'character.research_spell',
     tone: NarrativeTone.EpicHistorical,
     significanceRange: { min: 71, max: 100 },
-    template: 'The towers of {site.name} hummed with power as {character.name} completed research into magic of unprecedented might. What had begun as theoretical musings crystallized into a spell that would reshape the very art of sorcery. The mage-circles of {faction.name} trembled, for {pronoun.subject} had achieved what many thought impossible.',
+    template: 'The towers of {site.name} hummed with power as {character.name} completed research into magic of unprecedented might. {#if event.data.personalityDriver}{pronoun.possessive} {event.data.personalityDriver} fueled nights of ceaseless study that would have broken lesser minds. {/if}What had begun as theoretical musings crystallized into a spell that would reshape the very art of sorcery. {#if event.data.contextDetail}{event.data.contextDetail} {/if}The mage-circles of {faction.name} trembled, for {pronoun.subject} had achieved what many thought impossible.',
     requiredContext: [],
   },
 
@@ -300,7 +300,7 @@ export const characterActionTemplates: NarrativeTemplate[] = [
     subtype: 'character.enchant_item',
     tone: NarrativeTone.EpicHistorical,
     significanceRange: { min: 0, max: 40 },
-    template: '{character.name} imbued an object with minor enchantment.',
+    template: '{character.name} imbued an object with minor enchantment{#if event.data.targetId} for {target.name}{/if}.',
     requiredContext: [],
   },
   {
@@ -309,7 +309,7 @@ export const characterActionTemplates: NarrativeTemplate[] = [
     subtype: 'character.enchant_item',
     tone: NarrativeTone.EpicHistorical,
     significanceRange: { min: 41, max: 70 },
-    template: '{character.name} wove potent magic into an item at {site.name}. The enchantment held true, and the result would serve its wielder well.',
+    template: '{character.name} wove potent magic into an item at {site.name}. {#if event.data.motivation}{event.data.motivation}. {/if}The enchantment held true, and the result would serve its wielder well.',
     requiredContext: [],
   },
   {
@@ -318,7 +318,7 @@ export const characterActionTemplates: NarrativeTemplate[] = [
     subtype: 'character.enchant_item',
     tone: NarrativeTone.EpicHistorical,
     significanceRange: { min: 71, max: 100 },
-    template: 'In a ritual that lasted three days and three nights, {character.name} bound magic to matter in ways that defied convention. The item that emerged from {pronoun.possessive} sanctum pulsed with otherworldly power. Scholars of {faction.name} would study this enchantment for generations, and those who bore it would find their fates irrevocably altered.',
+    template: 'In a ritual that lasted three days and three nights, {character.name} bound magic to matter in ways that defied convention. {#if event.data.personalityDriver}{pronoun.possessive} {event.data.personalityDriver} sustained {pronoun.object} through the ordeal when lesser enchanters would have faltered. {/if}The item that emerged from {pronoun.possessive} sanctum at {site.name} pulsed with otherworldly power. {#if event.data.contextDetail}{event.data.contextDetail} {/if}Scholars of {faction.name} would study this enchantment for generations, and those who bore it would find their fates irrevocably altered.',
     requiredContext: [],
   },
 
@@ -329,7 +329,7 @@ export const characterActionTemplates: NarrativeTemplate[] = [
     subtype: 'character.forage',
     tone: NarrativeTone.EpicHistorical,
     significanceRange: { min: 0, max: 40 },
-    template: '{character.name} gathered provisions from the wild.',
+    template: '{character.name} gathered provisions from the wild{#if event.data.motivation}, {event.data.motivation}{/if}.',
     requiredContext: [],
   },
   {
@@ -338,7 +338,7 @@ export const characterActionTemplates: NarrativeTemplate[] = [
     subtype: 'character.forage',
     tone: NarrativeTone.EpicHistorical,
     significanceRange: { min: 41, max: 70 },
-    template: 'With practiced eye, {character.name} found bounty in the wilderness. What others overlooked, {pronoun.subject} harvested with skill.',
+    template: 'With practiced eye near {site.name}, {character.name} found bounty in the wilderness. {#if event.data.motivation}{event.data.motivation}. {/if}What others overlooked, {pronoun.subject} harvested with skill.',
     requiredContext: [],
   },
   {
@@ -347,7 +347,7 @@ export const characterActionTemplates: NarrativeTemplate[] = [
     subtype: 'character.forage',
     tone: NarrativeTone.EpicHistorical,
     significanceRange: { min: 71, max: 100 },
-    template: 'Venturing deep into untamed lands, {character.name} discovered resources thought lost to the ages. {pronoun.possessive} knowledge of nature\'s hidden places yielded a bounty that would sustain {faction.name} through the hard times ahead. The wilderness had shared its secrets with one who understood its language.',
+    template: 'Venturing deep into untamed lands beyond {site.name}, {character.name} discovered resources thought lost to the ages. {#if event.data.personalityDriver}{pronoun.possessive} {event.data.personalityDriver} drove {pronoun.object} farther than any had dared. {/if}{pronoun.possessive} knowledge of nature\'s hidden places yielded a bounty that would sustain {faction.name} through the hard times ahead. {#if event.data.contextDetail}{event.data.contextDetail} {/if}The wilderness had shared its secrets with one who understood its language.',
     requiredContext: [],
   },
 
@@ -358,7 +358,7 @@ export const characterActionTemplates: NarrativeTemplate[] = [
     subtype: 'character.flee',
     tone: NarrativeTone.EpicHistorical,
     significanceRange: { min: 0, max: 40 },
-    template: '{character.name} withdrew from danger.',
+    template: '{character.name} withdrew from danger{#if event.data.targetId}, fleeing {target.name}{/if}.',
     requiredContext: [],
   },
   {
@@ -367,7 +367,7 @@ export const characterActionTemplates: NarrativeTemplate[] = [
     subtype: 'character.flee',
     tone: NarrativeTone.EpicHistorical,
     significanceRange: { min: 41, max: 70 },
-    template: 'Recognizing that valor would yield only death, {character.name} fled from {site.name}. Survival demanded retreat.',
+    template: 'Recognizing that valor would yield only death, {character.name} fled from {site.name}{#if event.data.targetId}, with {target.name} in pursuit{/if}. {#if event.data.motivation}{event.data.motivation}. {/if}Survival demanded retreat.',
     requiredContext: [],
   },
   {
@@ -376,7 +376,7 @@ export const characterActionTemplates: NarrativeTemplate[] = [
     subtype: 'character.flee',
     tone: NarrativeTone.EpicHistorical,
     significanceRange: { min: 71, max: 100 },
-    template: 'When all seemed lost at {site.name}, {character.name} made a desperate escape that few thought possible. Through cunning, luck, and sheer determination, {pronoun.subject} evaded capture when others fell. The flight would haunt {pronoun.object} for years, yet {pronoun.possessive} survival meant that {faction.name} retained hope for the future.',
+    template: 'When all seemed lost at {site.name}, {character.name} made a desperate escape that few thought possible{#if event.data.targetId}, eluding {target.name} against all odds{/if}. {#if event.data.relationshipToTarget}That {pronoun.subject} fled from {event.data.relationshipToTarget} made the retreat all the more bitter. {/if}Through cunning, luck, and sheer determination, {pronoun.subject} evaded capture when others fell. {#if event.data.contextDetail}{event.data.contextDetail} {/if}The flight would haunt {pronoun.object} for years, yet {pronoun.possessive} survival meant that {faction.name} retained hope for the future.',
     requiredContext: [],
   },
 
@@ -387,7 +387,7 @@ export const characterActionTemplates: NarrativeTemplate[] = [
     subtype: 'character.seek_healing',
     tone: NarrativeTone.EpicHistorical,
     significanceRange: { min: 0, max: 40 },
-    template: '{character.name} sought treatment for minor ailments.',
+    template: '{character.name} sought treatment{#if event.data.targetId} from {target.name}{/if}.',
     requiredContext: [],
   },
   {
@@ -396,7 +396,7 @@ export const characterActionTemplates: NarrativeTemplate[] = [
     subtype: 'character.seek_healing',
     tone: NarrativeTone.EpicHistorical,
     significanceRange: { min: 41, max: 70 },
-    template: 'Wounded and weary, {character.name} came to {site.name} seeking restoration. The healers plied their art, and {pronoun.subject} recovered.',
+    template: 'Wounded and weary, {character.name} came to {site.name} seeking restoration{#if event.data.targetId} at the hands of {target.name}{/if}. {#if event.data.motivation}{event.data.motivation}. {/if}The healers plied their art, and {pronoun.subject} recovered.',
     requiredContext: [],
   },
   {
@@ -405,7 +405,7 @@ export const characterActionTemplates: NarrativeTemplate[] = [
     subtype: 'character.seek_healing',
     tone: NarrativeTone.EpicHistorical,
     significanceRange: { min: 71, max: 100 },
-    template: 'At death\'s very threshold, {character.name} was brought to the sanctuaries of {site.name}. The healers labored through endless nights, calling upon ancient knowledge and desperate prayers. Against all expectation, life returned to {pronoun.possessive} broken form. The recovery would be hailed as miraculous throughout {faction.name}.',
+    template: 'At death\'s very threshold, {character.name} was brought to the sanctuaries of {site.name}. {#if event.data.targetId}{target.name} labored through endless nights, calling upon ancient knowledge and desperate prayers. {#else}The healers labored through endless nights, calling upon ancient knowledge and desperate prayers. {/if}{#if event.data.personalityDriver}{pronoun.possessive} {event.data.personalityDriver} willed {pronoun.object} to cling to life when the body begged surrender. {/if}Against all expectation, life returned to {pronoun.possessive} broken form. {#if event.data.contextDetail}{event.data.contextDetail} {/if}The recovery would be hailed as miraculous throughout {faction.name}.',
     requiredContext: [],
   },
 
@@ -416,7 +416,7 @@ export const characterActionTemplates: NarrativeTemplate[] = [
     subtype: 'character.dream',
     tone: NarrativeTone.EpicHistorical,
     significanceRange: { min: 0, max: 40 },
-    template: '{character.name} experienced a vivid dream.',
+    template: '{character.name} experienced a vivid dream{#if event.data.targetId} about {target.name}{/if}.',
     requiredContext: [],
   },
   {
@@ -425,7 +425,7 @@ export const characterActionTemplates: NarrativeTemplate[] = [
     subtype: 'character.dream',
     tone: NarrativeTone.EpicHistorical,
     significanceRange: { min: 41, max: 70 },
-    template: 'In sleep, {character.name} beheld visions that lingered upon waking. The dream felt portentous, laden with meaning.',
+    template: 'In sleep, {character.name} beheld visions that lingered upon waking{#if event.data.targetId}, visions of {target.name} that felt portentous{/if}. {#if event.data.motivation}{event.data.motivation}. {/if}The dream was laden with meaning.',
     requiredContext: [],
   },
   {
@@ -434,7 +434,7 @@ export const characterActionTemplates: NarrativeTemplate[] = [
     subtype: 'character.dream',
     tone: NarrativeTone.EpicHistorical,
     significanceRange: { min: 71, max: 100 },
-    template: 'A dream of such clarity descended upon {character.name} that {pronoun.subject} could not dismiss it as mere phantasm. Symbols and visions revealed truths that waking reason had obscured. When {pronoun.subject} spoke of the dream to the wise of {faction.name}, they grew pale, for such dreams had heralded great changes in ages past.',
+    template: 'A dream of such clarity descended upon {character.name} that {pronoun.subject} could not dismiss it as mere phantasm. {#if event.data.targetId}The figure of {target.name} loomed central among the symbols and portents. {/if}{#if event.data.personalityDriver}{pronoun.possessive} {event.data.personalityDriver} had opened {pronoun.possessive} mind to truths that waking reason obscured. {/if}When {pronoun.subject} spoke of the dream to the wise of {faction.name}, they grew pale, for such dreams had heralded great changes in ages past. {#if event.data.contextDetail}{event.data.contextDetail}{/if}',
     requiredContext: [],
   },
 
@@ -445,7 +445,7 @@ export const characterActionTemplates: NarrativeTemplate[] = [
     subtype: 'character.betray',
     tone: NarrativeTone.EpicHistorical,
     significanceRange: { min: 0, max: 40 },
-    template: '{character.name} broke faith with an ally.',
+    template: '{character.name} broke faith with {#if event.data.targetId}{target.name}{#else}an ally{/if}.',
     requiredContext: [],
   },
   {
@@ -454,7 +454,7 @@ export const characterActionTemplates: NarrativeTemplate[] = [
     subtype: 'character.betray',
     tone: NarrativeTone.EpicHistorical,
     significanceRange: { min: 41, max: 70 },
-    template: 'In an act of calculated treachery, {character.name} turned against those who had trusted {pronoun.object}. The betrayal would not be forgotten.',
+    template: 'In an act of calculated treachery, {character.name} turned against {#if event.data.targetId}{target.name}{#else}those who had trusted {pronoun.object}{/if}. {#if event.data.motivation}{event.data.motivation}. {/if}The betrayal would not be forgotten.',
     requiredContext: [],
   },
   {
@@ -463,7 +463,7 @@ export const characterActionTemplates: NarrativeTemplate[] = [
     subtype: 'character.betray',
     tone: NarrativeTone.EpicHistorical,
     significanceRange: { min: 71, max: 100 },
-    template: 'The annals of {faction.name} would record the betrayal of {character.name} as a moment when trust died and cynicism was born. Those who had called {pronoun.object} friend discovered too late the depths of {pronoun.possessive} duplicity. At {site.name}, the very word "loyalty" took on bitter irony, for if {character.name} could betray, then who could be trusted?',
+    template: 'The annals of {faction.name} would record the betrayal of {character.name} as a moment when trust died and cynicism was born. {#if event.data.targetId}{target.name}, who had called {pronoun.object} friend, discovered too late the depths of {pronoun.possessive} duplicity. {#else}Those who had called {pronoun.object} friend discovered too late the depths of {pronoun.possessive} duplicity. {/if}{#if event.data.relationshipToTarget}That they had been {event.data.relationshipToTarget} only deepened the wound. {/if}At {site.name}, the very word "loyalty" took on bitter irony. {#if event.data.contextDetail}{event.data.contextDetail}{/if}',
     requiredContext: [],
   },
 
@@ -474,7 +474,7 @@ export const characterActionTemplates: NarrativeTemplate[] = [
     subtype: 'character.intimidate',
     tone: NarrativeTone.EpicHistorical,
     significanceRange: { min: 0, max: 40 },
-    template: '{character.name} used threats to gain compliance.',
+    template: '{character.name} used threats to gain {#if event.data.targetId}{target.name}\'s{#else}another\'s{/if} compliance.',
     requiredContext: [],
   },
   {
@@ -483,7 +483,7 @@ export const characterActionTemplates: NarrativeTemplate[] = [
     subtype: 'character.intimidate',
     tone: NarrativeTone.EpicHistorical,
     significanceRange: { min: 41, max: 70 },
-    template: 'With menacing presence, {character.name} bent others to {pronoun.possessive} will. Fear proved a powerful tool at {site.name}.',
+    template: 'With menacing presence at {site.name}, {character.name} bent {#if event.data.targetId}{target.name}{#else}others{/if} to {pronoun.possessive} will. {#if event.data.motivation}{event.data.motivation}. {/if}Fear proved a powerful tool.',
     requiredContext: [],
   },
   {
@@ -492,7 +492,7 @@ export const characterActionTemplates: NarrativeTemplate[] = [
     subtype: 'character.intimidate',
     tone: NarrativeTone.EpicHistorical,
     significanceRange: { min: 71, max: 100 },
-    template: 'When {character.name} spoke, {pronoun.possessive} words carried the weight of unspoken violence. Throughout {site.name}, none dared oppose {pronoun.object}, for all had heard what befell those who showed defiance. {pronoun.possessive} reputation spread through {faction.name} like wildfire, and fear became {pronoun.possessive} most loyal servant.',
+    template: 'When {character.name} spoke, {pronoun.possessive} words carried the weight of unspoken violence. {#if event.data.targetId}{target.name} was made to kneel before {pronoun.object}, a lesson for all who watched. {/if}{#if event.data.personalityDriver}{pronoun.possessive} {event.data.personalityDriver} granted {pronoun.object} an aura that lesser figures could only envy. {/if}Throughout {site.name}, none dared oppose {pronoun.object}, for all had heard what befell those who showed defiance. {#if event.data.contextDetail}{event.data.contextDetail} {/if}{pronoun.possessive} reputation spread through {faction.name} like wildfire, and fear became {pronoun.possessive} most loyal servant.',
     requiredContext: [],
   },
 
@@ -503,7 +503,7 @@ export const characterActionTemplates: NarrativeTemplate[] = [
     subtype: 'character.show_mercy',
     tone: NarrativeTone.EpicHistorical,
     significanceRange: { min: 0, max: 40 },
-    template: '{character.name} chose clemency over punishment.',
+    template: '{character.name} showed mercy to {#if event.data.targetId}{target.name}{#else}a defeated foe{/if}.',
     requiredContext: [],
   },
   {
@@ -512,7 +512,7 @@ export const characterActionTemplates: NarrativeTemplate[] = [
     subtype: 'character.show_mercy',
     tone: NarrativeTone.EpicHistorical,
     significanceRange: { min: 41, max: 70 },
-    template: 'When justice demanded severity, {character.name} instead offered mercy. The act surprised many at {site.name}.',
+    template: 'When justice demanded severity, {character.name} instead offered mercy{#if event.data.targetId} to {target.name}{/if} at {site.name}. {#if event.data.motivation}{event.data.motivation}. {/if}The act surprised many who expected retribution.',
     requiredContext: [],
   },
   {
@@ -521,7 +521,7 @@ export const characterActionTemplates: NarrativeTemplate[] = [
     subtype: 'character.show_mercy',
     tone: NarrativeTone.EpicHistorical,
     significanceRange: { min: 71, max: 100 },
-    template: 'In a moment that would define {pronoun.possessive} legacy, {character.name} stayed {pronoun.possessive} hand when all expected retribution. The mercy shown at {site.name} resonated through {faction.name}, transforming enemies into allies and hatred into gratitude. Future generations would speak of this compassion as the moment when the cycle of vengeance was finally broken.',
+    template: 'In a moment that would define {pronoun.possessive} legacy, {character.name} stayed {pronoun.possessive} hand when all expected retribution{#if event.data.targetId}, sparing {target.name}{/if}. {#if event.data.relationshipToTarget}That they had been {event.data.relationshipToTarget} made the mercy all the more remarkable. {/if}{#if event.data.personalityDriver}{pronoun.possessive} {event.data.personalityDriver} overrode the counsel of vengeance. {/if}The mercy shown at {site.name} resonated through {faction.name}, transforming enemies into allies and hatred into gratitude. {#if event.data.contextDetail}{event.data.contextDetail} {/if}Future generations would speak of this compassion as the moment when the cycle of vengeance was finally broken.',
     requiredContext: [],
   },
 
@@ -532,7 +532,7 @@ export const characterActionTemplates: NarrativeTemplate[] = [
     subtype: 'character.negotiate_treaty',
     tone: NarrativeTone.EpicHistorical,
     significanceRange: { min: 0, max: 40 },
-    template: '{character.name} participated in diplomatic negotiations.',
+    template: '{character.name} participated in diplomatic negotiations{#if event.data.targetId} with {target.name}{/if}.',
     requiredContext: [],
   },
   {
@@ -541,7 +541,7 @@ export const characterActionTemplates: NarrativeTemplate[] = [
     subtype: 'character.negotiate_treaty',
     tone: NarrativeTone.EpicHistorical,
     significanceRange: { min: 41, max: 70 },
-    template: '{character.name} brokered terms of agreement at {site.name}. Diplomacy proved more effective than the sword.',
+    template: '{character.name} brokered terms of agreement{#if event.data.targetId} with {target.name}{/if} at {site.name}. {#if event.data.motivation}{event.data.motivation}. {/if}Diplomacy proved more effective than the sword.',
     requiredContext: [],
   },
   {
@@ -550,7 +550,7 @@ export const characterActionTemplates: NarrativeTemplate[] = [
     subtype: 'character.negotiate_treaty',
     tone: NarrativeTone.EpicHistorical,
     significanceRange: { min: 71, max: 100 },
-    template: 'The halls of {site.name} witnessed {character.name} navigate treacherous diplomatic waters with masterful skill. Each concession was calculated, every clause crafted to serve {faction.name} while appearing to compromise. When the treaty was signed, observers marveled that {pronoun.subject} had achieved what armies could not—lasting peace through words alone.',
+    template: 'The halls of {site.name} witnessed {character.name} navigate treacherous diplomatic waters with masterful skill{#if event.data.targetId}, matching wits with {target.name}{/if}. {#if event.data.relationshipToTarget}That the parties were {event.data.relationshipToTarget} made every concession a delicate gamble. {/if}Each clause was crafted to serve {faction.name} while appearing to compromise. {#if event.data.contextDetail}{event.data.contextDetail} {/if}When the treaty was signed, observers marveled that {pronoun.subject} had achieved what armies could not.',
     requiredContext: [],
   },
 
@@ -561,7 +561,7 @@ export const characterActionTemplates: NarrativeTemplate[] = [
     subtype: 'character.forge_alliance',
     tone: NarrativeTone.EpicHistorical,
     significanceRange: { min: 0, max: 40 },
-    template: '{character.name} formed a political alliance.',
+    template: '{character.name} formed a political alliance{#if event.data.targetId} with {target.name}{/if}.',
     requiredContext: [],
   },
   {
@@ -570,7 +570,7 @@ export const characterActionTemplates: NarrativeTemplate[] = [
     subtype: 'character.forge_alliance',
     tone: NarrativeTone.EpicHistorical,
     significanceRange: { min: 41, max: 70 },
-    template: 'Through persuasion and shared interests, {character.name} united disparate factions. The alliance promised mutual benefit.',
+    template: 'Through persuasion and shared interests, {character.name} united {#if event.data.targetId}with {target.name}, binding{#else}disparate factions, forging{/if} an alliance that promised mutual benefit. {#if event.data.motivation}{event.data.motivation}.{/if}',
     requiredContext: [],
   },
   {
@@ -579,7 +579,7 @@ export const characterActionTemplates: NarrativeTemplate[] = [
     subtype: 'character.forge_alliance',
     tone: NarrativeTone.EpicHistorical,
     significanceRange: { min: 71, max: 100 },
-    template: 'Against a backdrop of ancient rivalries and bitter grievances, {character.name} achieved the impossible: an alliance that would reshape the political landscape. At {site.name}, oaths were sworn that bound {faction.name} to former enemies in common cause. The architects of this union knew they had witnessed history, for such alliances had toppled empires and birthed new ages.',
+    template: 'Against a backdrop of ancient rivalries and bitter grievances, {character.name} achieved the impossible: an alliance{#if event.data.targetId} with {target.name}{/if} that would reshape the political landscape. {#if event.data.relationshipToTarget}That {event.data.relationshipToTarget} could set aside their differences spoke to the gravity of the moment. {/if}At {site.name}, oaths were sworn that bound {faction.name} to former enemies in common cause. {#if event.data.contextDetail}{event.data.contextDetail} {/if}The architects of this union knew they had witnessed history, for such alliances had toppled empires and birthed new ages.',
     requiredContext: [],
   },
 
@@ -590,7 +590,7 @@ export const characterActionTemplates: NarrativeTemplate[] = [
     subtype: 'character.rally_troops',
     tone: NarrativeTone.EpicHistorical,
     significanceRange: { min: 0, max: 40 },
-    template: '{character.name} addressed the assembled soldiers.',
+    template: '{character.name} addressed the assembled warriors{#if event.data.motivation}, {event.data.motivation}{/if}.',
     requiredContext: [],
   },
   {
@@ -599,7 +599,7 @@ export const characterActionTemplates: NarrativeTemplate[] = [
     subtype: 'character.rally_troops',
     tone: NarrativeTone.EpicHistorical,
     significanceRange: { min: 41, max: 70 },
-    template: '{character.name} stirred the hearts of warriors at {site.name}. Morale lifted as {pronoun.subject} spoke of honor and duty.',
+    template: '{character.name} stirred the hearts of warriors at {site.name}. {#if event.data.motivation}{event.data.motivation}. {/if}{#if event.data.targetId}{pronoun.subject} spoke of the threat posed by {target.name} and the honor of standing against it. {#else}Morale lifted as {pronoun.subject} spoke of honor and duty. {/if}',
     requiredContext: [],
   },
   {
@@ -608,7 +608,7 @@ export const characterActionTemplates: NarrativeTemplate[] = [
     subtype: 'character.rally_troops',
     tone: NarrativeTone.EpicHistorical,
     significanceRange: { min: 71, max: 100 },
-    template: 'Before the massed ranks of {faction.name}, {character.name} delivered words that would be remembered for generations. {pronoun.possessive} voice rang across {site.name}, transforming fear into courage, doubt into certainty. The soldiers who had marched forth with heavy hearts now burned with renewed purpose, ready to face any foe, for {character.name} had reminded them what they fought for.',
+    template: 'Before the massed ranks of {faction.name}, {character.name} delivered words that would be remembered for generations. {#if event.data.personalityDriver}{pronoun.possessive} {event.data.personalityDriver} burned through every syllable, setting fire to the hearts of all who listened. {/if}{pronoun.possessive} voice rang across {site.name}, transforming fear into courage, doubt into certainty. {#if event.data.targetId}Against {target.name}, no sacrifice would be too great, {pronoun.subject} declared. {/if}{#if event.data.contextDetail}{event.data.contextDetail} {/if}The warriors who had marched forth with heavy hearts now burned with renewed purpose, ready to face any foe.',
     requiredContext: [],
   },
 
@@ -619,7 +619,7 @@ export const characterActionTemplates: NarrativeTemplate[] = [
     subtype: 'character.plan_campaign',
     tone: NarrativeTone.EpicHistorical,
     significanceRange: { min: 0, max: 40 },
-    template: '{character.name} devised military strategy.',
+    template: '{character.name} devised military strategy{#if event.data.targetId} against {target.name}{/if}.',
     requiredContext: [],
   },
   {
@@ -628,7 +628,7 @@ export const characterActionTemplates: NarrativeTemplate[] = [
     subtype: 'character.plan_campaign',
     tone: NarrativeTone.EpicHistorical,
     significanceRange: { min: 41, max: 70 },
-    template: 'Poring over maps at {site.name}, {character.name} crafted a campaign of cunning design. The strategy balanced risk and opportunity.',
+    template: 'Poring over maps at {site.name}, {character.name} crafted a campaign{#if event.data.targetId} against {target.name}{/if} of cunning design. {#if event.data.motivation}{event.data.motivation}. {/if}The strategy balanced risk and opportunity.',
     requiredContext: [],
   },
   {
@@ -637,7 +637,7 @@ export const characterActionTemplates: NarrativeTemplate[] = [
     subtype: 'character.plan_campaign',
     tone: NarrativeTone.EpicHistorical,
     significanceRange: { min: 71, max: 100 },
-    template: 'The war councils of {faction.name} fell silent as {character.name} unveiled a campaign of breathtaking audacity. Every contingency had been considered, every advantage exploited, every weakness of the enemy laid bare. The generals of {site.name} recognized genius when they saw it, and they knew that this campaign would be studied by strategists for centuries to come.',
+    template: 'The war councils of {faction.name} fell silent as {character.name} unveiled a campaign of breathtaking audacity{#if event.data.targetId} directed against {target.name}{/if}. {#if event.data.personalityDriver}{pronoun.possessive} {event.data.personalityDriver} had distilled into a vision of total strategic mastery. {/if}Every contingency had been considered, every advantage exploited, every weakness of the enemy laid bare. {#if event.data.contextDetail}{event.data.contextDetail} {/if}The generals of {site.name} recognized genius when they saw it, and they knew that this campaign would be studied by strategists for centuries to come.',
     requiredContext: [],
   },
 ];

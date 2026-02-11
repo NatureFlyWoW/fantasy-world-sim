@@ -325,17 +325,79 @@ export function detectEntityType(entityId: number, world: World): string {
 
 /**
  * Get event description from narrative prose, data, or subtype.
- * Prefers narrative engine prose (cached on event.data by SimulationRunner),
- * then falls back to event.data.description, then humanized subtype.
+ * Uses a 4-tier fallback chain:
+ *   1. event.data.narrativeBody (truncated to 120 chars)
+ *   2. event.data.description
+ *   3. Built from event.data fields: "{actionName} at {siteName}" or "{actionName} involving {targetName}"
+ *   4. Humanized subtype (last resort)
  */
 export function eventDescription(event: WorldEvent): string {
   const data = event.data as Record<string, unknown>;
+
+  // Tier 1: narrative body
   const narrativeBody = data['narrativeBody'];
   if (typeof narrativeBody === 'string' && narrativeBody.length > 0) {
-    // Truncate long narrative bodies for inline display (max ~120 chars)
     if (narrativeBody.length <= 120) return narrativeBody;
     return narrativeBody.slice(0, 117) + '...';
   }
+
+  // Tier 2: explicit description
   const desc = data['description'];
-  return typeof desc === 'string' && desc.length > 0 ? desc : event.subtype.replace(/[._]/g, ' ');
+  if (typeof desc === 'string' && desc.length > 0) return desc;
+
+  // Tier 3: build from event.data fields
+  const actionName = data['actionName'];
+  if (typeof actionName === 'string' && actionName.length > 0) {
+    const humanAction = actionName.replace(/[._]/g, ' ');
+    const siteName = data['siteName'];
+    if (typeof siteName === 'string' && siteName.length > 0) {
+      return `${humanAction} at ${siteName}`;
+    }
+    // actionName alone is still more meaningful than raw subtype
+    return humanAction;
+  }
+
+  // Tier 4: humanized subtype
+  return humanizeSubtype(event.subtype);
+}
+
+/**
+ * Humanize an event subtype string: strip prefix, replace separators, capitalize.
+ * "character.show_mercy" → "Show mercy"
+ */
+export function humanizeSubtype(subtype: string): string {
+  // Strip category prefix (e.g., "character.", "political.")
+  const dotIndex = subtype.indexOf('.');
+  const raw = dotIndex >= 0 ? subtype.slice(dotIndex + 1) : subtype;
+  const words = raw.replace(/[._]/g, ' ').trim();
+  if (words.length === 0) return subtype;
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
+/**
+ * Get a compact health status word from current/maximum health values.
+ */
+export function getHealthWord(current: number, maximum: number): string {
+  const state = getHealthState(current, maximum);
+  const HEALTH_WORDS: Record<string, string> = {
+    perfect: 'Healthy',
+    healthy: 'Healthy',
+    injured: 'Injured',
+    wounded: 'Wounded',
+    critical: 'Critical',
+    dead: 'Dead',
+  };
+  return HEALTH_WORDS[state] ?? 'Unknown';
+}
+
+/**
+ * Get a compact wealth descriptor from coin count.
+ */
+export function getWealthWord(coins: number): string {
+  if (coins >= 50000) return 'Opulent';
+  if (coins >= 20000) return 'Wealthy';
+  if (coins >= 5000) return 'Comfortable';
+  if (coins >= 1000) return 'Modest';
+  if (coins >= 100) return 'Poor';
+  return 'Destitute';
 }

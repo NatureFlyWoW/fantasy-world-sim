@@ -1,6 +1,8 @@
 import type { ChronicleEntry } from './event-aggregator.js';
 import { ContextMenu } from '../context-menu.js';
 import type { ContextMenuItem } from '../context-menu.js';
+import type { FavoritesManager } from '../favorites-manager.js';
+import { uiEvents } from '../ui-events.js';
 
 /**
  * Virtual-scroll DOM renderer for Chronicle entries.
@@ -25,6 +27,7 @@ export class ChronicleRenderer {
   private readonly newEventsIndicator: HTMLElement;
   private readonly cardPool: HTMLElement[] = [];
   private readonly contextMenu = new ContextMenu();
+  private readonly favoritesManager: FavoritesManager;
   private entries: readonly ChronicleEntry[] = [];
   private mode: 'prose' | 'compact' = 'prose';
   private entityNames: ReadonlyMap<number, string> = new Map();
@@ -72,7 +75,8 @@ export class ChronicleRenderer {
   public onEntityClick: ((entityId: number) => void) | null = null;
   public onEventClick: ((eventId: number) => void) | null = null;
 
-  constructor(container: HTMLElement) {
+  constructor(container: HTMLElement, favoritesManager: FavoritesManager) {
+    this.favoritesManager = favoritesManager;
     this.scrollContainer = document.createElement('div');
     this.scrollContainer.className = 'chronicle-scroll';
 
@@ -104,6 +108,13 @@ export class ChronicleRenderer {
     this.scrollContainer.addEventListener('contextmenu', this.handleContextMenu);
     this.scrollContainer.addEventListener('scroll', this.handleScroll);
     this.newEventsIndicator.addEventListener('click', () => this.scrollToBottom());
+
+    // Listen for favorite changes to re-render affected cards
+    uiEvents.on('favorite-changed', () => {
+      // Force a full repopulation to update favorite status
+      this.dataGeneration++;
+      this.updateVisibleCards();
+    });
   }
 
   /**
@@ -360,6 +371,12 @@ export class ChronicleRenderer {
       // Add legendary class for high significance events
       if (entry.formatted.significanceTier === 'legendary') {
         card.classList.add('event-card--legendary');
+      }
+
+      // Check if any participant is favorited
+      const hasFavorite = entry.formatted.entityIds.some((id) => this.favoritesManager.isFavorite(id));
+      if (hasFavorite) {
+        card.classList.add('event-card--favorite');
       }
 
       const sigDiv = document.createElement('div');

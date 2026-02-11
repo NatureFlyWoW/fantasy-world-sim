@@ -63,13 +63,87 @@
 
 /* ── Entity name and summary ───────────────────────────────────────────── */
 
+.inspector-entity-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-sm) var(--space-lg);
+}
+
 .inspector-entity-name {
   font-family: var(--font-display);
   font-size: var(--text-xl);
   color: var(--n3);
-  padding: var(--space-sm) var(--space-lg);
   margin: 0;
   font-weight: 700;
+  flex: 1;
+}
+
+.inspector-entity-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.inspector-favorite-star {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--text-lg);
+  color: var(--n1);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.inspector-favorite-star:hover {
+  color: var(--au2);
+  border-color: var(--border-default);
+  background: var(--bg2);
+}
+
+.inspector-favorite-star--active {
+  color: var(--au2);
+}
+
+.inspector-favorite-star--active:hover {
+  color: var(--au1);
+}
+
+.inspector-legends-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-xs) var(--space-sm);
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.inspector-legends-btn:hover {
+  color: var(--text-secondary);
+  border-color: var(--border-default);
+  background: var(--bg2);
+}
+
+.inspector-legends-btn__icon {
+  font-size: var(--text-sm);
+  color: var(--au2);
+}
+
+.inspector-legends-btn__label {
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .inspector-entity-summary {

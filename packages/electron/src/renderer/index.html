@@ -19,7 +19,7 @@
       <!-- View Navigation Tabs -->
       <div class="topbar__view-nav">
         <button class="view-tab view-tab--active" data-view="map">Map</button>
-        <button class="view-tab" data-view="chronicle">Chronicle</button>
+        <button class="view-tab" data-view="legends">Legends</button>
       </div>
 
       <!-- Date Display -->
@@ -52,11 +52,12 @@
       </nav>
     </header>
 
-    <!-- Main content: Map + Panels -->
+    <!-- Main content: Map + Legends + Panels -->
     <main id="content">
       <div id="map-container">
         <canvas id="pixi-canvas" aria-label="World map"></canvas>
       </div>
+      <div id="legends-container" aria-label="Legends viewer"></div>
       <aside id="panel-column">
         <div class="panel" id="event-log-panel">
           <div class="panel-titlebar panel-titlebar--chronicle">

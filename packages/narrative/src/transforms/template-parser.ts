@@ -45,7 +45,7 @@ export interface Token {
  * Parsed reference from a template placeholder.
  */
 export interface ParsedReference {
-  readonly entityType: 'character' | 'faction' | 'site' | 'artifact' | 'deity' | 'pronoun' | 'event' | 'arc';
+  readonly entityType: 'character' | 'faction' | 'site' | 'artifact' | 'deity' | 'target' | 'pronoun' | 'event' | 'arc';
   readonly entityIndex?: number;
   readonly property: string;
 }
@@ -171,6 +171,14 @@ export class TemplateParser {
     const property = parts.slice(1).join('.');
 
     // Check for indexed entity (e.g., "character0", "faction1")
+    // Check for target (special entity resolved from event.data.targetId)
+    if (entityPart === 'target') {
+      return {
+        entityType: 'target',
+        property,
+      };
+    }
+
     const indexMatch = /^(character|faction|site|artifact|deity)(\d+)?$/.exec(entityPart);
     if (indexMatch?.[1] !== undefined) {
       return {
@@ -222,6 +230,7 @@ export class TemplateParser {
       case 'site':
       case 'artifact':
       case 'deity':
+      case 'target':
         return this.resolveEntityReference(parsed, context);
 
       case 'pronoun':
@@ -245,11 +254,14 @@ export class TemplateParser {
     parsed: ParsedReference,
     context: EvaluationContext
   ): string {
-    const key = `${parsed.entityType}${parsed.entityIndex ?? 0}`;
+    // Target is stored under just 'target' (no index); regular entities use type+index
+    const key = parsed.entityType === 'target'
+      ? 'target'
+      : `${parsed.entityType}${parsed.entityIndex ?? 0}`;
     let entity = context.entities.get(key);
 
-    // Try dynamic resolution if not cached
-    if (entity === undefined) {
+    // Try dynamic resolution if not cached (not applicable for target — it's pre-resolved)
+    if (entity === undefined && parsed.entityType !== 'target') {
       const participantId = context.participants[parsed.entityIndex ?? 0];
       if (participantId !== undefined) {
         switch (parsed.entityType) {
@@ -285,6 +297,8 @@ export class TemplateParser {
           return parsed.property === 'name' ? 'an artifact' : '';
         case 'deity':
           return parsed.property === 'name' ? 'a god' : '';
+        case 'target':
+          return parsed.property === 'name' ? 'another' : '';
         default:
           return '';
       }
@@ -453,8 +467,11 @@ export class TemplateParser {
       case 'faction':
       case 'site':
       case 'artifact':
-      case 'deity': {
-        const key = `${parsed.entityType}${parsed.entityIndex ?? 0}`;
+      case 'deity':
+      case 'target': {
+        const key = parsed.entityType === 'target'
+          ? 'target'
+          : `${parsed.entityType}${parsed.entityIndex ?? 0}`;
         const entity = context.entities.get(key);
         if (entity === undefined) return undefined;
 
