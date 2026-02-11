@@ -20,12 +20,14 @@ import type { World } from '@fws/core';
 import type { WorldClock } from '@fws/core';
 import type { EventLog } from '@fws/core';
 import type { EntityId } from '@fws/core';
+
+// Persistence imports (direct, not through barrel to avoid browser deps)
 import type {
   SaveStorage,
   SaveMetadata,
   ExportFormat,
-} from '@fws/core';
-import { SaveManager, ExportManager } from '@fws/core';
+} from '../../../core/src/persistence/index.js';
+import { SaveManager, ExportManager } from '../../../core/src/persistence/index.js';
 
 // ─── Node.js file system implementation ────────────────────────────────────
 

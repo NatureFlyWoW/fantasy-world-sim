@@ -42,7 +42,11 @@ pnpm run test         # Run all tests (2909 passing)
 pnpm run start        # Generate world + terminal UI
 pnpm run start -- --seed 42 --headless --ticks 100  # Deterministic headless run
 pnpm run start:electron  # Launch Electron graphical UI
+pnpm --filter @fws/core run build   # Rebuild core dist (required after adding new exports)
+pnpm --filter @fws/generator run build  # Rebuild generator dist (same)
 ```
+
+> **Build note:** `start:electron` only compiles the Electron package — it does NOT rebuild workspace dependencies. After adding new exports to `@fws/core` or `@fws/generator`, you must `pnpm run build` in those packages first or Electron will fail at runtime with missing export errors.
 
 ## Subagent Routing
 - Game design, engagement, emergent narrative → `fantasy-gdesigner`

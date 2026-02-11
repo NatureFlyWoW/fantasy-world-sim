@@ -20,8 +20,20 @@ export * from './spatial/index.js';
 // Systems module
 export * from './systems/index.js';
 
-// Persistence module
-export * from './persistence/index.js';
+// Note: Persistence module is NOT exported through barrel to avoid pulling
+// Node.js dependencies (zlib from save-manager) into browser contexts.
+// Node.js entry points (CLI) import persistence directly.
+// Type-only re-exports are safe (erased at runtime):
+export type {
+  DivergenceAction,
+  Branch,
+  BranchResult,
+  WorldSnapshot,
+  ComponentSnapshot,
+  SaveMetadata,
+  ExportFormat,
+  ExportOptions,
+} from './persistence/index.js';
 
 // Utils module
 export * from './utils/index.js';

@@ -38,3 +38,13 @@ Thumbs.db
 .env
 .env.local
 .env.*.local
+
+# Local working artifacts
+codebase_analysis.md
+typescript_expert_review.md
+implementation_guide/
+error_screens/
+current_ui.png
+docker-compose.yml
+mcp.json
+.cgcignore
