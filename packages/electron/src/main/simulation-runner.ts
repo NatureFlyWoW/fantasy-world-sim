@@ -26,6 +26,9 @@ import {
 } from '@fws/generator';
 import type { GeneratedWorld } from '@fws/generator';
 
+import { createDefaultNarrativeEngine } from '@fws/narrative';
+import type { NarrativeEngine } from '@fws/narrative';
+
 import type {
   TickDelta,
   WorldSnapshot,
@@ -70,6 +73,9 @@ export class SimulationRunner {
   private engine: SimulationEngine | null = null;
   private spatialIndex: SpatialIndex | null = null;
   private lodManager: LevelOfDetailManager | null = null;
+
+  // Narrative engine for prose generation
+  private narrativeEngine: NarrativeEngine | null = null;
 
   // Generated data
   private generatedData: GeneratedWorld | null = null;
@@ -161,6 +167,18 @@ export class SimulationRunner {
       Math.floor(this.generatedData.worldMap.getWidth() / 2),
       Math.floor(this.generatedData.worldMap.getHeight() / 2),
     );
+
+    // Build entity resolver for narrative engine (mirrors CLI's buildEntityResolver)
+    const resolver = this.buildEntityResolver();
+
+    // Create a seeded LCG RNG for deterministic narrative template selection.
+    // Uses a separate stream from the simulation RNG to avoid coupling.
+    let narrativeRngState = (this.seed * 2654435761 + 1013904223) >>> 0;
+    const narrativeRng = (): number => {
+      narrativeRngState = (narrativeRngState * 1664525 + 1013904223) >>> 0;
+      return narrativeRngState / 0x100000000;
+    };
+    this.narrativeEngine = createDefaultNarrativeEngine({ rng: narrativeRng }, resolver);
 
     console.log(`[main] World initialized: ${this.generatedData.worldMap.getWidth()}x${this.generatedData.worldMap.getHeight()}, ${this.populationResult?.totalEntities ?? 0} entities`);
   }
@@ -317,11 +335,11 @@ export class SimulationRunner {
         }
       }
 
-      // Faction allegiance
-      if (this.world.hasStore('Allegiance')) {
-        const allegiance = this.world.getComponent(eid, 'Allegiance') as { factionId?: unknown } | undefined;
-        if (allegiance?.factionId !== undefined) {
-          factionId = allegiance.factionId as number;
+      // Faction membership
+      if (this.world.hasStore('Membership')) {
+        const membership = this.world.getComponent(eid, 'Membership') as { factionId?: unknown } | undefined;
+        if (membership?.factionId !== undefined && membership.factionId !== null) {
+          factionId = membership.factionId as number;
         }
       }
 
@@ -401,16 +419,116 @@ export class SimulationRunner {
     return entities;
   }
 
+  // ── Entity resolver for narrative engine ──────────────────────────────────
+
+  /**
+   * Build an EntityResolver from generated data with World-based fallback.
+   * Static maps capture initial entities. The World fallback resolves
+   * entities created at runtime (armies, institutions, artifacts, etc.)
+   */
+  private buildEntityResolver() {
+    const generatedData = this.generatedData;
+    const populationResult = this.populationResult;
+    const world = this.world;
+
+    // Build character ID -> data maps
+    const characterData = new Map();
+    const allCharacters = [...generatedData.rulers, ...generatedData.notables];
+    for (const char of allCharacters) {
+      const charId = populationResult.characterIds.get(char.name);
+      if (charId !== undefined) {
+        const idNum = charId;
+        characterData.set(idNum, {
+          name: char.name,
+          title: char.status.title.length > 0 ? char.status.title : undefined,
+          gender: char.gender,
+        });
+      }
+    }
+
+    // Build faction ID -> data maps
+    const factionData = new Map();
+    for (let i = 0; i < generatedData.factions.length; i++) {
+      const faction = generatedData.factions[i];
+      if (faction === undefined) continue;
+      const factionId = populationResult.factionIds.get(i);
+      if (factionId !== undefined) {
+        factionData.set(factionId, {
+          name: faction.name,
+        });
+      }
+    }
+
+    // Build settlement/site ID -> data maps
+    const siteData = new Map();
+    for (let i = 0; i < generatedData.settlements.length; i++) {
+      const settlement = generatedData.settlements[i];
+      if (settlement === undefined) continue;
+      const siteId = populationResult.settlementIds.get(i);
+      if (siteId !== undefined) {
+        siteData.set(siteId, {
+          name: settlement.name,
+        });
+      }
+    }
+
+    // Build deity ID -> data maps from pantheon
+    const deityData = new Map();
+    for (let i = 0; i < generatedData.pantheon.gods.length; i++) {
+      const deity = generatedData.pantheon.gods[i];
+      if (deity === undefined) continue;
+      deityData.set(i, {
+        name: deity.name,
+        title: deity.title,
+      });
+    }
+
+    /**
+     * World-based fallback: resolve any entity ID by reading ECS components.
+     */
+    function resolveFromWorld(id) {
+      const entityId = id;
+      if (world.hasStore('Status')) {
+        const status = world.getComponent(entityId, 'Status');
+        if (status !== undefined) {
+          const titles = status.titles;
+          if (titles !== undefined && titles.length > 0 && titles[0] !== undefined) {
+            return { name: titles[0] };
+          }
+        }
+      }
+      return undefined;
+    }
+
+    return {
+      resolveCharacter: (id) => characterData.get(id) ?? resolveFromWorld(id),
+      resolveFaction: (id) => factionData.get(id) ?? resolveFromWorld(id),
+      resolveSite: (id) => siteData.get(id) ?? resolveFromWorld(id),
+      resolveArtifact: (id) => resolveFromWorld(id),
+      resolveDeity: (id) => deityData.get(id),
+    };
+  }
+
   // ── Private helpers ────────────────────────────────────────────────────────
 
   private restartTickLoop(): void {
     this.clearTickLoop();
     if (this.paused || this.ticksPerSecond <= 0) return;
 
-    const interval = Math.max(16, Math.floor(1000 / this.ticksPerSecond));
+    // At high speeds, batch multiple ticks per interval to reduce IPC overhead.
+    // 30x: 2 ticks per ~33ms interval. 365x: 6 ticks per ~16ms interval.
+    let ticksPerBatch = 1;
+    if (this.ticksPerSecond >= 365) ticksPerBatch = 6;
+    else if (this.ticksPerSecond >= 30) ticksPerBatch = 2;
+
+    const interval = Math.max(16, Math.floor(1000 * ticksPerBatch / this.ticksPerSecond));
     this.tickInterval = setInterval(() => {
       if (this.engine !== null) {
-        this.engine.run(1);
+        for (let i = 0; i < ticksPerBatch; i++) {
+          this.engine.run(1);
+        }
+        // Single delta with combined events from all ticks in the batch
+        // and the latest entity snapshots (post-batch state).
         this.emitTickDelta();
       }
     }, interval);
@@ -489,14 +607,47 @@ export class SimulationRunner {
   }
 
   private serializeEvents(events: readonly WorldEvent[]): SerializedEvent[] {
-    return events.map(e => ({
-      id: e.id as unknown as number,
-      tick: e.timestamp as unknown as number,
-      category: e.category,
-      subtype: e.subtype,
-      significance: e.significance,
-      participants: e.participants.map(p => p as unknown as number),
-      data: e.data as Record<string, unknown>,
-    }));
+    return events.map(e => {
+      // Generate narrative prose (cached on event.data to avoid re-generation)
+      let narrativeTitle = '';
+      let narrativeBody = '';
+
+      const existingTitle = (e.data as Record<string, unknown>).narrativeTitle;
+      const existingBody = (e.data as Record<string, unknown>).narrativeBody;
+
+      if (typeof existingTitle === 'string' && typeof existingBody === 'string') {
+        // Already generated (cached from a previous call)
+        narrativeTitle = existingTitle;
+        narrativeBody = existingBody;
+      } else if (this.narrativeEngine !== null && this.world !== null && this.clock !== null) {
+        try {
+          const output = this.narrativeEngine.generateNarrative({
+            event: e,
+            world: this.world,
+            clock: this.clock,
+          });
+          narrativeTitle = output.title;
+          narrativeBody = output.body;
+
+          // Cache on event.data so inspectors and subsequent serializations can reuse it
+          (e.data as Record<string, unknown>).narrativeTitle = narrativeTitle;
+          (e.data as Record<string, unknown>).narrativeBody = narrativeBody;
+        } catch {
+          // Fallback: use empty strings (formatter has its own fallback maps)
+        }
+      }
+
+      return {
+        id: e.id as unknown as number,
+        tick: e.timestamp as unknown as number,
+        category: e.category,
+        subtype: e.subtype,
+        significance: e.significance,
+        participants: e.participants.map(p => p as unknown as number),
+        data: e.data as Record<string, unknown>,
+        narrativeTitle,
+        narrativeBody,
+      };
+    });
   }
 }

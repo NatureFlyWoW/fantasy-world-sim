@@ -263,18 +263,24 @@ export function formatEvent(event: SerializedEvent, getName: (id: number) => str
 
   const entityIds = event.participants;
 
-  // Title: prefer SHORT_NARRATIVE_MAP, fallback to humanized subtype
-  const title = SHORT_NARRATIVE_MAP[event.subtype] ?? humanizeSubtype(event.subtype);
+  // Title: prefer narrative engine prose, fallback to SHORT_NARRATIVE_MAP, then humanized subtype
+  const title = (event.narrativeTitle.length > 0 ? event.narrativeTitle : undefined)
+    ?? SHORT_NARRATIVE_MAP[event.subtype]
+    ?? humanizeSubtype(event.subtype);
 
-  // Description: fallback chain
+  // Description: prefer narrative engine prose, fallback to verb template, data.description, humanized subtype
   let description = '';
-  const verbTemplate = SUBTYPE_VERB_MAP[event.subtype];
-  if (verbTemplate !== undefined) {
-    description = substitutePlaceholders(verbTemplate, event.participants, getName);
-  } else if (typeof event.data === 'object' && event.data !== null && 'description' in event.data && typeof event.data.description === 'string') {
-    description = event.data.description;
+  if (event.narrativeBody.length > 0) {
+    description = event.narrativeBody;
   } else {
-    description = humanizeSubtype(event.subtype);
+    const verbTemplate = SUBTYPE_VERB_MAP[event.subtype];
+    if (verbTemplate !== undefined) {
+      description = substitutePlaceholders(verbTemplate, event.participants, getName);
+    } else if (typeof event.data === 'object' && event.data !== null && 'description' in event.data && typeof event.data.description === 'string') {
+      description = event.data.description;
+    } else {
+      description = humanizeSubtype(event.subtype);
+    }
   }
 
   return {

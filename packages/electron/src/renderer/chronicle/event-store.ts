@@ -9,11 +9,21 @@ export interface ChronicleFilter {
 
 /**
  * Accumulates SerializedEvent objects from tick deltas and provides entity name resolution.
+ *
+ * Supports incremental retrieval via `getNewEvents()` so that downstream consumers
+ * (aggregator, renderer) can process only the events added since their last call
+ * instead of re-processing the entire store every frame.
  */
 export class EventStore {
   private events: SerializedEvent[] = [];
   private entityNames = new Map<number, string>();
   private readonly MAX_EVENTS = 5000;
+
+  /**
+   * Index into `events` up to which `getNewEvents()` has already returned.
+   * Adjusted when oldest events are trimmed by `addEvents()`.
+   */
+  private lastProcessedIndex = 0;
 
   /**
    * Add new events to the store. If total exceeds MAX_EVENTS, removes oldest events.
@@ -24,7 +34,29 @@ export class EventStore {
     if (this.events.length > this.MAX_EVENTS) {
       const excess = this.events.length - this.MAX_EVENTS;
       this.events.splice(0, excess);
+      // Adjust the processed cursor so it stays valid after trimming.
+      this.lastProcessedIndex = Math.max(0, this.lastProcessedIndex - excess);
     }
+  }
+
+  /**
+   * Return events added since the last call to `getNewEvents()`.
+   * Updates the internal cursor so subsequent calls only return truly new events.
+   */
+  getNewEvents(): readonly SerializedEvent[] {
+    const start = this.lastProcessedIndex;
+    this.lastProcessedIndex = this.events.length;
+    if (start >= this.events.length) return [];
+    return this.events.slice(start);
+  }
+
+  /**
+   * Return all events starting from `startIndex`.
+   * Does NOT advance the internal cursor — useful for one-off reads.
+   */
+  getAllFromIndex(startIndex: number): readonly SerializedEvent[] {
+    if (startIndex >= this.events.length) return [];
+    return this.events.slice(startIndex);
   }
 
   /**
@@ -95,10 +127,19 @@ export class EventStore {
   }
 
   /**
+   * Reset the incremental cursor so the next `getNewEvents()` replays everything.
+   * Called on mode/filter change that requires a full rebuild.
+   */
+  resetProcessedIndex(): void {
+    this.lastProcessedIndex = 0;
+  }
+
+  /**
    * Clear all events and entity names.
    */
   clear(): void {
     this.events = [];
     this.entityNames.clear();
+    this.lastProcessedIndex = 0;
   }
 }

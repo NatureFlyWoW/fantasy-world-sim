@@ -106,6 +106,176 @@ function hashString(str: string): number {
   return Math.abs(hash);
 }
 
+/**
+ * Compute the grouping key for a low-significance event.
+ */
+function groupKey(event: SerializedEvent, timeWindow: number): string {
+  const primaryParticipant = event.participants[0] ?? 'none';
+  const window = Math.floor(event.tick / timeWindow);
+  return `${event.category}|${primaryParticipant}|${window}`;
+}
+
+/**
+ * Build an aggregate theme string from a group key and count.
+ */
+function buildTheme(key: string, count: number, getName: (id: number) => string): string {
+  const [category, participantStr] = key.split('|') as [string, string];
+  const participant = participantStr === 'none' ? 0 : parseInt(participantStr, 10);
+  const templates = AGGREGATION_PROSE[category ?? ''] ?? ['Multiple events occurred'];
+  const templateIndex = hashString(key) % templates.length;
+  const template = templates[templateIndex] ?? 'Multiple events occurred';
+  return template
+    .replace('{participant}', getName(participant))
+    .replace('{count}', String(count))
+    .replace('{period}', 'period');
+}
+
+/**
+ * Season name for a given month number (1-indexed).
+ */
+function seasonName(month: number): string {
+  if (month <= 3) return 'Winter';
+  if (month <= 6) return 'Spring';
+  if (month <= 9) return 'Summer';
+  return 'Autumn';
+}
+
+// ── Incremental aggregation state ────────────────────────────────────────────
+
+/**
+ * Mutable state carried between incremental `appendEvents()` calls.
+ *
+ * `groupIndex` maps grouping keys to the index in `entries` where the
+ * corresponding aggregate or singleton event entry lives, allowing O(1) lookup
+ * when deciding whether a new low-significance event should merge into an
+ * existing group or start a new one.
+ */
+export interface AggregationState {
+  /** The live entry list rendered by the chronicle. */
+  entries: ChronicleEntry[];
+  /** group key -> index in entries */
+  groupIndex: Map<string, number>;
+  /** Last year for which a header was emitted. */
+  lastYear: number;
+  /** Last month for which a header was emitted. */
+  lastMonth: number;
+  /** Cached formatted events keyed by event ID to avoid re-formatting. */
+  formatCache: Map<number, FormattedEvent>;
+}
+
+/**
+ * Create a fresh aggregation state.
+ */
+export function createAggregationState(): AggregationState {
+  return {
+    entries: [],
+    groupIndex: new Map(),
+    lastYear: -1,
+    lastMonth: -1,
+    formatCache: new Map(),
+  };
+}
+
+/**
+ * Incrementally append new events into an existing aggregation state.
+ *
+ * New events are assumed to be chronologically ordered (or at least from the
+ * same or later ticks than the events already in state). This avoids the
+ * O(n log n) full re-sort that `aggregateEvents()` performs.
+ *
+ * - sig >= 60: standalone event entry, appended at the end.
+ * - sig < 60: merged into an existing aggregate/singleton or creates a new one.
+ *
+ * Temporal headers are inserted as needed for new year/month boundaries.
+ */
+export function appendEvents(
+  state: AggregationState,
+  newEvents: readonly SerializedEvent[],
+  getName: (id: number) => string,
+  timeWindow = 30,
+): void {
+  for (const event of newEvents) {
+    const tick = event.tick;
+    const year = Math.floor(tick / 360) + 1;
+    const month = Math.floor((tick % 360) / 30) + 1;
+
+    // ── Temporal headers ──
+    if (year !== state.lastYear) {
+      state.entries.push({ kind: 'header', text: `--- Year ${year} ---`, tick });
+      state.lastYear = year;
+      state.lastMonth = -1;
+    }
+    if (month !== state.lastMonth) {
+      state.entries.push({ kind: 'header', text: `${seasonName(month)}, Month ${month}`, tick });
+      state.lastMonth = month;
+    }
+
+    // ── Standalone (high significance) ──
+    if (event.significance >= 60) {
+      let formatted = state.formatCache.get(event.id);
+      if (formatted === undefined) {
+        formatted = formatEvent(event, getName);
+        state.formatCache.set(event.id, formatted);
+      }
+      state.entries.push({ kind: 'event', event, formatted });
+      continue;
+    }
+
+    // ── Low significance — try to merge into existing group ──
+    const key = groupKey(event, timeWindow);
+    const existingIdx = state.groupIndex.get(key);
+
+    if (existingIdx !== undefined) {
+      const existing = state.entries[existingIdx];
+
+      if (existing !== undefined && existing.kind === 'aggregate') {
+        // Merge into existing aggregate — replace with updated entry.
+        const newCount = existing.count + 1;
+        const newSig = Math.max(existing.significance, event.significance);
+        const newIds = [...existing.eventIds, event.id];
+        state.entries[existingIdx] = {
+          kind: 'aggregate',
+          category: existing.category,
+          count: newCount,
+          theme: buildTheme(key, newCount, getName),
+          significance: newSig,
+          tick: existing.tick,
+          icon: existing.icon,
+          categoryColor: existing.categoryColor,
+          eventIds: newIds,
+        };
+      } else if (existing !== undefined && existing.kind === 'event') {
+        // Promote singleton to aggregate.
+        const category = event.category;
+        state.entries[existingIdx] = {
+          kind: 'aggregate',
+          category,
+          count: 2,
+          theme: buildTheme(key, 2, getName),
+          significance: Math.max(existing.event.significance, event.significance),
+          tick: existing.event.tick,
+          icon: CATEGORY_ICONS[category] ?? '\u2022',
+          categoryColor: CATEGORY_COLORS[category] ?? '#888888',
+          eventIds: [existing.event.id, event.id],
+        };
+      }
+      // In either merge case we are done with this event.
+    } else {
+      // No existing group — add as standalone singleton, register key.
+      let formatted = state.formatCache.get(event.id);
+      if (formatted === undefined) {
+        formatted = formatEvent(event, getName);
+        state.formatCache.set(event.id, formatted);
+      }
+      const idx = state.entries.length;
+      state.entries.push({ kind: 'event', event, formatted });
+      state.groupIndex.set(key, idx);
+    }
+  }
+}
+
+// ── Full rebuild (used on mode change / filter change) ───────────────────────
+
 export function aggregateEvents(
   events: readonly SerializedEvent[],
   getName: (id: number) => string,
@@ -126,9 +296,7 @@ export function aggregateEvents(
   // 2. Group candidates
   const groups = new Map<string, SerializedEvent[]>();
   for (const event of candidates) {
-    const primaryParticipant = event.participants[0] ?? 'none';
-    const window = Math.floor(event.tick / timeWindow);
-    const key = `${event.category}|${primaryParticipant}|${window}`;
+    const key = groupKey(event, timeWindow);
     const group = groups.get(key);
     if (group) {
       group.push(event);
@@ -141,22 +309,14 @@ export function aggregateEvents(
   const aggregated: ChronicleEntry[] = [];
   for (const [key, group] of groups) {
     if (group.length >= 2) {
-      const [category, participantStr] = key.split('|') as [string, string];
-      const participant = participantStr === 'none' ? 0 : parseInt(participantStr, 10);
-      const templates = AGGREGATION_PROSE[category] ?? ['Multiple events occurred'];
-      const templateIndex = hashString(key) % templates.length;
-      const template = templates[templateIndex] ?? 'Multiple events occurred';
-      const theme = template
-        .replace('{participant}', getName(participant))
-        .replace('{count}', String(group.length))
-        .replace('{period}', 'period');
+      const [category] = key.split('|') as [string];
       const maxSig = Math.max(...group.map((e) => e.significance));
       const minTick = Math.min(...group.map((e) => e.tick));
       aggregated.push({
         kind: 'aggregate',
         category,
         count: group.length,
-        theme,
+        theme: buildTheme(key, group.length, getName),
         significance: maxSig,
         tick: minTick,
         icon: CATEGORY_ICONS[category] ?? '\u2022',
@@ -195,8 +355,7 @@ export function aggregateEvents(
     }
 
     if (month !== lastMonth) {
-      const season =
-        month <= 3 ? 'Winter' : month <= 6 ? 'Spring' : month <= 9 ? 'Summer' : 'Autumn';
+      const season = seasonName(month);
       result.push({ kind: 'header', text: `${season}, Month ${month}`, tick });
       lastMonth = month;
     }

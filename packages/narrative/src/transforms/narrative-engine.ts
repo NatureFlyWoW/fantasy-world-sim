@@ -49,6 +49,7 @@ export class NarrativeEngine {
   private readonly parser: TemplateParser;
   private readonly config: NarrativeEngineConfig;
   private readonly resolver: EntityResolver;
+  private readonly rng: () => number;
 
   /** Track first mentions for epithet insertion */
   private mentionedEntities: Set<string> = new Set();
@@ -59,6 +60,7 @@ export class NarrativeEngine {
     resolver?: EntityResolver
   ) {
     this.config = { ...DEFAULT_ENGINE_CONFIG, ...config };
+    this.rng = this.config.rng ?? Math.random;
     this.parser = new TemplateParser();
     this.resolver = resolver ?? createDefaultResolver();
     this.registry = this.buildRegistry(templates);
@@ -210,12 +212,12 @@ export class NarrativeEngine {
     // Prefer exact tone match
     const toneMatch = inRange.filter((t) => t.tone === tone);
     if (toneMatch.length > 0) {
-      // Return a random one from matching templates
-      return toneMatch[Math.floor(Math.random() * toneMatch.length)];
+      // Return a random one from matching templates (uses seeded RNG if provided)
+      return toneMatch[Math.floor(this.rng() * toneMatch.length)];
     }
 
     // Fall back to any template in range
-    return inRange[Math.floor(Math.random() * inRange.length)];
+    return inRange[Math.floor(this.rng() * inRange.length)];
   }
 
   /**
@@ -435,7 +437,7 @@ export class NarrativeEngine {
 
     // Add foreshadowing for setup and rising action
     if (phase === 'Setup' || phase === 'RisingAction') {
-      const foreshadowPhrase = getRandomPhrase(tone, 'foreshadowing');
+      const foreshadowPhrase = getRandomPhrase(tone, 'foreshadowing', this.rng);
       if (foreshadowPhrase.length > 0) {
         return `${body} ${foreshadowPhrase}`;
       }
@@ -460,7 +462,7 @@ export class NarrativeEngine {
     _context: TemplateContext,
     tone: NarrativeTone
   ): string {
-    const retroPhrase = getRandomPhrase(tone, 'retrospectives');
+    const retroPhrase = getRandomPhrase(tone, 'retrospectives', this.rng);
     if (retroPhrase.length > 0) {
       return `${retroPhrase} ${body}`;
     }

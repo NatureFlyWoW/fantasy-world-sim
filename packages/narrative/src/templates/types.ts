@@ -115,6 +115,9 @@ export interface NarrativeEngineConfig {
   readonly includeRetrospectives: boolean;
   /** Whether to add dramatic irony asides for secrets */
   readonly includeDramaticIrony: boolean;
+  /** Optional seeded RNG for deterministic template selection.
+   *  Must return a number in [0, 1). Defaults to Math.random. */
+  readonly rng?: () => number;
 }
 
 /**

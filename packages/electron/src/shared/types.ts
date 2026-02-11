@@ -15,6 +15,8 @@ export interface SerializedEvent {
   readonly significance: number;
   readonly participants: readonly number[];
   readonly data: Record<string, unknown>;
+  readonly narrativeTitle: string;
+  readonly narrativeBody: string;
 }
 
 export interface EntityDelta {
