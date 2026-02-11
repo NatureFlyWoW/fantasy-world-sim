@@ -29,9 +29,9 @@ import {
   SpatialIndex,
   LevelOfDetailManager,
   resetEntityIdCounter,
-  createSimulationEngine,
 } from '@fws/core';
-import type { WorldEvent, EntityId, CharacterId, SiteId, CharacterInitData } from '@fws/core';
+import type { WorldEvent, EntityId, CharacterId, SiteId } from '@fws/core';
+import { createSimulationEngine, type CharacterInitData } from '@fws/core';
 
 // Controls imports
 import {
