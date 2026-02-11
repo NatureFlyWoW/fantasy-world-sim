@@ -61,7 +61,6 @@ interface NavEntry {
 export class InspectorPanel {
   private history: NavEntry[] = [];
   private historyIndex = -1;
-  private activeTab: 'elegic' | 'section' | 'card' = 'elegic';
   private collapsedSections = new Set<string>();
   private currentResponse: InspectorResponse | null = null;
   private readonly ipc: IpcClient;
@@ -200,9 +199,6 @@ export class InspectorPanel {
       parts.push(`<p class="inspector-entity-summary">${this.parseEntityMarkers(this.escapeHtml(response.summary))}</p>`);
     }
 
-    // Tabs
-    parts.push(this.renderTabs());
-
     // Sections
     if (response.sections.length > 0) {
       parts.push('<div class="inspector-sections">');
@@ -282,24 +278,6 @@ export class InspectorPanel {
       }
     }
 
-    parts.push('</div>');
-    return parts.join('\n');
-  }
-
-  private renderTabs(): string {
-    const tabs: Array<{ id: 'elegic' | 'section' | 'card'; label: string }> = [
-      { id: 'elegic', label: 'Elegic' },
-      { id: 'section', label: 'Section' },
-      { id: 'card', label: 'Card' },
-    ];
-
-    const parts: string[] = ['<div class="inspector-tabs">'];
-    for (const tab of tabs) {
-      const activeClass = tab.id === this.activeTab ? ' inspector-tab--active' : '';
-      parts.push(
-        `<button class="inspector-tab${activeClass}" data-tab="${tab.id}">${this.escapeHtml(tab.label)}</button>`,
-      );
-    }
     parts.push('</div>');
     return parts.join('\n');
   }
@@ -424,15 +402,6 @@ export class InspectorPanel {
         return;
       }
 
-      // Tab clicks
-      const tab = target.closest('.inspector-tab') as HTMLElement | null;
-      if (tab !== null) {
-        const tabId = tab.dataset.tab as 'elegic' | 'section' | 'card' | undefined;
-        if (tabId !== undefined && tabId !== this.activeTab) {
-          this.activeTab = tabId;
-          this.render();
-        }
-      }
     });
   }
 

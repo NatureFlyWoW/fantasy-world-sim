@@ -373,23 +373,6 @@ export function inspectCharacter(
     summaryParts.push(resolveName(membership.factionId, world));
   }
 
-  // ── Prose lines ─────────────────────────────────────────────────────
-  const proseLines: string[] = [];
-  if (health !== undefined) {
-    const state = getHealthState(health.current ?? 100, health.maximum ?? 100);
-    const prose = HEALTH_PROSE[state];
-    if (prose !== undefined) proseLines.push(`${name} ${prose}.`);
-  }
-  if (personality !== undefined) {
-    const descriptors: string[] = [];
-    for (const [axis, value] of Object.entries(personality) as Array<[string, number | undefined]>) {
-      if (value === undefined) continue;
-      const desc = getPersonalityDescriptor(axis, value);
-      if (desc !== null) descriptors.push(desc);
-    }
-    if (descriptors.length > 0) proseLines.push(`This individual is ${descriptors.join(', and ')}.`);
-  }
-
   return {
     entityType: 'character',
     entityName: name,
@@ -403,7 +386,7 @@ export function inspectCharacter(
       { title: 'Remembered Things', content: memoryLines.join('\n') },
       { title: 'Possessions & Treasures', content: possessionLines.join('\n') },
     ],
-    prose: proseLines,
+    prose: [],
     relatedEntities: refs.toArray(),
   };
 }

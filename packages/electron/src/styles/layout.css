@@ -198,7 +198,8 @@
 /* ── View Modes (topbar tab switching) ────────────────────────────── */
 
 /* Chronicle view: hide map, panels fill content area */
-.view--chronicle {
+/* NOTE: #app prefix required so these override the #app base rules (ID > class specificity). */
+#app.view--chronicle {
   grid-template-columns: 1fr;
   grid-template-areas:
     "topbar"
@@ -206,50 +207,50 @@
     "status";
 }
 
-.view--chronicle #map-container {
+#app.view--chronicle #map-container {
   display: none;
 }
 
-.view--chronicle #panel-column {
+#app.view--chronicle #panel-column {
   border-left: none;
 }
 
 /* ── Layout Presets ─────────────────────────────────────────────────── */
 
 /* Narrative: panels take more space */
-.layout--narrative {
+#app.layout--narrative {
   grid-template-columns: 1fr minmax(420px, 60%);
 }
 
 /* Map focus: hide panels, full-width map */
-.layout--map-focus #panel-column {
-  display: none;
-}
-.layout--map-focus {
+#app.layout--map-focus {
   grid-template-columns: 1fr;
+}
+#app.layout--map-focus #panel-column {
+  display: none;
 }
 
 /* Log focus: swap widths, hide inspector */
-.layout--log-focus {
+#app.layout--log-focus {
   grid-template-columns: minmax(420px, 60%) 1fr;
 }
-.layout--log-focus #panel-column {
+#app.layout--log-focus #panel-column {
   grid-column: 1;
   grid-row: 2;
   border-left: none;
   border-right: 1px solid var(--border-default);
 }
-.layout--log-focus #map-container {
+#app.layout--log-focus #map-container {
   grid-column: 2;
   grid-row: 2;
 }
-.layout--log-focus #inspector-panel,
-.layout--log-focus #panel-divider {
+#app.layout--log-focus #inspector-panel,
+#app.layout--log-focus #panel-divider {
   display: none;
 }
 
 /* Split: horizontal stacking — map top, panels bottom */
-.layout--split {
+#app.layout--split {
   grid-template-columns: 1fr;
   grid-template-rows: 48px 1fr 1fr 24px;
   grid-template-areas:
@@ -258,14 +259,14 @@
     "panels"
     "status";
 }
-.layout--split #panel-column {
+#app.layout--split #panel-column {
   border-left: none;
   border-top: 1px solid var(--border-default);
   flex-direction: row;
 }
-.layout--split #panel-column > .panel {
+#app.layout--split #panel-column > .panel {
   flex: 1;
 }
-.layout--split #panel-divider {
+#app.layout--split #panel-divider {
   display: none;
 }
