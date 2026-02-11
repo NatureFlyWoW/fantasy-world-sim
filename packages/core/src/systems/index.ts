@@ -505,6 +505,9 @@ export type {
   WorldFingerprint,
 } from './world-fingerprint.js';
 
+// Population system
+export { PopulationSystem } from './population-system.js';
+
 // Population utilities
 export {
   createNonNotable,
