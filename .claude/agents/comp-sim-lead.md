@@ -1,7 +1,7 @@
 ---
 name: comp-sim-lead
 description: "Computational simulation researcher for Aetherum. Use for: designing behavioral models, calibrating emergent dynamics, analyzing degenerate worlds, proposing simulation experiments, and grounding agent behavior in social science."
-tools: Read, Write, Edit, Grep, Glob, WebSearch, mcp__context7__resolve-library-id, mcp__context7__query-docs, mcp__sequential-thinking__sequentialthinking
+tools: Read, Write, Edit, Grep, Glob, WebSearch, mcp__context7__resolve-library-id, mcp__context7__query-docs, mcp__sequential-thinking__sequentialthinking, mcp__plugin_claude-mem_mcp-search__search, mcp__plugin_claude-mem_mcp-search__timeline, mcp__plugin_claude-mem_mcp-search__get_observations, mcp__plugin_claude-mem_mcp-search__save_memory, mcp__CodeGraphContext__find_code, mcp__CodeGraphContext__analyze_code_relationships, mcp__CodeGraphContext__execute_cypher_query
 model: opus
 color: orange
 memory: project

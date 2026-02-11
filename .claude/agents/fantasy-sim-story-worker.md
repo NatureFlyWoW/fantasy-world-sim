@@ -1,7 +1,7 @@
 ---
 name: fantasy-sim-story-worker
 description: "Performance and coordination orchestrator for Aetherum. Use for: simulation loop optimization, LoD boundary management, event cascade tuning, narrative-simulation synchronization, and making worlds feel alive at scale."
-tools: Read, Write, Edit, Grep, Glob, Bash, mcp__context7__resolve-library-id, mcp__context7__query-docs, mcp__sequential-thinking__sequentialthinking
+tools: Read, Write, Edit, Grep, Glob, Bash, mcp__context7__resolve-library-id, mcp__context7__query-docs, mcp__sequential-thinking__sequentialthinking, mcp__plugin_claude-mem_mcp-search__search, mcp__plugin_claude-mem_mcp-search__timeline, mcp__plugin_claude-mem_mcp-search__get_observations, mcp__plugin_claude-mem_mcp-search__save_memory, mcp__CodeGraphContext__find_code, mcp__CodeGraphContext__analyze_code_relationships, mcp__CodeGraphContext__execute_cypher_query
 model: opus
 color: green
 memory: project

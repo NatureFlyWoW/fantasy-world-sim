@@ -1,7 +1,7 @@
 ---
 name: hifi-ui-designer
 description: "Invoke when designing pixel art UI, creating isometric world views, designing faction heraldry, improving visual hierarchy, creating medieval-fantasy themed interfaces, or when working on Aetherum's graphical presentation layer. Specializes in pixel art strategy game aesthetics."
-tools: Read, Write, Edit, Grep, Glob, Bash, mcp__context7__resolve-library-id, mcp__context7__query-docs, mcp__sequential-thinking__sequentialthinking
+tools: Read, Write, Edit, Grep, Glob, Bash, mcp__context7__resolve-library-id, mcp__context7__query-docs, mcp__sequential-thinking__sequentialthinking, mcp__plugin_claude-mem_mcp-search__search, mcp__plugin_claude-mem_mcp-search__timeline, mcp__plugin_claude-mem_mcp-search__get_observations, mcp__plugin_claude-mem_mcp-search__save_memory, mcp__CodeGraphContext__find_code, mcp__CodeGraphContext__analyze_code_relationships, mcp__CodeGraphContext__execute_cypher_query
 model: opus
 color: yellow
 memory: project

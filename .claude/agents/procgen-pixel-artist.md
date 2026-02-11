@@ -1,7 +1,7 @@
 ---
 name: procgen-pixel-artist
 description: "Invoke when generating procedural pixel art, creating random terrain/biome systems, implementing noise-based generation algorithms, designing faction heraldry generators, or developing procedural visual content systems for Aetherum. Specializes in algorithmic art generation for medieval-fantasy pixel aesthetics."
-tools: Read, Write, Edit, Grep, Glob, Bash, mcp__context7__resolve-library-id, mcp__context7__query-docs, mcp__sequential-thinking__sequentialthinking
+tools: Read, Write, Edit, Grep, Glob, Bash, mcp__context7__resolve-library-id, mcp__context7__query-docs, mcp__sequential-thinking__sequentialthinking, mcp__plugin_claude-mem_mcp-search__search, mcp__plugin_claude-mem_mcp-search__timeline, mcp__plugin_claude-mem_mcp-search__get_observations, mcp__plugin_claude-mem_mcp-search__save_memory, mcp__CodeGraphContext__find_code, mcp__CodeGraphContext__analyze_code_relationships, mcp__CodeGraphContext__execute_cypher_query
 model: opus
 color: magenta
 memory: project
