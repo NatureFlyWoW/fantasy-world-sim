@@ -131,6 +131,9 @@ export interface CharacterSummary {
   readonly faction: string;
   readonly factionId: number;
   readonly alive: boolean;
+  readonly isNotable: boolean;
+  readonly deceased: boolean;
+  readonly deathCause?: string;
 }
 
 export interface FactionSummary {

@@ -33,7 +33,7 @@ function resolveName(world: World, eid: EntityId): string {
  * Build a complete legends summary by scanning all ECS entities.
  *
  * Entity type identification follows the same heuristics as simulation-runner.ts:
- * - Characters: have Personality component
+ * - Characters: have Personality (notables) or Notability (non-notables) component
  * - Factions: have Government component
  * - Sites: have Population component (settlements)
  * - Artifacts: have CreationHistory or OwnershipChain component
@@ -59,48 +59,83 @@ export function buildLegendsSummary(world: World): LegendsSummary {
   }
 
   // ── Characters ────────────────────────────────────────────────────────
+  // Collect character entity IDs from both Personality (notables) and Notability (non-notables)
+  const characterEids = new Set<number>();
+
   if (world.hasStore('Personality')) {
     for (const [eid] of world.getStore('Personality').getAll()) {
-      const numId = eid as unknown as number;
-      const name = resolveName(world, eid) || `Character #${numId}`;
+      characterEids.add(eid as unknown as number);
+    }
+  }
+  if (world.hasStore('Notability')) {
+    for (const [eid] of world.getStore('Notability').getAll()) {
+      characterEids.add(eid as unknown as number);
+    }
+  }
 
-      // Race from CreatureType
-      let race = 'Unknown';
-      if (world.hasStore('CreatureType')) {
-        const ct = world.getComponent(eid, 'CreatureType');
-        if (ct?.species !== undefined) race = ct.species;
+  for (const numId of characterEids) {
+    const eid = numId as unknown as EntityId;
+    const name = resolveName(world, eid) || `Character #${numId}`;
+
+    // Notable = has Personality component
+    const isNotable = world.hasStore('Personality')
+      && world.getComponent(eid, 'Personality') !== undefined;
+
+    // Race from CreatureType
+    let race = 'Unknown';
+    if (world.hasStore('CreatureType')) {
+      const ct = world.getComponent(eid, 'CreatureType');
+      if (ct?.species !== undefined) race = ct.species;
+    }
+
+    // Profession from Status
+    let profession = 'Unknown';
+    const status = world.hasStore('Status')
+      ? world.getComponent(eid, 'Status')
+      : undefined;
+    if (status?.socialClass !== undefined && status.socialClass !== '') {
+      profession = status.socialClass;
+    }
+
+    // Faction from Membership
+    let faction = 'None';
+    let factionId = -1;
+    if (world.hasStore('Membership')) {
+      const membership = world.getComponent(eid, 'Membership');
+      if (membership?.factionId !== undefined && membership.factionId !== null) {
+        factionId = membership.factionId as number;
+        faction = factionNames.get(factionId) ?? `Faction #${factionId}`;
       }
+    }
 
-      // Profession from Status
-      let profession = 'Unknown';
-      const status = world.hasStore('Status')
-        ? world.getComponent(eid, 'Status')
-        : undefined;
-      if (status?.socialClass !== undefined && status.socialClass !== '') {
-        profession = status.socialClass;
+    // Alive from Health
+    let alive = true;
+    if (world.hasStore('Health')) {
+      const health = world.getComponent(eid, 'Health');
+      if (health !== undefined && health.current <= 0) {
+        alive = false;
       }
+    }
 
-      // Faction from Membership
-      let faction = 'None';
-      let factionId = -1;
-      if (world.hasStore('Membership')) {
-        const membership = world.getComponent(eid, 'Membership');
-        if (membership?.factionId !== undefined && membership.factionId !== null) {
-          factionId = membership.factionId as number;
-          faction = factionNames.get(factionId) ?? `Faction #${factionId}`;
+    // Deceased status from Deceased component
+    let deceased = false;
+    let deathCause;
+    if (world.hasStore('Deceased')) {
+      const deceasedComp = world.getComponent(eid, 'Deceased');
+      if (deceasedComp !== undefined) {
+        deceased = true;
+        if (deceasedComp.cause !== undefined && deceasedComp.cause !== '') {
+          deathCause = deceasedComp.cause;
         }
+        alive = false; // Deceased overrides Health-based alive check
       }
+    }
 
-      // Alive from Health
-      let alive = true;
-      if (world.hasStore('Health')) {
-        const health = world.getComponent(eid, 'Health');
-        if (health !== undefined && health.current <= 0) {
-          alive = false;
-        }
-      }
-
-      characters.push({ id: numId, name, race, profession, faction, factionId, alive });
+    const entry = { id: numId, name, race, profession, faction, factionId, alive, isNotable, deceased };
+    if (deathCause !== undefined) {
+      characters.push({ ...entry, deathCause });
+    } else {
+      characters.push(entry);
     }
   }
 
@@ -138,11 +173,15 @@ export function buildLegendsSummary(world: World): LegendsSummary {
   }
 
   // ── Sites ─────────────────────────────────────────────────────────────
-  // Sites are entities with Population but NOT Personality (not characters)
+  // Sites are entities with Population but NOT characters or factions
   if (world.hasStore('Population')) {
     for (const [eid] of world.getStore('Population').getAll()) {
-      // Skip entities that are characters (have Personality)
+      // Skip entities that are notable characters (have Personality)
       if (world.hasStore('Personality') && world.getComponent(eid, 'Personality') !== undefined) {
+        continue;
+      }
+      // Skip entities that are non-notable characters (have Notability)
+      if (world.hasStore('Notability') && world.getComponent(eid, 'Notability') !== undefined) {
         continue;
       }
       // Skip entities that are factions (have Government)
