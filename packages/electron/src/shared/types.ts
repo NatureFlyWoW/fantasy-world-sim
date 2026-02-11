@@ -121,6 +121,58 @@ export type SimulationCommand =
   | { readonly type: 'resume' }
   | { readonly type: 'step'; readonly ticks: number };
 
+// ── Legends Viewer (entity browser) ──────────────────────────────────────────
+
+export interface CharacterSummary {
+  readonly id: number;
+  readonly name: string;
+  readonly race: string;
+  readonly profession: string;
+  readonly faction: string;
+  readonly factionId: number;
+  readonly alive: boolean;
+}
+
+export interface FactionSummary {
+  readonly id: number;
+  readonly name: string;
+  readonly governmentType: string;
+  readonly memberCount: number;
+  readonly territoryCount: number;
+}
+
+export interface SiteSummary {
+  readonly id: number;
+  readonly name: string;
+  readonly siteType: string;
+  readonly ownerFaction: string;
+  readonly ownerFactionId: number;
+  readonly population: number;
+}
+
+export interface ArtifactSummary {
+  readonly id: number;
+  readonly name: string;
+  readonly artifactType: string;
+  readonly currentOwner: string;
+  readonly currentOwnerId: number;
+}
+
+export interface DeitySummary {
+  readonly id: number;
+  readonly name: string;
+  readonly domain: string;
+  readonly followerCount: number;
+}
+
+export interface LegendsSummary {
+  readonly characters: readonly CharacterSummary[];
+  readonly factions: readonly FactionSummary[];
+  readonly sites: readonly SiteSummary[];
+  readonly artifacts: readonly ArtifactSummary[];
+  readonly deities: readonly DeitySummary[];
+}
+
 // ── Preload API exposed to renderer ──────────────────────────────────────────
 
 export interface AeternumAPI {
@@ -128,4 +180,5 @@ export interface AeternumAPI {
   sendCommand(command: SimulationCommand): void;
   onTickDelta(callback: (delta: TickDelta) => void): void;
   queryInspector(query: InspectorQuery): Promise<InspectorResponse>;
+  queryLegends(): Promise<LegendsSummary>;
 }

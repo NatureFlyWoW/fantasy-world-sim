@@ -4,6 +4,7 @@ import { formatEvent } from './event-formatter.js';
 import { aggregateEvents, appendEvents, createAggregationState } from './event-aggregator.js';
 import type { ChronicleEntry, AggregationState } from './event-aggregator.js';
 import { ChronicleRenderer } from './chronicle-renderer.js';
+import type { FavoritesManager } from '../favorites-manager.js';
 
 /**
  * Chronicle panel controller.
@@ -46,7 +47,7 @@ export class ChroniclePanel {
   public onEntityClick: ((entityId: number) => void) | null = null;
   public onEventClick: ((eventId: number) => void) | null = null;
 
-  constructor(container: HTMLElement) {
+  constructor(container: HTMLElement, favoritesManager: FavoritesManager) {
     this.store = new EventStore();
 
     const contentDiv = container.querySelector('#chronicle-content');
@@ -54,7 +55,7 @@ export class ChroniclePanel {
       throw new Error('Chronicle panel requires #chronicle-content element');
     }
 
-    this.renderer = new ChronicleRenderer(contentDiv);
+    this.renderer = new ChronicleRenderer(contentDiv, favoritesManager);
     this.renderer.onEntityClick = (id) => this.onEntityClick?.(id);
     this.renderer.onEventClick = (id) => this.onEventClick?.(id);
 

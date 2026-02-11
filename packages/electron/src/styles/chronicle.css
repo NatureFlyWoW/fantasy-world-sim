@@ -107,6 +107,16 @@
   animation: legendary-pulse 2s infinite;
 }
 
+/* Favorite entity events */
+.event-card--favorite {
+  border-left: 3px solid var(--au2);
+}
+
+.event-card--favorite .event-card__title::before {
+  content: '\2605 ';
+  color: var(--au2);
+}
+
 .event-card--compact {
   height: 28px;
   align-items: center;

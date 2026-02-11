@@ -8,8 +8,9 @@ import { ipcMain } from 'electron';
 import type { BrowserWindow } from 'electron';
 import { IPC_CHANNELS } from '../shared/ipc-channels.js';
 import type { SimulationRunner } from './simulation-runner.js';
-import type { SimulationCommand, InspectorQuery, InspectorResponse } from '../shared/types.js';
+import type { SimulationCommand, InspectorQuery, InspectorResponse, LegendsSummary } from '../shared/types.js';
 import { inspectEntity } from './entity-inspector.js';
+import { buildLegendsSummary } from './legends-provider.js';
 
 export function registerIpcHandlers(
   runner: SimulationRunner,
@@ -47,5 +48,14 @@ export function registerIpcHandlers(
       return { entityType: query.type, entityName: 'Unknown', summary: '', sections: [], prose: [], relatedEntities: [] };
     }
     return inspectEntity(query, world, eventLog, clock);
+  });
+
+  // Legends summary (invoke/handle)
+  ipcMain.handle(IPC_CHANNELS.LEGENDS_SUMMARY, (): LegendsSummary => {
+    const world = runner.getWorld();
+    if (world === null) {
+      return { characters: [], factions: [], sites: [], artifacts: [], deities: [] };
+    }
+    return buildLegendsSummary(world);
   });
 }

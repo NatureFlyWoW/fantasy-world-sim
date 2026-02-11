@@ -1,0 +1,234 @@
+/**
+ * Legends Viewer -- entity browser replacing the chronicle full-screen view.
+ * BEM naming. All colors from variables.css palette.
+ */
+
+/* ── Legends container (grid area: map) ────────────────────────────────── */
+
+#legends-container {
+  grid-area: map;
+  display: none;
+  flex-direction: column;
+  background: var(--bg0);
+  overflow: hidden;
+}
+
+/* view--legends display:flex rule is in layout.css (canonical location for view switching) */
+
+/* ── Category tabs ─────────────────────────────────────────────────────── */
+
+.legends-tabs {
+  display: flex;
+  gap: var(--space-xs);
+  padding: var(--space-md) var(--space-lg);
+  border-bottom: 1px solid var(--border-default);
+  background: var(--bg1);
+  flex-shrink: 0;
+}
+
+.legends-tab {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-lg);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-tertiary);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: color var(--transition-fast), border-color var(--transition-fast);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.legends-tab:hover {
+  color: var(--text-secondary);
+  border-color: var(--border-default);
+}
+
+.legends-tab--active {
+  color: var(--text-accent);
+  border-color: var(--border-ornament);
+}
+
+.legends-tab__icon {
+  font-size: var(--text-base);
+}
+
+.legends-tab__label {
+  font-size: var(--text-xs);
+}
+
+/* ── Search bar ────────────────────────────────────────────────────────── */
+
+.legends-search {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-md) var(--space-lg);
+  border-bottom: 1px solid var(--border-default);
+  background: var(--bg1);
+  flex-shrink: 0;
+}
+
+.legends-search__input {
+  flex: 1;
+  padding: var(--space-sm) var(--space-md);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  background: var(--bg0);
+  border: 1px solid var(--border-default);
+  border-radius: 2px;
+  outline: none;
+  transition: border-color var(--transition-fast);
+}
+
+.legends-search__input::placeholder {
+  color: var(--text-disabled);
+}
+
+.legends-search__input:focus {
+  border-color: var(--border-ornament);
+}
+
+.legends-search__count {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  white-space: nowrap;
+}
+
+/* ── List container ────────────────────────────────────────────────────── */
+
+.legends-list {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+
+/* ── Virtual scroll ────────────────────────────────────────────────────── */
+
+.legends-scroll {
+  position: relative;
+  overflow-y: auto;
+  height: 100%;
+}
+
+.legends-scroll__content {
+  position: relative;
+}
+
+/* ── Entity rows ───────────────────────────────────────────────────────── */
+
+.legends-row {
+  display: flex;
+  align-items: center;
+  height: 36px;
+  padding: 0 var(--space-lg);
+  gap: var(--space-md);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+  border-bottom: 1px solid var(--bg2);
+}
+
+.legends-row:hover {
+  background: var(--bg-hover);
+}
+
+.legends-row__name {
+  flex: 2;
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.legends-row__detail {
+  flex: 1;
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.legends-row__star {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--text-lg);
+  color: var(--n1);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: color var(--transition-fast);
+  padding: 0;
+}
+
+.legends-row__star:hover {
+  color: var(--au2);
+}
+
+.legends-row__star--active {
+  color: var(--au2);
+}
+
+.legends-row__star--active:hover {
+  color: var(--au1);
+}
+
+/* ── Separator rows ────────────────────────────────────────────────────── */
+
+.legends-separator {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  height: 28px;
+  padding: 0 var(--space-lg);
+}
+
+.legends-separator::before,
+.legends-separator::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border-default);
+}
+
+.legends-separator__text {
+  font-family: var(--font-display);
+  font-size: var(--text-xs);
+  color: var(--au2);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  white-space: nowrap;
+}
+
+/* ── Empty state ───────────────────────────────────────────────────────── */
+
+.legends-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  color: var(--text-tertiary);
+  font-style: italic;
+  padding: var(--space-2xl);
+  text-align: center;
+}

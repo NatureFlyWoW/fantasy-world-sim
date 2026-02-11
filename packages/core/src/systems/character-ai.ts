@@ -485,6 +485,9 @@ export class ActionExecutor {
   /**
    * Execute the top-scoring action. Roll for outcome based on skills,
    * generate a WorldEvent, and return the result.
+   *
+   * @param enrichment Optional extra fields to include in event.data
+   *   (targetId, locationId, motivation, personalityDriver, etc.)
    */
   execute(
     topScore: ActionScore,
@@ -492,6 +495,7 @@ export class ActionExecutor {
     clock: WorldClock,
     events: EventBus,
     randomFn: () => number,
+    enrichment?: Readonly<Record<string, unknown>>,
   ): ActionOutcome {
     const action = topScore.action;
     const skillLevel = context.skillValues.get(action.primarySkill) ?? 0;
@@ -522,6 +526,7 @@ export class ActionExecutor {
         skillLevel,
         roll,
         successProbability,
+        ...enrichment,
       },
       consequencePotential: outcome === OutcomeType.CriticalSuccess
         || outcome === OutcomeType.CriticalFailure
@@ -804,8 +809,13 @@ export class CharacterAISystem extends BaseSystem {
     const topScore = sortedScores[0];
     if (topScore === undefined) return;
 
+    // 4b. ENRICH — compute context data for the event
+    const enrichment = this.computeEnrichment(
+      topScore.action, context, prioritizedGoals, world,
+    );
+
     // 5. EXECUTE
-    const outcome = this.actionExecutor.execute(topScore, context, clock, events, rng);
+    const outcome = this.actionExecutor.execute(topScore, context, clock, events, rng, enrichment);
 
     // 6. REFLECT
     const reflection = this.goalReflector.reflect(outcome, context, prioritizedGoals);
@@ -861,5 +871,215 @@ export class CharacterAISystem extends BaseSystem {
   cleanup(): void {
     super.cleanup();
     this.entityGoals.clear();
+  }
+
+  // ── Event enrichment helpers ─────────────────────────────────────────────
+
+  /**
+   * Compute enrichment context data for a character action event.
+   * All fields are optional — only included when meaningful data is available.
+   */
+  private computeEnrichment(
+    action: CharacterAction,
+    context: PerceptionContext,
+    goals: readonly CharacterGoal[],
+    world: World,
+  ): Record<string, unknown> {
+    const enrichment: Record<string, unknown> = {};
+
+    // Target resolution: explicit targetId on action, or first nearby for Social actions
+    const targetId = this.resolveTargetId(action, context);
+    if (targetId !== undefined) {
+      enrichment['targetId'] = targetId;
+    }
+
+    // Location resolution: nearest settlement (entity with Position + Population)
+    const locationId = this.resolveNearestSite(world, context.position.x, context.position.y);
+    if (locationId !== undefined) {
+      enrichment['locationId'] = locationId;
+    }
+
+    // Motivation: top active goal's description
+    const motivation = this.resolveMotivation(goals);
+    if (motivation !== undefined) {
+      enrichment['motivation'] = motivation;
+    }
+
+    // Personality driver: dominant trait from the action's trait weights
+    const personalityDriver = this.resolvePersonalityDriver(action, context);
+    if (personalityDriver !== undefined) {
+      enrichment['personalityDriver'] = personalityDriver;
+    }
+
+    // Relationship to target
+    if (targetId !== undefined) {
+      const rel = this.resolveRelationshipToTarget(targetId, world, context.entityId);
+      if (rel !== undefined) {
+        enrichment['relationshipToTarget'] = rel;
+      }
+    }
+
+    // Context detail: combined readable sentence
+    const contextDetail = this.buildContextDetail(
+      motivation, personalityDriver,
+      enrichment['relationshipToTarget'] as string | undefined,
+    );
+    if (contextDetail !== undefined) {
+      enrichment['contextDetail'] = contextDetail;
+    }
+
+    return enrichment;
+  }
+
+  /**
+   * Resolve the target entity for an action.
+   * Uses explicit action.targetId if set, otherwise picks first nearby entity
+   * for Social-category actions.
+   */
+  private resolveTargetId(
+    action: CharacterAction,
+    context: PerceptionContext,
+  ): number | undefined {
+    if (action.targetId !== undefined) {
+      return action.targetId as number;
+    }
+    // Social actions implicitly target a nearby entity
+    if (action.category === ActionCategory.Social && context.nearbyEntityIds.length > 0) {
+      const first = context.nearbyEntityIds[0];
+      if (first !== undefined) {
+        return first as number;
+      }
+    }
+    return undefined;
+  }
+
+  /**
+   * Find the nearest settlement (entity with Position + Population) to the given coords.
+   * Returns the entity ID as a number, or undefined if no settlements exist.
+   */
+  private resolveNearestSite(
+    world: World,
+    x: number,
+    y: number,
+  ): number | undefined {
+    let siteIds: readonly EntityId[];
+    try {
+      siteIds = world.query('Position', 'Population');
+    } catch {
+      // Population store may not be registered
+      return undefined;
+    }
+
+    if (siteIds.length === 0) return undefined;
+
+    let bestId: EntityId | undefined;
+    let bestDist = Infinity;
+
+    for (const siteId of siteIds) {
+      const pos = world.getComponent<PositionComponent>(siteId, 'Position');
+      if (pos === undefined) continue;
+      const dist = Math.abs(pos.x - x) + Math.abs(pos.y - y);
+      if (dist < bestDist) {
+        bestDist = dist;
+        bestId = siteId;
+      }
+    }
+
+    return bestId !== undefined ? (bestId as number) : undefined;
+  }
+
+  /**
+   * Extract the top active goal's description as the character's motivation.
+   */
+  private resolveMotivation(goals: readonly CharacterGoal[]): string | undefined {
+    const topGoal = goals.find(g => g.active);
+    return topGoal?.description;
+  }
+
+  /**
+   * Find the personality trait that most strongly drove this action choice.
+   * Returns a human-readable string like "high empathetic" or "low cruel".
+   */
+  private resolvePersonalityDriver(
+    action: CharacterAction,
+    context: PerceptionContext,
+  ): string | undefined {
+    if (action.traitWeights.length === 0) return undefined;
+
+    let bestTrait: string | undefined;
+    let bestInfluence = 0;
+    let bestTraitValue = 0;
+
+    for (const { trait, weight } of action.traitWeights) {
+      const traitValue = context.traitValues.get(trait) ?? 0;
+      // Influence = |traitValue * weight| — how much this trait pushed the decision
+      const influence = Math.abs(traitValue * weight);
+      if (influence > bestInfluence) {
+        bestInfluence = influence;
+        bestTrait = trait;
+        bestTraitValue = traitValue;
+      }
+    }
+
+    if (bestTrait === undefined) return undefined;
+
+    // Only report traits with meaningful strength (absolute value > 30)
+    if (Math.abs(bestTraitValue) <= 30) return undefined;
+
+    const qualifier = bestTraitValue > 0 ? 'high' : 'low';
+    return `${qualifier} ${bestTrait}`;
+  }
+
+  /**
+   * Look up the relationship kind and affinity between the character and a target.
+   * Returns a formatted string like "rival (-45)" or "friend (+72)".
+   */
+  private resolveRelationshipToTarget(
+    targetId: number,
+    world: World,
+    entityId: EntityId,
+  ): string | undefined {
+    const rels = world.getComponent<RelationshipComponent>(entityId, 'Relationship');
+    if (rels === undefined) return undefined;
+
+    const affinity = rels.affinity.get(targetId);
+    if (affinity === undefined) return undefined;
+
+    const kind = rels.relationships.get(targetId);
+    const label = kind ?? (affinity >= 0 ? 'acquaintance' : 'antagonist');
+    const sign = affinity >= 0 ? '+' : '';
+    return `${label} (${sign}${affinity})`;
+  }
+
+  /**
+   * Combine motivation, personality driver, and relationship into a readable sentence.
+   * Example: "Driven by compassion (high empathetic) toward rival (-45)"
+   */
+  private buildContextDetail(
+    motivation: string | undefined,
+    personalityDriver: string | undefined,
+    relationshipToTarget: string | undefined,
+  ): string | undefined {
+    const parts: string[] = [];
+
+    if (motivation !== undefined) {
+      parts.push(motivation);
+    }
+
+    if (personalityDriver !== undefined) {
+      if (parts.length > 0) {
+        parts.push(`(${personalityDriver})`);
+      } else {
+        parts.push(personalityDriver);
+      }
+    }
+
+    if (relationshipToTarget !== undefined) {
+      parts.push(`toward ${relationshipToTarget}`);
+    }
+
+    if (parts.length === 0) return undefined;
+
+    return `Driven by ${parts.join(' ')}`;
   }
 }

@@ -13,4 +13,7 @@ export const IPC_CHANNELS = {
 
   /** Renderer requests inspector data (invoke/handle) */
   INSPECTOR_QUERY: 'inspector:query',
+
+  /** Renderer requests legends summary (invoke/handle) */
+  LEGENDS_SUMMARY: 'legends:summary',
 } as const;

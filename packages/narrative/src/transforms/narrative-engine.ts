@@ -319,6 +319,33 @@ export class NarrativeEngine {
       }
     }
 
+    // Resolve target from event.data.targetId — try character, faction, site, artifact, deity
+    const targetId = context.event.data['targetId'];
+    if (typeof targetId === 'number' && targetId > 0) {
+      const target =
+        this.resolver.resolveCharacter(targetId) ??
+        this.resolver.resolveFaction(targetId) ??
+        this.resolver.resolveSite(targetId) ??
+        this.resolver.resolveArtifact(targetId) ??
+        this.resolver.resolveDeity(targetId);
+      if (target !== undefined) {
+        entities.set('target', target);
+      }
+    }
+
+    // Resolve location from event.data.locationId if no event.location was set
+    const dataLocationId = context.event.data['locationId'];
+    if (typeof dataLocationId === 'number' && dataLocationId > 0 && !entities.has('site')) {
+      const dataLocation = this.resolver.resolveSite(dataLocationId);
+      if (dataLocation !== undefined) {
+        entities.set('site', dataLocation);
+        entities.set('location', dataLocation);
+        if (!entities.has('site0')) {
+          entities.set('site0', dataLocation);
+        }
+      }
+    }
+
     return {
       entities,
       currentGender: 'neutral' as Gender,
