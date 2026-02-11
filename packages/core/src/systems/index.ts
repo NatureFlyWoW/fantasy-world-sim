@@ -508,6 +508,17 @@ export type {
 // Population system
 export { PopulationSystem } from './population-system.js';
 
+// Exploration system
+export {
+  ExplorationSystem,
+  EXPEDITION_DURATION_TICKS,
+  DISCOVERY_RANGE,
+  DISCOVERY_NOTABILITY_THRESHOLD,
+  DISCOVERY_NOTABILITY_BONUS,
+  FRONTIER_AGE_TICKS,
+  FRONTIER_EVENTS,
+} from './exploration-system.js';
+
 // Promotion system
 export { promote, PROMOTION_THRESHOLD } from './promotion.js';
 

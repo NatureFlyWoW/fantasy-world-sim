@@ -657,6 +657,41 @@ function seedNonNotables(
   return totalCreated;
 }
 
+// ══════════════════════════════════════════════════════════════════════════════
+// HIDDEN LOCATION SEEDING
+// ══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Seed hidden locations across the world for the ExplorationSystem to discover.
+ * Creates 20-40 hidden locations of various types at random positions.
+ */
+function seedHiddenLocations(world: World, _worldMap: WorldMap): number {
+  const count = 20 + Math.floor(Math.random() * 21); // 20-40 hidden locations
+  const LOCATION_TYPES = ['ruins', 'resource', 'magical', 'lore'];
+
+  for (let i = 0; i < count; i++) {
+    const locationType = LOCATION_TYPES[Math.floor(Math.random() * LOCATION_TYPES.length)];
+    const x = 5 + Math.floor(Math.random() * 190);
+    const y = 5 + Math.floor(Math.random() * 190);
+
+    const entityId = world.createEntity();
+    world.addComponent(entityId, makeComponent({
+      type: 'Position',
+      x,
+      y,
+    }));
+    world.addComponent(entityId, makeComponent({
+      type: 'HiddenLocation',
+      locationType,
+      revealed: false,
+      revealedTick: null,
+      x,
+      y,
+    }));
+  }
+  return count;
+}
+
 /**
  * Populate an ECS World from generated world data.
  *
@@ -704,7 +739,10 @@ export function populateWorldFromGenerated(
   // Seed non-notable characters for each settlement
   const nonNotableCount = seedNonNotables(world, data.settlements, settlementIds);
 
-  const totalEntities = settlementIds.size + factionIds.size + characterIds.size + nonNotableCount;
+  // Seed hidden locations for exploration
+  const hiddenLocationCount = seedHiddenLocations(world, data.worldMap);
+
+  const totalEntities = settlementIds.size + factionIds.size + characterIds.size + nonNotableCount + hiddenLocationCount;
 
   return {
     settlementIds,
