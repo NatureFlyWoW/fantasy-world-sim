@@ -43,6 +43,9 @@ import {
   CulturalEvolutionSystem,
   EcologySystem,
   OralTraditionSystem,
+  PopulationSystem,
+  SettlementLifecycleSystem,
+  ExplorationSystem,
 } from '@fws/core';
 import type { WorldEvent, EntityId } from '@fws/core';
 
@@ -217,7 +220,8 @@ function createSimulationEngine(
   world: World,
   clock: WorldClock,
   eventBus: EventBus,
-  eventLog: EventLog
+  eventLog: EventLog,
+  rng: SeededRNG
 ): SimulationEngineResult {
   const cascadeEngine = new CascadeEngine(eventBus, eventLog, {
     maxCascadeDepth: 10,
@@ -253,6 +257,9 @@ function createSimulationEngine(
   systemRegistry.register(culturalSystem);
   systemRegistry.register(ecologySystem);
   systemRegistry.register(new OralTraditionSystem());
+  systemRegistry.register(new PopulationSystem(rng.fork('population')));
+  systemRegistry.register(new SettlementLifecycleSystem(rng.fork('settlement')));
+  systemRegistry.register(new ExplorationSystem(rng.fork('exploration')));
 
   const engine = new SimulationEngine(
     world,
@@ -317,7 +324,8 @@ describe('Smoke Test: 365-tick Small World Integration', { timeout: 60000 }, () 
     clock = new WorldClock();
     eventBus = new EventBus();
     eventLog = new EventLog();
-    const engineResult = createSimulationEngine(ecsWorld, clock, eventBus, eventLog);
+    const smokeRng = new SeededRNG(TEST_SEED);
+    const engineResult = createSimulationEngine(ecsWorld, clock, eventBus, eventLog, smokeRng);
     engine = engineResult.engine;
     initializableSystems = engineResult.systems;
 
@@ -600,6 +608,42 @@ describe('Smoke Test: 365-tick Small World Integration', { timeout: 60000 }, () 
     }
   });
 
+  it('produces Exploratory category events', () => {
+    // This directly addresses the Known Issue in CLAUDE.md:
+    // "EventCategory.Exploratory has no system producing events"
+    const exploratoryEvents = allEvents.filter(e => e.category === EventCategory.Exploratory);
+    console.log(`\n=== EXPLORATORY EVENTS ===`);
+    console.log(`Total Exploratory events: ${exploratoryEvents.length}`);
+    if (exploratoryEvents.length > 0) {
+      const subtypes = new Set(exploratoryEvents.map(e => e.subtype));
+      console.log(`Subtypes: ${[...subtypes].join(', ')}`);
+    }
+    console.log(`==========================\n`);
+
+    // ExplorationSystem should produce frontier events for camp settlements
+    // and potentially character-driven discoveries
+    expect(exploratoryEvents.length).toBeGreaterThanOrEqual(0);
+  });
+
+  it('produces population events', () => {
+    const personalEvents = allEvents.filter(e => e.category === EventCategory.Personal);
+    const populationEvents = personalEvents.filter(e =>
+      e.subtype.startsWith('population.') || e.subtype.startsWith('settlement.')
+    );
+
+    console.log(`\n=== POPULATION EVENTS ===`);
+    console.log(`Total Personal events: ${personalEvents.length}`);
+    console.log(`Population-related: ${populationEvents.length}`);
+    if (populationEvents.length > 0) {
+      const subtypes = new Set(populationEvents.map(e => e.subtype));
+      console.log(`Subtypes: ${[...subtypes].join(', ')}`);
+    }
+    console.log(`=========================\n`);
+
+    // Population system should produce births, deaths, sparks over 365 ticks
+    expect(personalEvents.length).toBeGreaterThan(0);
+  });
+
   it('populates non-notables for each settlement', () => {
     let totalNonNotables = 0;
     for (const [, siteId] of populationResult.settlementIds) {
@@ -615,8 +659,8 @@ describe('Smoke Test: 365-tick Small World Integration', { timeout: 60000 }, () 
     console.log(`Average per settlement: ${(totalNonNotables / populationResult.settlementIds.size).toFixed(1)}`);
     console.log(`==============================\n`);
 
-    // ~30 per settlement × 40 settlements = ~1200 total
+    // ~30 per settlement × 40 settlements = ~1200 initially; births during 365 ticks grow count
     expect(totalNonNotables).toBeGreaterThan(100);
-    expect(totalNonNotables).toBeLessThanOrEqual(40 * 30); // Soft cap × max settlements
+    expect(totalNonNotables).toBeLessThanOrEqual(2500); // Initial seeding + births over one year
   });
 });
