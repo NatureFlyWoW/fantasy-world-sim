@@ -12,19 +12,22 @@ import type { TickFrequency } from '../time/types.js';
  * Execution order constants matching the 13-step tick order from design doc Section 2.2.
  */
 export const ExecutionOrder = {
-  TIME_ADVANCE: 1,
-  ENVIRONMENT: 2,
-  ECONOMY: 3,
-  POLITICS: 4,
-  SOCIAL: 5,
-  CHARACTER_AI: 6,
-  MAGIC: 7,
-  RELIGION: 8,
-  MILITARY: 9,
-  EVENT_RESOLUTION: 10,
-  NARRATIVE_GENERATION: 11,
-  CLEANUP_INDEXING: 12,
-  PLAYER_NOTIFICATION: 13,
+  TIME_ADVANCE: 10,
+  ENVIRONMENT: 20,
+  ECONOMY: 30,
+  POPULATION: 35,
+  POLITICS: 40,
+  SETTLEMENT_LIFECYCLE: 45,
+  SOCIAL: 50,
+  CHARACTER_AI: 60,
+  EXPLORATION: 65,
+  MAGIC: 70,
+  RELIGION: 80,
+  MILITARY: 90,
+  EVENT_RESOLUTION: 100,
+  NARRATIVE_GENERATION: 110,
+  CLEANUP_INDEXING: 120,
+  PLAYER_NOTIFICATION: 130,
 } as const;
 
 export type ExecutionOrderValue = (typeof ExecutionOrder)[keyof typeof ExecutionOrder];

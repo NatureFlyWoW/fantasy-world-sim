@@ -626,7 +626,7 @@ describe('MagicSystem', () => {
 
   it('has correct name and execution order', () => {
     expect(system.name).toBe('MagicSystem');
-    expect(system.executionOrder).toBe(7); // MAGIC = 7
+    expect(system.executionOrder).toBe(70); // MAGIC = 70
   });
 
   describe('Institution Management', () => {

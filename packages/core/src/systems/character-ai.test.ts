@@ -746,7 +746,7 @@ describe('CharacterAISystem', () => {
   it('has correct system properties', () => {
     expect(system.name).toBe('CHARACTER_AI');
     expect(system.frequency).toBe(1);
-    expect(system.executionOrder).toBe(6);
+    expect(system.executionOrder).toBe(60);
   });
 
   it('processes a character and emits events', () => {

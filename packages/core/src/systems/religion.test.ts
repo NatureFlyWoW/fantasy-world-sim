@@ -953,7 +953,7 @@ describe('ReligionSystem', () => {
     });
 
     it('has correct execution order', () => {
-      expect(system.executionOrder).toBe(8); // ExecutionOrder.RELIGION
+      expect(system.executionOrder).toBe(80); // ExecutionOrder.RELIGION
     });
 
     it('has weekly frequency', () => {

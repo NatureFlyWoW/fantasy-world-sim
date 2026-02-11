@@ -677,7 +677,7 @@ describe('WarfareSystem', () => {
   it('has correct system properties', () => {
     expect(system.name).toBe('WarfareSystem');
     expect(system.frequency).toBe(1); // Daily
-    expect(system.executionOrder).toBe(9); // MILITARY
+    expect(system.executionOrder).toBe(90); // MILITARY
   });
 
   it('executes without crashing on empty world', () => {
