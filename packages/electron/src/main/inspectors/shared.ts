@@ -324,9 +324,18 @@ export function detectEntityType(entityId: number, world: World): string {
 }
 
 /**
- * Get event description from data or subtype.
+ * Get event description from narrative prose, data, or subtype.
+ * Prefers narrative engine prose (cached on event.data by SimulationRunner),
+ * then falls back to event.data.description, then humanized subtype.
  */
 export function eventDescription(event: WorldEvent): string {
-  const desc = (event.data as Record<string, unknown>)['description'];
+  const data = event.data as Record<string, unknown>;
+  const narrativeBody = data['narrativeBody'];
+  if (typeof narrativeBody === 'string' && narrativeBody.length > 0) {
+    // Truncate long narrative bodies for inline display (max ~120 chars)
+    if (narrativeBody.length <= 120) return narrativeBody;
+    return narrativeBody.slice(0, 117) + '...';
+  }
+  const desc = data['description'];
   return typeof desc === 'string' && desc.length > 0 ? desc : event.subtype.replace(/[._]/g, ' ');
 }

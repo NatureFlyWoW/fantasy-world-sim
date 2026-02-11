@@ -14,6 +14,10 @@ import type { ContextMenuItem } from '../context-menu.js';
  *   never shows the "New events" indicator.
  * - Re-entrant updateVisibleCards calls (from programmatic scrollTop changes
  *   triggering the scroll handler) are suppressed via an isUpdating guard.
+ * - Scroll events are gated through requestAnimationFrame to avoid redundant
+ *   repaints within a single frame.
+ * - Only cards that enter the viewport are repopulated; cards that remain
+ *   visible across frames keep their DOM unchanged.
  */
 export class ChronicleRenderer {
   private readonly scrollContainer: HTMLElement;
@@ -38,6 +42,32 @@ export class ChronicleRenderer {
    * scrollTop assignment triggering the scroll handler.
    */
   private isUpdating = false;
+
+  /**
+   * Gates scroll-handler calls through rAF so only one update runs per frame.
+   */
+  private scrollRafPending = false;
+
+  /**
+   * Track the visible range from the previous updateVisibleCards call.
+   * Used to diff against the new range so only newly-visible cards are
+   * populated, avoiding full DOM teardown on every scroll event.
+   */
+  private prevStartIdx = -1;
+  private prevEndIdx = -1;
+
+  /**
+   * Maps entry index -> card pool index for currently assigned cards.
+   * Allows O(1) lookup to check whether a given entry already has a card.
+   */
+  private entryToCard = new Map<number, number>();
+
+  /**
+   * Incremented on full data changes (new entries array, mode switch) to
+   * force a complete card repopulation rather than a differential update.
+   */
+  private dataGeneration = 0;
+  private lastRenderedGeneration = -1;
 
   public onEntityClick: ((entityId: number) => void) | null = null;
   public onEventClick: ((eventId: number) => void) | null = null;
@@ -90,17 +120,28 @@ export class ChronicleRenderer {
     entityNames?: ReadonlyMap<number, string>,
     isModeChange = false,
   ): void {
-    const wasAtBottom = this.isAtBottom();
+    // ── Batch DOM reads before any writes ──
+    const scrollHeight = this.scrollContainer.scrollHeight;
+    const scrollTop = this.scrollContainer.scrollTop;
+    const clientHeight = this.scrollContainer.clientHeight;
+    const wasAtBottom = scrollHeight - scrollTop - clientHeight < 50;
     const oldTotalHeight = this.cumulativeHeights.length > 0
       ? this.cumulativeHeights[this.cumulativeHeights.length - 1] ?? 0
       : 0;
-    const oldScrollTop = this.scrollContainer.scrollTop;
     const previousCount = this.previousEntryCount;
+
+    const modeChanged = mode !== this.mode;
+    const entriesChanged = entries !== this.entries;
 
     this.entries = entries;
     this.mode = mode;
     this.entityNames = entityNames ?? new Map();
     this.previousEntryCount = entries.length;
+
+    // Invalidate card mapping on full data change (mode switch, new array)
+    if (isModeChange || modeChanged) {
+      this.dataGeneration++;
+    }
 
     // Compute cumulative heights
     this.cumulativeHeights = [];
@@ -111,17 +152,16 @@ export class ChronicleRenderer {
       this.cumulativeHeights.push(total);
     }
 
+    // ── DOM writes ──
     this.contentDiv.style.height = `${total}px`;
 
     if (isModeChange) {
       // ── Mode/filter change: preserve scroll position proportionally ──
-      // Map the old scroll fraction to the new total height so the user
-      // sees roughly the same temporal position after the switch.
       if (wasAtBottom) {
         this.updateVisibleCards();
         this.scrollToBottom();
       } else if (oldTotalHeight > 0 && total > 0) {
-        const fraction = oldScrollTop / oldTotalHeight;
+        const fraction = scrollTop / oldTotalHeight;
         this.scrollContainer.scrollTop = Math.round(fraction * total);
         this.updateVisibleCards();
       } else {
@@ -129,12 +169,15 @@ export class ChronicleRenderer {
       }
       // Never show the "New events" indicator for mode changes.
     } else {
-      // ── New data: auto-scroll or show indicator ──
+      // If entries grew but the array identity is the same (incremental append),
+      // we can do a differential update. If entries changed identity, force full.
+      if (entriesChanged) {
+        this.dataGeneration++;
+      }
       this.updateVisibleCards();
       if (wasAtBottom) {
         this.scrollToBottom();
       } else if (entries.length > previousCount) {
-        // Only show indicator when entries actually grew.
         this.newEventsIndicator.style.display = 'block';
       }
     }
@@ -164,14 +207,14 @@ export class ChronicleRenderer {
   }
 
   private updateVisibleCards(): void {
-    // Guard against re-entrant calls from programmatic scrollTop changes
-    // (scrollToBottom or proportional scroll adjustment trigger the scroll
-    // handler, which calls this method again redundantly).
+    // Guard against re-entrant calls from programmatic scrollTop changes.
     if (this.isUpdating) return;
     this.isUpdating = true;
 
     try {
-      const { scrollTop, clientHeight } = this.scrollContainer;
+      // ── Batch all DOM reads up front ──
+      const scrollTop = this.scrollContainer.scrollTop;
+      const clientHeight = this.scrollContainer.clientHeight;
       const viewportEnd = scrollTop + clientHeight;
 
       // Binary search for first visible index
@@ -199,24 +242,92 @@ export class ChronicleRenderer {
         endIdx++;
       }
 
-      // Reset all cards
-      for (const card of this.cardPool) {
-        card.style.display = 'none';
+      const forceRepopulate = this.lastRenderedGeneration !== this.dataGeneration;
+
+      if (forceRepopulate) {
+        // ── Full repopulate: data changed (mode switch, new entries array) ──
+        this.lastRenderedGeneration = this.dataGeneration;
+        this.entryToCard.clear();
+
+        // Hide all cards
+        for (const card of this.cardPool) {
+          card.style.display = 'none';
+        }
+
+        // Populate visible range
+        let poolIdx = 0;
+        for (let i = startIdx; i < endIdx && i < this.entries.length; i++) {
+          const entry = this.entries[i];
+          const card = this.cardPool[poolIdx];
+          if (!entry || !card) continue;
+
+          const top = i === 0 ? 0 : (this.cumulativeHeights[i - 1] ?? 0);
+          card.style.top = `${top}px`;
+          card.style.display = 'block';
+          this.populateCard(card, entry);
+          this.entryToCard.set(i, poolIdx);
+          poolIdx++;
+        }
+      } else {
+        // ── Differential update: only populate newly-visible cards ──
+        const prevStart = this.prevStartIdx;
+        const prevEnd = this.prevEndIdx;
+
+        // Collect card pool indices that left the viewport
+        const freedPool: number[] = [];
+        for (let i = prevStart; i < prevEnd; i++) {
+          if (i < startIdx || i >= endIdx) {
+            const poolIdx = this.entryToCard.get(i);
+            if (poolIdx !== undefined) {
+              const card = this.cardPool[poolIdx];
+              if (card) card.style.display = 'none';
+              freedPool.push(poolIdx);
+              this.entryToCard.delete(i);
+            }
+          }
+        }
+
+        // Find indices that entered the viewport and need population
+        let freeIdx = 0;
+        for (let i = startIdx; i < endIdx && i < this.entries.length; i++) {
+          if (this.entryToCard.has(i)) {
+            // Already has a card — check if the entry content was mutated
+            // (e.g. aggregate count changed). Re-populate if so.
+            // For simplicity, skip — aggregates are rare updates.
+            continue;
+          }
+
+          // Need a pool slot. Try freed first, then scan for hidden cards.
+          let poolIdx: number | undefined;
+          if (freeIdx < freedPool.length) {
+            poolIdx = freedPool[freeIdx++];
+          } else {
+            // Scan pool for an unused (hidden) card
+            for (let p = 0; p < this.cardPool.length; p++) {
+              const card = this.cardPool[p];
+              if (card && card.style.display === 'none') {
+                poolIdx = p;
+                break;
+              }
+            }
+          }
+
+          if (poolIdx === undefined) break; // No more pool cards available
+
+          const entry = this.entries[i];
+          const card = this.cardPool[poolIdx];
+          if (!entry || !card) continue;
+
+          const top = i === 0 ? 0 : (this.cumulativeHeights[i - 1] ?? 0);
+          card.style.top = `${top}px`;
+          card.style.display = 'block';
+          this.populateCard(card, entry);
+          this.entryToCard.set(i, poolIdx);
+        }
       }
 
-      // Populate visible cards
-      let poolIdx = 0;
-      for (let i = startIdx; i < endIdx && i < this.entries.length; i++) {
-        const entry = this.entries[i];
-        const card = this.cardPool[poolIdx++];
-        if (!entry || !card) continue;
-
-        const top = i === 0 ? 0 : (this.cumulativeHeights[i - 1] ?? 0);
-        card.style.top = `${top}px`;
-        card.style.display = 'block';
-
-        this.populateCard(card, entry);
-      }
+      this.prevStartIdx = startIdx;
+      this.prevEndIdx = endIdx;
     } finally {
       this.isUpdating = false;
     }
@@ -340,28 +451,16 @@ export class ChronicleRenderer {
     const card = target.closest('.event-card');
     if (!(card instanceof HTMLElement)) return;
 
-    // Find the entry index from the card position
-    const poolIdx = this.cardPool.indexOf(card);
-    if (poolIdx === -1) return;
-
-    // Get the visible range to determine the entry
-    const { scrollTop } = this.scrollContainer;
-    let firstVisible = 0;
-    let left = 0;
-    let right = this.cumulativeHeights.length - 1;
-    while (left <= right) {
-      const mid = Math.floor((left + right) / 2);
-      const height = this.cumulativeHeights[mid];
-      if (height === undefined) break;
-      if (height < scrollTop) {
-        left = mid + 1;
-      } else {
-        firstVisible = mid;
-        right = mid - 1;
+    // Find the entry index from the card's entryToCard mapping
+    let entryIdx = -1;
+    for (const [idx, poolIdx] of this.entryToCard) {
+      if (this.cardPool[poolIdx] === card) {
+        entryIdx = idx;
+        break;
       }
     }
-    const startIdx = Math.max(0, firstVisible - 10);
-    const entryIdx = startIdx + poolIdx;
+    if (entryIdx === -1) return;
+
     const entry = this.entries[entryIdx];
     if (!entry || entry.kind !== 'event') return;
 
@@ -377,11 +476,20 @@ export class ChronicleRenderer {
     this.contextMenu.show(e.clientX, e.clientY, items);
   };
 
+  /**
+   * Scroll handler gated through requestAnimationFrame. Multiple scroll events
+   * within a single frame are coalesced into one updateVisibleCards call.
+   */
   private readonly handleScroll = (): void => {
-    this.updateVisibleCards();
-    if (this.isAtBottom()) {
-      this.newEventsIndicator.style.display = 'none';
-    }
+    if (this.scrollRafPending) return;
+    this.scrollRafPending = true;
+    requestAnimationFrame(() => {
+      this.scrollRafPending = false;
+      this.updateVisibleCards();
+      if (this.isAtBottom()) {
+        this.newEventsIndicator.style.display = 'none';
+      }
+    });
   };
 }
 

@@ -27,6 +27,13 @@ import type {
   MembershipComponent,
   StructuresComponent,
   StatusComponent,
+  AttributeComponent,
+  PersonalityComponent,
+  HealthComponent,
+  SkillComponent,
+  RelationshipComponent,
+  GoalComponent,
+  PopulationDemographicsComponent,
 } from '@fws/core';
 
 import type { Settlement } from '../civilization/settlement-placer.js';
@@ -126,6 +133,13 @@ function registerComponents(world: World): void {
     'Membership',
     'Structures',
     'Status',
+    'Attribute',
+    'Personality',
+    'Health',
+    'Skill',
+    'Relationship',
+    'Goal',
+    'PopulationDemographics',
   ] as const;
 
   for (const type of types) {
@@ -154,6 +168,36 @@ function normalizeBiomeType(biomeType: string): string {
     river: 'plains',
   };
   return mapping[biomeType.toLowerCase()] ?? 'plains';
+}
+
+/**
+ * Derive an OCEAN personality dimension from generator trait values.
+ * Positive traits contribute positively, negative traits are subtracted.
+ * The result is clamped to -100..+100.
+ */
+function deriveOceanDimension(
+  traits: ReadonlyMap<string, number>,
+  positiveTraits: readonly string[],
+  negativeTraits: readonly string[],
+): number {
+  let sum = 0;
+  let count = 0;
+  for (const name of positiveTraits) {
+    const val = traits.get(name);
+    if (val !== undefined) {
+      sum += val;
+      count++;
+    }
+  }
+  for (const name of negativeTraits) {
+    const val = traits.get(name);
+    if (val !== undefined) {
+      sum -= val;
+      count++;
+    }
+  }
+  if (count === 0) return 0;
+  return Math.max(-100, Math.min(100, Math.round(sum / count)));
 }
 
 /**
@@ -239,6 +283,13 @@ function populateSettlements(
       titles: [settlement.name],
       socialClass: 'settlement',
     }));
+
+    // PopulationDemographics component — race distribution for the settlement
+    world.addComponent(entityId, makeComponent<PopulationDemographicsComponent>({
+      type: 'PopulationDemographics',
+      raceDistribution: new Map([[settlement.dominantRace, settlement.population]]),
+      ageDistribution: new Map(),
+    }));
   }
 
   return settlementIds;
@@ -254,6 +305,7 @@ function populateFactions(
 ): Map<number, FactionId> {
   const factionIds = new Map<number, FactionId>();
 
+  // Pass 1: Create all faction entities with non-relational components
   for (let i = 0; i < factions.length; i++) {
     const faction = factions[i];
     if (faction === undefined) continue;
@@ -278,24 +330,44 @@ function populateFactions(
       training: 50,
     }));
 
-    // Diplomacy component - initialize relations to neutral (50)
-    const relations = new Map<number, number>();
-    for (let j = 0; j < factions.length; j++) {
-      if (j !== i) {
-        relations.set(j, 50); // Neutral starting relations
-      }
-    }
-    world.addComponent(entityId, makeComponent<DiplomacyComponent>({
-      type: 'Diplomacy',
-      relations,
-      treaties: [],
-    }));
-
     // Hierarchy component (no leader yet, will be linked after characters)
     world.addComponent(entityId, makeComponent<HierarchyComponent>({
       type: 'Hierarchy',
       leaderId: null,
       subordinateIds: [],
+    }));
+
+    // Status component — stores faction name for entity resolution
+    world.addComponent(entityId, makeComponent<StatusComponent>({
+      type: 'Status',
+      conditions: [],
+      titles: [faction.name],
+      socialClass: 'faction',
+    }));
+  }
+
+  // Pass 2: Add Diplomacy components using actual entity IDs (not indices)
+  for (let i = 0; i < factions.length; i++) {
+    const faction = factions[i];
+    if (faction === undefined) continue;
+
+    const factionId = factionIds.get(i);
+    if (factionId === undefined) continue;
+
+    const relations = new Map<number, number>();
+    for (let j = 0; j < factions.length; j++) {
+      if (j !== i) {
+        const otherFactionId = factionIds.get(j);
+        if (otherFactionId !== undefined) {
+          relations.set(otherFactionId as number, 50); // Neutral starting relations
+        }
+      }
+    }
+
+    world.addComponent(factionId as EntityId, makeComponent<DiplomacyComponent>({
+      type: 'Diplomacy',
+      relations,
+      treaties: [],
     }));
   }
 
@@ -370,6 +442,103 @@ function populateCharacters(
       titles: charTitles,
       socialClass: character.status.type,
     }));
+
+    // Attribute component — base stats from generator
+    world.addComponent(entityId, makeComponent<AttributeComponent>({
+      type: 'Attribute',
+      strength: character.attributes.strength,
+      agility: character.attributes.agility,
+      endurance: character.attributes.endurance,
+      intelligence: character.attributes.intelligence,
+      wisdom: character.attributes.wisdom,
+      charisma: character.attributes.charisma,
+    }));
+
+    // Personality component — derive OCEAN model from generator trait map.
+    // Trait-to-dimension mapping covers all 18 generator traits.
+    // Some traits appear in multiple dimensions (e.g., patient -> C+ and N-),
+    // creating psychologically valid inter-dimension correlations.
+    world.addComponent(entityId, makeComponent<PersonalityComponent>({
+      type: 'Personality',
+      openness: deriveOceanDimension(character.personality.traits, ['curious', 'creative', 'scholarly', 'idealistic'], ['pragmatic']),
+      conscientiousness: deriveOceanDimension(character.personality.traits, ['patient', 'pragmatic'], ['impulsive', 'amoral']),
+      extraversion: deriveOceanDimension(character.personality.traits, ['brave', 'ambitious'], ['cautious']),
+      agreeableness: deriveOceanDimension(character.personality.traits, ['empathetic', 'forgiving', 'loyal', 'idealistic'], ['cruel', 'selfAbsorbed', 'amoral']),
+      neuroticism: deriveOceanDimension(character.personality.traits, ['paranoid', 'vengeful', 'impulsive'], ['patient', 'forgiving']),
+    }));
+
+    // Health component — map generator health to ECS format
+    world.addComponent(entityId, makeComponent<HealthComponent>({
+      type: 'Health',
+      current: character.health.current,
+      maximum: character.health.max,
+      injuries: character.health.conditions.length > 0 ? [...character.health.conditions] : [],
+      diseases: [],
+    }));
+
+    // Skill component — map generator skills + empty experience
+    const skillsMap = new Map<string, number>();
+    const experienceMap = new Map<string, number>();
+    for (const [skillName, skillValue] of character.skills.skills) {
+      skillsMap.set(skillName, skillValue);
+      experienceMap.set(skillName, 0);
+    }
+    world.addComponent(entityId, makeComponent<SkillComponent>({
+      type: 'Skill',
+      skills: skillsMap,
+      experience: experienceMap,
+    }));
+
+    // Relationship component — map by character name (resolve IDs in second pass)
+    // Initialize empty; filled below after all characters are created
+    world.addComponent(entityId, makeComponent<RelationshipComponent>({
+      type: 'Relationship',
+      relationships: new Map(),
+      affinity: new Map(),
+    }));
+
+    // Goal component — map generator goals to ECS format
+    const objectives: string[] = [];
+    const goalPriorities = new Map<string, number>();
+    for (const goal of character.goals) {
+      objectives.push(goal.description);
+      goalPriorities.set(goal.description, goal.priority);
+    }
+    world.addComponent(entityId, makeComponent<GoalComponent>({
+      type: 'Goal',
+      objectives,
+      priorities: goalPriorities,
+    }));
+  }
+
+  // Second pass: resolve character relationships by name → entity ID
+  for (const character of allCharacters) {
+    const characterId = characterIds.get(character.name);
+    if (characterId === undefined) continue;
+    if (character.relationships.length === 0) continue;
+
+    const relationships = new Map<number, string>();
+    const affinity = new Map<number, number>();
+    for (const rel of character.relationships) {
+      const targetId = characterIds.get(rel.targetName);
+      if (targetId !== undefined) {
+        relationships.set(targetId as number, rel.kind);
+        affinity.set(targetId as number, rel.strength);
+      }
+    }
+
+    if (relationships.size > 0) {
+      const relComp = world.getComponent<RelationshipComponent>(characterId as EntityId, 'Relationship');
+      if (relComp !== undefined) {
+        // Update the existing component's maps
+        for (const [id, kind] of relationships) {
+          relComp.relationships.set(id, kind);
+        }
+        for (const [id, aff] of affinity) {
+          relComp.affinity.set(id, aff);
+        }
+      }
+    }
   }
 
   // Link rulers to their factions' hierarchy
