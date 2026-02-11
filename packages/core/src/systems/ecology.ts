@@ -374,6 +374,8 @@ export class EcologySystem extends BaseSystem {
           severity,
           recoveryTicks,
           environmentalEventId: envEvent.id,
+          estimatedCasualties: Math.floor(severity * 5),
+          regionId,
         },
       }),
     );

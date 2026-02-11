@@ -7,8 +7,10 @@
  */
 
 import { World, WorldClock, EventLog } from '@fws/core';
+import type { EntityId } from '@fws/core';
 import type { InspectorQuery, InspectorResponse } from '../../shared/types.js';
 import { inspectCharacter } from './character-inspector.js';
+import { inspectCommoner } from './commoner-inspector.js';
 import { inspectFaction } from './faction-inspector.js';
 import { inspectSite } from './site-inspector.js';
 import { inspectArtifact } from './artifact-inspector.js';
@@ -24,6 +26,18 @@ export function inspectEntity(
   eventLog: EventLog,
   clock: WorldClock,
 ): InspectorResponse {
+  // Check for non-notable characters (commoners): has Notability but NOT Personality
+  if (query.type === 'character') {
+    const eid = query.id as unknown as EntityId;
+    if (world.hasStore('Notability') && world.hasStore('Personality')) {
+      const hasNotability = world.getComponent(eid, 'Notability') !== undefined;
+      const hasPersonality = world.getComponent(eid, 'Personality') !== undefined;
+      if (hasNotability && !hasPersonality) {
+        return inspectCommoner(query.id, world, eventLog, clock);
+      }
+    }
+  }
+
   // Type-safe dispatcher map
   const inspectors: Record<
     string,

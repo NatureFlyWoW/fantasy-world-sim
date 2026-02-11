@@ -295,4 +295,113 @@ export const personalTemplates: NarrativeTemplate[] = [
     template: '{character.name} experienced something that would change {pronoun.object}.',
     requiredContext: [],
   },
+
+  // ============================================================================
+  // PROMOTION (non-notable → notable)
+  // ============================================================================
+
+  {
+    id: 'personal.promotion.epic.high',
+    category: EventCategory.Personal,
+    subtype: 'promotion',
+    tone: NarrativeTone.EpicHistorical,
+    significanceRange: { min: 60, max: 100 },
+    template: 'From the ranks of the common folk rose {character.name}, once a humble {event.data.profession}. Through deeds of note and force of will, a new figure emerged upon the stage of history.',
+    requiredContext: [],
+  },
+  {
+    id: 'personal.promotion.epic.mid',
+    category: EventCategory.Personal,
+    subtype: 'promotion',
+    tone: NarrativeTone.EpicHistorical,
+    significanceRange: { min: 30, max: 59 },
+    template: '{character.name} distinguished {pronoun.object}self from the masses, earning recognition through persistent effort and quiet determination.',
+    requiredContext: [],
+  },
+  {
+    id: 'personal.promotion.personal.survivor',
+    category: EventCategory.Personal,
+    subtype: 'promotion',
+    tone: NarrativeTone.PersonalCharacterFocus,
+    significanceRange: { min: 60, max: 100 },
+    template: 'Having endured hardships that would have broken lesser souls, {character.name} emerged transformed. The scars of survival had forged something new — someone the world could no longer ignore.',
+    requiredContext: [],
+  },
+  {
+    id: 'personal.promotion.personal.artisan',
+    category: EventCategory.Personal,
+    subtype: 'promotion',
+    tone: NarrativeTone.PersonalCharacterFocus,
+    significanceRange: { min: 40, max: 80 },
+    template: 'Whose craft had been their quiet devotion, {character.name} found that mastery brought more than skill — it brought renown. Word of their work spread, and with it, a reputation that could not be contained.',
+    requiredContext: [],
+  },
+  {
+    id: 'personal.promotion.personal.warrior',
+    category: EventCategory.Personal,
+    subtype: 'promotion',
+    tone: NarrativeTone.PersonalCharacterFocus,
+    significanceRange: { min: 50, max: 100 },
+    template: 'Courage shown in the face of danger had marked {character.name} as someone apart. The settlement whispered of their bravery, and soon those whispers carried far beyond its walls.',
+    requiredContext: [],
+  },
+  {
+    id: 'personal.promotion.myth.high',
+    category: EventCategory.Personal,
+    subtype: 'promotion',
+    tone: NarrativeTone.Mythological,
+    significanceRange: { min: 60, max: 100 },
+    template: 'The fates had woven {character.name}\'s thread in colors unseen by mortal eyes. What began as an unremarkable life was touched by destiny, and the tapestry of the world grew richer for it.',
+    requiredContext: [],
+  },
+  {
+    id: 'personal.promotion.myth.visionary',
+    category: EventCategory.Personal,
+    subtype: 'promotion',
+    tone: NarrativeTone.Mythological,
+    significanceRange: { min: 50, max: 100 },
+    template: 'Visions had haunted {character.name} since youth — portents of a life beyond the ordinary. When at last the world recognized what the dreams had foretold, the humble origins of the visionary only deepened the mystery.',
+    requiredContext: [],
+  },
+  {
+    id: 'personal.promotion.wry.scholar',
+    category: EventCategory.Personal,
+    subtype: 'promotion',
+    tone: NarrativeTone.Scholarly,
+    significanceRange: { min: 30, max: 80 },
+    template: 'It turns out that spending years observing the world with uncommon attention does, occasionally, pay dividends. {character.name} — formerly just another face in the crowd — had become someone worth noticing.',
+    requiredContext: [],
+  },
+  {
+    id: 'personal.promotion.wry.general',
+    category: EventCategory.Personal,
+    subtype: 'promotion',
+    tone: NarrativeTone.Scholarly,
+    significanceRange: { min: 20, max: 60 },
+    template: 'One might wonder how a {event.data.profession} from nowhere particular became a person of consequence. {character.name} might wonder that too, had they time for such reflection.',
+    requiredContext: [],
+  },
+
+  // ============================================================================
+  // NATURAL DEATH (population system)
+  // ============================================================================
+
+  {
+    id: 'personal.natural_death.epic.mid',
+    category: EventCategory.Personal,
+    subtype: 'natural_death',
+    tone: NarrativeTone.EpicHistorical,
+    significanceRange: { min: 0, max: 40 },
+    template: '{character.name} passed quietly from this world, their years spent.',
+    requiredContext: [],
+  },
+  {
+    id: 'personal.natural_death.personal.mid',
+    category: EventCategory.Personal,
+    subtype: 'natural_death',
+    tone: NarrativeTone.PersonalCharacterFocus,
+    significanceRange: { min: 0, max: 40 },
+    template: 'In the end, {character.name} went gently, surrounded by the familiar walls of the settlement that had been home for so long.',
+    requiredContext: [],
+  },
 ];

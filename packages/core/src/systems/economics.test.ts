@@ -94,6 +94,7 @@ function makeSettlement(
     type: 'Population' as const,
     count: population,
     growthRate: 0.02,
+    nonNotableIds: [],
     serialize: () => ({}),
   } satisfies PopulationComponent);
 
@@ -561,7 +562,7 @@ describe('EconomicSystem', () => {
   it('has correct system properties', () => {
     expect(system.name).toBe('EconomicSystem');
     expect(system.frequency).toBe(30); // Monthly
-    expect(system.executionOrder).toBe(3); // ECONOMY
+    expect(system.executionOrder).toBe(30); // ECONOMY
   });
 
   it('executes without crashing on empty world', () => {

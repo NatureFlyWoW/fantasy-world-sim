@@ -38,7 +38,7 @@ export function inspectSite(
   const portraitLines: string[] = [];
 
   const sitePopulation = world.hasStore('Population')
-    ? world.getComponent(eid, 'Population') as { count?: number; growthRate?: number } | undefined
+    ? world.getComponent(eid, 'Population') as { count?: number; growthRate?: number; nonNotableIds?: number[] } | undefined
     : undefined;
   const ownership = world.hasStore('Ownership')
     ? world.getComponent(eid, 'Ownership') as { ownerId?: number | null; claimStrength?: number } | undefined
@@ -297,7 +297,28 @@ export function inspectSite(
 
   if (soulsLines.length === 0) soulsLines.push('No notable inhabitants recorded.');
 
-  // ── Section 7: The Annals ───────────────────────────────────────────
+  // ── Section 7: Population ─────────────────────────────────────────
+  const populationLines: string[] = [];
+
+  if (sitePopulation?.count !== undefined) {
+    const tier = getSettlementSize(sitePopulation.count);
+    populationLines.push(`Population: ${sitePopulation.count.toLocaleString()} (${tier})`);
+
+    // Non-notable residents count
+    const nonNotableCount = sitePopulation.nonNotableIds?.length ?? 0;
+    populationLines.push(`Non-notable residents: ${nonNotableCount.toLocaleString()}`);
+
+    // Growth rate
+    if (sitePopulation.growthRate !== undefined) {
+      const growthPct = (sitePopulation.growthRate * 100).toFixed(1);
+      const growthSign = sitePopulation.growthRate >= 0 ? '+' : '';
+      populationLines.push(`Growth rate: ${growthSign}${growthPct}%`);
+    }
+  }
+
+  if (populationLines.length === 0) populationLines.push('No population data available.');
+
+  // ── Section 8: The Annals ───────────────────────────────────────────
   const annalsLines: string[] = [];
 
   if (siteHistory?.foundingDate !== undefined) {
@@ -346,6 +367,7 @@ export function inspectSite(
       { title: 'Trade & Industry', content: tradeLines.join('\n') },
       { title: 'Walls & Works', content: wallsLines.join('\n') },
       { title: 'Notable Souls', content: soulsLines.join('\n') },
+      { title: 'Population', content: populationLines.join('\n') },
       { title: 'The Annals', content: annalsLines.join('\n') },
     ],
     prose: proseLines,

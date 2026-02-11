@@ -56,6 +56,11 @@ export type ComponentType =
   | 'Domain'
   | 'Power'
   | 'InterventionHistory'
+  // Population components
+  | 'Notability'
+  | 'Parentage'
+  | 'Deceased'
+  | 'HiddenLocation'
   // Cultural components
   | 'Worshiper'
   | 'HolySite'
@@ -160,6 +165,7 @@ export interface PopulationComponent extends Component {
   readonly type: 'Population';
   count: number;
   growthRate: number;
+  nonNotableIds: number[];
 }
 
 export interface EconomyComponent extends Component {
@@ -424,6 +430,39 @@ export interface PowerComponent extends Component {
 export interface InterventionHistoryComponent extends Component {
   readonly type: 'InterventionHistory';
   interventions: Array<{ tick: number; type: string; targetId: number }>;
+}
+
+// =============================================================================
+// POPULATION COMPONENTS
+// =============================================================================
+
+export interface NotabilityComponent extends Component {
+  readonly type: 'Notability';
+  score: number;
+  birthTick: number;
+  sparkHistory: Array<{ tick: number; description: string }>;
+}
+
+export interface ParentageComponent extends Component {
+  readonly type: 'Parentage';
+  motherId: number | null;
+  fatherId: number | null;
+}
+
+export interface DeceasedComponent extends Component {
+  readonly type: 'Deceased';
+  cause: string;
+  tick: number;
+  locationId: number;
+}
+
+export interface HiddenLocationComponent extends Component {
+  readonly type: 'HiddenLocation';
+  locationType: 'ruins' | 'resource' | 'magical' | 'lore';
+  revealed: boolean;
+  revealedTick: number | null;
+  x: number;
+  y: number;
 }
 
 // =============================================================================
@@ -753,6 +792,10 @@ export type AnyComponent =
   | DomainComponent
   | PowerComponent
   | InterventionHistoryComponent
+  | NotabilityComponent
+  | ParentageComponent
+  | DeceasedComponent
+  | HiddenLocationComponent
   | WorshiperComponent
   | HolySiteComponent
   | SchismHistoryComponent

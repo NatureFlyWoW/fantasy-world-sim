@@ -59,6 +59,7 @@ import {
 } from '@fws/core';
 import type { RegionId } from '@fws/core';
 import { toRegionId } from '@fws/core';
+import { createNonNotable, PROFESSIONS } from '@fws/core';
 
 /**
  * Input data from the world generation pipeline.
@@ -140,6 +141,10 @@ function registerComponents(world: World): void {
     'Relationship',
     'Goal',
     'PopulationDemographics',
+    'Notability',
+    'Parentage',
+    'Deceased',
+    'HiddenLocation',
   ] as const;
 
   for (const type of types) {
@@ -235,6 +240,7 @@ function populateSettlements(
       type: 'Population',
       count: settlement.population,
       growthRate: 0.02, // 2% base growth
+      nonNotableIds: [],
     }));
 
     // Economy component
@@ -558,6 +564,134 @@ function populateCharacters(
   return characterIds;
 }
 
+// ══════════════════════════════════════════════════════════════════════════════
+// NON-NOTABLE CHARACTER SEEDING
+// ══════════════════════════════════════════════════════════════════════════════
+
+const FIRST_NAMES = [
+  'Ada', 'Bran', 'Cora', 'Dael', 'Eira', 'Finn', 'Gwen', 'Holt',
+  'Iris', 'Jace', 'Kira', 'Lorn', 'Mira', 'Nox', 'Orin', 'Pria',
+  'Quinn', 'Reva', 'Sven', 'Tara', 'Ulf', 'Vara', 'Wren', 'Xara',
+  'Yori', 'Zara', 'Ash', 'Beck', 'Clay', 'Dove', 'Elm', 'Fern',
+  'Glen', 'Hart', 'Ivy', 'Jade', 'Knox', 'Leaf', 'Moss', 'Nell',
+  'Oak', 'Pike', 'Rain', 'Sage', 'Thorn', 'Vale', 'Wolf', 'Yew',
+];
+
+const FAMILY_NAMES = [
+  'Smith', 'Stone', 'Brook', 'Hill', 'Wood', 'Field', 'Dale', 'Ford',
+  'Glen', 'Marsh', 'Heath', 'Moor', 'Ridge', 'Thorne', 'Cross', 'Wells',
+  'Frost', 'Storm', 'Bright', 'Dark', 'Swift', 'Strong', 'Bold', 'Keen',
+  'Ward', 'Hale', 'Grey', 'White', 'Black', 'Green', 'Brown', 'Reed',
+];
+
+/**
+ * Simple deterministic name pick using index-based selection.
+ */
+function pickSimpleName(settlementIndex: number, personIndex: number): string {
+  const fi = (settlementIndex * 7 + personIndex * 13) % FIRST_NAMES.length;
+  const li = (settlementIndex * 11 + personIndex * 17 + 3) % FAMILY_NAMES.length;
+  return `${FIRST_NAMES[fi]} ${FAMILY_NAMES[li]}`;
+}
+
+/**
+ * Seed non-notable characters for each settlement.
+ * Creates lightweight person entities with Position, Status, Notability, Parentage.
+ */
+function seedNonNotables(
+  world: World,
+  settlements: readonly Settlement[],
+  settlementIds: Map<number, SiteId>,
+): number {
+  let totalCreated = 0;
+  const softCap = 30;
+
+  for (let i = 0; i < settlements.length; i++) {
+    const settlement = settlements[i];
+    const siteId = settlementIds.get(i);
+    if (settlement === undefined || siteId === undefined) continue;
+
+    // Determine how many non-notables to create (capped at softCap)
+    const count = Math.min(settlement.population, softCap);
+    const nonNotableIds: number[] = [];
+
+    for (let p = 0; p < count; p++) {
+      const name = pickSimpleName(i, p);
+      const professionIndex = (i * 3 + p * 7) % PROFESSIONS.length;
+
+      // Age distribution: weighted toward working age (18-55) with some young/old
+      const ageBucket = (i * 5 + p * 11) % 10;
+      let age: number;
+      if (ageBucket < 2) {
+        age = 1 + (p % 17); // Children: 1-17
+      } else if (ageBucket < 8) {
+        age = 18 + ((i * 3 + p * 5) % 38); // Working age: 18-55
+      } else {
+        age = 56 + ((i * 7 + p * 3) % 25); // Elderly: 56-80
+      }
+
+      const entityId = createNonNotable(world, {
+        name,
+        race: settlement.dominantRace,
+        age,
+        profession: PROFESSIONS[professionIndex],
+        siteId: siteId as number,
+        x: settlement.x,
+        y: settlement.y,
+        currentTick: 0, // World generation happens at tick 0
+        motherId: null,
+        fatherId: null,
+      });
+
+      nonNotableIds.push(entityId as number);
+    }
+
+    // Update the settlement's Population component with non-notable IDs
+    const pop = world.getComponent(siteId as EntityId, 'Population');
+    if (pop !== undefined) {
+      pop.nonNotableIds = nonNotableIds;
+    }
+
+    totalCreated += count;
+  }
+
+  return totalCreated;
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// HIDDEN LOCATION SEEDING
+// ══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Seed hidden locations across the world for the ExplorationSystem to discover.
+ * Creates 20-40 hidden locations of various types at random positions.
+ */
+function seedHiddenLocations(world: World, _worldMap: WorldMap): number {
+  const count = 20 + Math.floor(Math.random() * 21); // 20-40 hidden locations
+  const LOCATION_TYPES = ['ruins', 'resource', 'magical', 'lore'];
+
+  for (let i = 0; i < count; i++) {
+    const locationType = LOCATION_TYPES[Math.floor(Math.random() * LOCATION_TYPES.length)];
+    const x = 5 + Math.floor(Math.random() * 190);
+    const y = 5 + Math.floor(Math.random() * 190);
+
+    const entityId = world.createEntity();
+    world.addComponent(entityId, makeComponent({
+      type: 'Position',
+      x,
+      y,
+    }));
+    world.addComponent(entityId, makeComponent({
+      type: 'HiddenLocation',
+      locationType,
+      revealed: false,
+      revealedTick: null,
+      x,
+      y,
+    }));
+  }
+  return count;
+}
+
 /**
  * Populate an ECS World from generated world data.
  *
@@ -602,7 +736,13 @@ export function populateWorldFromGenerated(
     }
   }
 
-  const totalEntities = settlementIds.size + factionIds.size + characterIds.size;
+  // Seed non-notable characters for each settlement
+  const nonNotableCount = seedNonNotables(world, data.settlements, settlementIds);
+
+  // Seed hidden locations for exploration
+  const hiddenLocationCount = seedHiddenLocations(world, data.worldMap);
+
+  const totalEntities = settlementIds.size + factionIds.size + characterIds.size + nonNotableCount + hiddenLocationCount;
 
   return {
     settlementIds,

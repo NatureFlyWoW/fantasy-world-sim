@@ -85,6 +85,11 @@ export type {
   DomainComponent,
   PowerComponent,
   InterventionHistoryComponent,
+  // Population
+  NotabilityComponent,
+  ParentageComponent,
+  DeceasedComponent,
+  HiddenLocationComponent,
   // Cultural
   WorshiperComponent,
   HolySiteComponent,
