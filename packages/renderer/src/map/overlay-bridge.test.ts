@@ -71,7 +71,7 @@ function addSettlement(
     type: 'Position', x, y,
   }));
   world.addComponent(eid, makeComponent<PopulationComponent>({
-    type: 'Population', count: population, growthRate: 0.02,
+    type: 'Population', count: population, growthRate: 0.02, nonNotableIds: [],
   }));
   world.addComponent(eid, makeComponent<EconomyComponent>({
     type: 'Economy', wealth, tradeVolume: 0, industries: ['farming'],

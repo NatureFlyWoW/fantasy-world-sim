@@ -94,6 +94,7 @@ function makeSettlement(
     type: 'Population' as const,
     count: population,
     growthRate: 0.02,
+    nonNotableIds: [],
     serialize: () => ({}),
   } satisfies PopulationComponent);
 

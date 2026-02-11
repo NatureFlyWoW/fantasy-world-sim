@@ -165,6 +165,7 @@ export interface PopulationComponent extends Component {
   readonly type: 'Population';
   count: number;
   growthRate: number;
+  nonNotableIds: number[];
 }
 
 export interface EconomyComponent extends Component {

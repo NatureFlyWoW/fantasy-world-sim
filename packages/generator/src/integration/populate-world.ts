@@ -235,6 +235,7 @@ function populateSettlements(
       type: 'Population',
       count: settlement.population,
       growthRate: 0.02, // 2% base growth
+      nonNotableIds: [],
     }));
 
     // Economy component

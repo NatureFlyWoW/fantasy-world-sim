@@ -97,7 +97,7 @@ describe('InspectorPanel', () => {
         getComponent: (id: EntityId, type: string) => {
           if (id === entityId) {
             if (type === 'Position') return { type: 'Position', x: 10, y: 20 };
-            if (type === 'Population') return { type: 'Population', count: 1000 };
+            if (type === 'Population') return { type: 'Population', count: 1000, nonNotableIds: [] };
           }
           return undefined;
         },
@@ -434,7 +434,7 @@ describe('InspectorPanel', () => {
         getComponent: (id: EntityId, type: string) => {
           if (id === entityId) {
             if (type === 'Position') return { type: 'Position', x: 10, y: 20 };
-            if (type === 'Population') return { type: 'Population', count: 1000 };
+            if (type === 'Population') return { type: 'Population', count: 1000, nonNotableIds: [] };
           }
           return undefined;
         },
