@@ -508,6 +508,9 @@ export type {
 // Population system
 export { PopulationSystem } from './population-system.js';
 
+// Promotion system
+export { promote, PROMOTION_THRESHOLD } from './promotion.js';
+
 // Population utilities
 export {
   createNonNotable,

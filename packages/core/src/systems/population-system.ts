@@ -12,6 +12,7 @@ import { TickFrequency } from '../time/types.js';
 import { EventCategory } from '../events/types.js';
 import { createEvent } from '../events/event-factory.js';
 import { createNonNotable, PROFESSIONS, FALLBACK_LIFESPAN } from './population-utils.js';
+import { promote, PROMOTION_THRESHOLD } from './promotion.js';
 import type { RaceLifespan } from './population-utils.js';
 import type { World } from '../ecs/world.js';
 import type { WorldClock } from '../time/world-clock.js';
@@ -85,6 +86,7 @@ export class PopulationSystem extends BaseSystem {
     this.processNaturalDeath(world, clock, events);
     this.processBirths(world, clock, events);
     this.processSparks(world, clock, events);
+    this.processPromotions(world, clock, events);
   }
 
   /**
@@ -343,6 +345,25 @@ export class PopulationSystem extends BaseSystem {
             newScore: notability.score,
           },
         }));
+      }
+    }
+  }
+
+  /**
+   * Check non-notables for Notability threshold crossing and promote.
+   */
+  private processPromotions(world: World, clock: WorldClock, events: EventBus): void {
+    for (const settlementId of this.settlementIds) {
+      const pop = world.getComponent<PopulationComponent>(settlementId, 'Population');
+      if (pop === undefined) continue;
+
+      for (const nnId of pop.nonNotableIds) {
+        const notability = world.getComponent<NotabilityComponent>(nnId as EntityId, 'Notability');
+        if (notability === undefined) continue;
+
+        if (notability.score >= PROMOTION_THRESHOLD) {
+          promote(world, nnId as EntityId, clock.currentTick, events, this.rng);
+        }
       }
     }
   }
