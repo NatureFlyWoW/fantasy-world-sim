@@ -26,6 +26,7 @@ import type {
   TraitsComponent,
   MembershipComponent,
   StructuresComponent,
+  StatusComponent,
 } from '@fws/core';
 
 import type { Settlement } from '../civilization/settlement-placer.js';
@@ -124,6 +125,7 @@ function registerComponents(world: World): void {
     'Traits',
     'Membership',
     'Structures',
+    'Status',
   ] as const;
 
   for (const type of types) {
@@ -228,6 +230,14 @@ function populateSettlements(
       type: 'Structures',
       buildings: settlement.structures.map(s => s.name),
       fortificationLevel: settlement.structures.some(s => s.type === 'wall' || s.type === 'fortress') ? 50 : 0,
+    }));
+
+    // Status component — stores settlement name for entity resolution
+    world.addComponent(entityId, makeComponent<StatusComponent>({
+      type: 'Status',
+      conditions: [],
+      titles: [settlement.name],
+      socialClass: 'settlement',
     }));
   }
 
@@ -347,6 +357,18 @@ function populateCharacters(
       factionId: factionId !== undefined ? (factionId as number) : null,
       rank: character.status.type,
       joinDate: 0,
+    }));
+
+    // Status component — stores character name and title for entity resolution
+    const charTitles = [character.name];
+    if (character.status.title.length > 0) {
+      charTitles.push(character.status.title);
+    }
+    world.addComponent(entityId, makeComponent<StatusComponent>({
+      type: 'Status',
+      conditions: [],
+      titles: charTitles,
+      socialClass: character.status.type,
     }));
   }
 

@@ -24,7 +24,7 @@ import { generateIconAtlas } from './procgen/icon-atlas.js';
 import { WelcomeScreen } from './welcome-screen.js';
 import { ContextMenu } from './context-menu.js';
 import type { ContextMenuItem } from './context-menu.js';
-import type { EntityType, InspectorQuery, TickDelta, WorldSnapshot } from '../shared/types.js';
+import type { EntitySnapshot, EntityType, FactionSnapshot, InspectorQuery, TickDelta, WorldSnapshot } from '../shared/types.js';
 
 // ── State ────────────────────────────────────────────────────────────────────
 
@@ -37,6 +37,9 @@ let speed = 1;
 // FPS tracking
 let frameCount = 0;
 let lastFpsTime = performance.now();
+
+// Entity type resolution for chronicle clicks
+const entityTypeMap = new Map<number, InspectorQuery['type']>();
 
 // Map
 const tilemap = new TilemapRenderer();
@@ -164,6 +167,33 @@ function mapEntityTypeToInspectorType(type: EntityType): InspectorQuery['type'] 
   }
 }
 
+/**
+ * Populate the entityTypeMap from entity and faction snapshots.
+ * This allows the chronicle to resolve entity IDs to inspector types.
+ */
+function buildEntityTypeMap(
+  entities: readonly EntitySnapshot[],
+  factions: readonly FactionSnapshot[],
+): void {
+  for (const entity of entities) {
+    const inspectorType = mapEntityTypeToInspectorType(entity.type);
+    if (inspectorType !== null) {
+      entityTypeMap.set(entity.id, inspectorType);
+    }
+  }
+  for (const faction of factions) {
+    entityTypeMap.set(faction.id, 'faction');
+  }
+}
+
+/**
+ * Resolve an entity ID to an inspector type.
+ * Falls back to 'character' for unknown IDs (most event participants are characters).
+ */
+function resolveEntityType(id: number): InspectorQuery['type'] {
+  return entityTypeMap.get(id) ?? 'character';
+}
+
 // ── Tick handling ─────────────────────────────────────────────────────────────
 
 /**
@@ -199,6 +229,14 @@ function handleTickDelta(delta: TickDelta): void {
     overlayManager.buildTradeRouteCache(currentEntities);
     tileDataProvider.updateEntities(currentEntities);
     chronicle.updateEntityNames(delta.entityUpdates);
+
+    // Keep entity type map current for chronicle click resolution
+    for (const entity of delta.entityUpdates) {
+      const inspectorType = mapEntityTypeToInspectorType(entity.type);
+      if (inspectorType !== null) {
+        entityTypeMap.set(entity.id, inspectorType);
+      }
+    }
   }
 
   // Notify high-significance events
@@ -413,11 +451,20 @@ function initializePanelFocus(): void {
  * Switch between Map and Chronicle view focus
  */
 function setViewFocus(view: 'map' | 'chronicle'): void {
+  const appEl = document.getElementById('app');
+
   // Update tab states
   document.querySelectorAll('.view-tab').forEach((tab) => {
     tab.classList.remove('view-tab--active');
   });
   document.querySelector(`.view-tab[data-view="${view}"]`)?.classList.add('view-tab--active');
+
+  // Toggle chronicle-fullscreen layout mode
+  if (view === 'chronicle') {
+    appEl?.classList.add('view--chronicle');
+  } else {
+    appEl?.classList.remove('view--chronicle');
+  }
 
   // Set panel focus
   setPanelFocus(view);
@@ -530,9 +577,27 @@ async function init(): Promise<void> {
 
   // Initialize chronicle with snapshot data
   chronicle.updateEntityNames(snapshot.entities);
+  // Faction entities lack Position components so they never appear in entity
+  // snapshots, but events reference them by ID. Register their names directly
+  // so the chronicle can resolve faction IDs to readable names.
+  for (const faction of snapshot.factions) {
+    chronicle.registerEntityName(faction.id, faction.name);
+  }
   if (snapshot.events.length > 0) {
     chronicle.addEvents(snapshot.events);
   }
+
+  // Build entity type map for chronicle click resolution
+  buildEntityTypeMap(snapshot.entities, snapshot.factions);
+
+  // Wire chronicle click handlers to inspector
+  chronicle.onEntityClick = (entityId: number) => {
+    const type = resolveEntityType(entityId);
+    void inspector.inspect({ type, id: entityId });
+  };
+  chronicle.onEventClick = (eventId: number) => {
+    void inspector.inspect({ type: 'event', id: eventId });
+  };
 
   // Initialize map
   tilemap.init(snapshot);

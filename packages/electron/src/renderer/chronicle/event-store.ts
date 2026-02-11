@@ -37,6 +37,13 @@ export class EventStore {
   }
 
   /**
+   * Register a single entity name directly (e.g. for factions that lack Position components).
+   */
+  setEntityName(id: number, name: string): void {
+    this.entityNames.set(id, name);
+  }
+
+  /**
    * Resolve entity ID to name with fallback.
    */
   getEntityName(id: number): string {

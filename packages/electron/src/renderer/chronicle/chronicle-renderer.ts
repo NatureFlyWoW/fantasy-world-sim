@@ -5,6 +5,15 @@ import type { ContextMenuItem } from '../context-menu.js';
 /**
  * Virtual-scroll DOM renderer for Chronicle entries.
  * Uses fixed-height cards with a reusable pool for performance.
+ *
+ * Key behaviors:
+ * - On new data (isModeChange=false): auto-scrolls to bottom if the user was
+ *   already there; shows "New events" indicator only when entries actually grew.
+ * - On mode/filter change (isModeChange=true): preserves the user's current
+ *   scroll position proportionally so they see roughly the same content, and
+ *   never shows the "New events" indicator.
+ * - Re-entrant updateVisibleCards calls (from programmatic scrollTop changes
+ *   triggering the scroll handler) are suppressed via an isUpdating guard.
  */
 export class ChronicleRenderer {
   private readonly scrollContainer: HTMLElement;
@@ -16,9 +25,22 @@ export class ChronicleRenderer {
   private mode: 'prose' | 'compact' = 'prose';
   private entityNames: ReadonlyMap<number, string> = new Map();
   private cumulativeHeights: number[] = [];
-  private wasAtBottom = true;
+
+  /**
+   * Tracks the previous entry count so that the "New events" indicator is
+   * only shown when the entry list actually grew (not on mode switch or
+   * entity-name refresh).
+   */
+  private previousEntryCount = 0;
+
+  /**
+   * Guards against re-entrant updateVisibleCards calls caused by programmatic
+   * scrollTop assignment triggering the scroll handler.
+   */
+  private isUpdating = false;
 
   public onEntityClick: ((entityId: number) => void) | null = null;
+  public onEventClick: ((eventId: number) => void) | null = null;
 
   constructor(container: HTMLElement) {
     this.scrollContainer = document.createElement('div');
@@ -30,7 +52,7 @@ export class ChronicleRenderer {
 
     this.newEventsIndicator = document.createElement('div');
     this.newEventsIndicator.className = 'chronicle-new-events';
-    this.newEventsIndicator.textContent = 'New events ↓';
+    this.newEventsIndicator.textContent = 'New events \u2193';
     this.newEventsIndicator.style.display = 'none';
 
     container.appendChild(this.scrollContainer);
@@ -54,15 +76,31 @@ export class ChronicleRenderer {
     this.newEventsIndicator.addEventListener('click', () => this.scrollToBottom());
   }
 
+  /**
+   * Render entries into the virtual scroll.
+   *
+   * @param isModeChange - when true, preserves scroll position proportionally
+   *   and suppresses the "New events" indicator. Passed from ChroniclePanel
+   *   when the render was caused by a mode switch or filter change rather
+   *   than incoming simulation data.
+   */
   public render(
     entries: readonly ChronicleEntry[],
     mode: 'prose' | 'compact',
-    entityNames?: ReadonlyMap<number, string>
+    entityNames?: ReadonlyMap<number, string>,
+    isModeChange = false,
   ): void {
-    this.wasAtBottom = this.isAtBottom();
+    const wasAtBottom = this.isAtBottom();
+    const oldTotalHeight = this.cumulativeHeights.length > 0
+      ? this.cumulativeHeights[this.cumulativeHeights.length - 1] ?? 0
+      : 0;
+    const oldScrollTop = this.scrollContainer.scrollTop;
+    const previousCount = this.previousEntryCount;
+
     this.entries = entries;
     this.mode = mode;
     this.entityNames = entityNames ?? new Map();
+    this.previousEntryCount = entries.length;
 
     // Compute cumulative heights
     this.cumulativeHeights = [];
@@ -74,12 +112,31 @@ export class ChronicleRenderer {
     }
 
     this.contentDiv.style.height = `${total}px`;
-    this.updateVisibleCards();
 
-    if (this.wasAtBottom) {
-      this.scrollToBottom();
-    } else if (entries.length > 0) {
-      this.newEventsIndicator.style.display = 'block';
+    if (isModeChange) {
+      // ── Mode/filter change: preserve scroll position proportionally ──
+      // Map the old scroll fraction to the new total height so the user
+      // sees roughly the same temporal position after the switch.
+      if (wasAtBottom) {
+        this.updateVisibleCards();
+        this.scrollToBottom();
+      } else if (oldTotalHeight > 0 && total > 0) {
+        const fraction = oldScrollTop / oldTotalHeight;
+        this.scrollContainer.scrollTop = Math.round(fraction * total);
+        this.updateVisibleCards();
+      } else {
+        this.updateVisibleCards();
+      }
+      // Never show the "New events" indicator for mode changes.
+    } else {
+      // ── New data: auto-scroll or show indicator ──
+      this.updateVisibleCards();
+      if (wasAtBottom) {
+        this.scrollToBottom();
+      } else if (entries.length > previousCount) {
+        // Only show indicator when entries actually grew.
+        this.newEventsIndicator.style.display = 'block';
+      }
     }
   }
 
@@ -107,51 +164,61 @@ export class ChronicleRenderer {
   }
 
   private updateVisibleCards(): void {
-    const { scrollTop, clientHeight } = this.scrollContainer;
-    const viewportEnd = scrollTop + clientHeight;
+    // Guard against re-entrant calls from programmatic scrollTop changes
+    // (scrollToBottom or proportional scroll adjustment trigger the scroll
+    // handler, which calls this method again redundantly).
+    if (this.isUpdating) return;
+    this.isUpdating = true;
 
-    // Binary search for first visible index
-    let firstVisible = 0;
-    let left = 0;
-    let right = this.cumulativeHeights.length - 1;
-    while (left <= right) {
-      const mid = Math.floor((left + right) / 2);
-      const height = this.cumulativeHeights[mid];
-      if (height === undefined) break;
-      if (height < scrollTop) {
-        left = mid + 1;
-      } else {
-        firstVisible = mid;
-        right = mid - 1;
+    try {
+      const { scrollTop, clientHeight } = this.scrollContainer;
+      const viewportEnd = scrollTop + clientHeight;
+
+      // Binary search for first visible index
+      let firstVisible = 0;
+      let left = 0;
+      let right = this.cumulativeHeights.length - 1;
+      while (left <= right) {
+        const mid = Math.floor((left + right) / 2);
+        const height = this.cumulativeHeights[mid];
+        if (height === undefined) break;
+        if (height < scrollTop) {
+          left = mid + 1;
+        } else {
+          firstVisible = mid;
+          right = mid - 1;
+        }
       }
-    }
 
-    // Determine visible range with buffer
-    const startIdx = Math.max(0, firstVisible - 10);
-    let endIdx = startIdx;
-    while (endIdx < this.entries.length) {
-      const height = this.cumulativeHeights[endIdx];
-      if (height === undefined || height > viewportEnd + 400) break;
-      endIdx++;
-    }
+      // Determine visible range with buffer
+      const startIdx = Math.max(0, firstVisible - 10);
+      let endIdx = startIdx;
+      while (endIdx < this.entries.length) {
+        const height = this.cumulativeHeights[endIdx];
+        if (height === undefined || height > viewportEnd + 400) break;
+        endIdx++;
+      }
 
-    // Reset all cards
-    for (const card of this.cardPool) {
-      card.style.display = 'none';
-    }
+      // Reset all cards
+      for (const card of this.cardPool) {
+        card.style.display = 'none';
+      }
 
-    // Populate visible cards
-    let poolIdx = 0;
-    for (let i = startIdx; i < endIdx && i < this.entries.length; i++) {
-      const entry = this.entries[i];
-      const card = this.cardPool[poolIdx++];
-      if (!entry || !card) continue;
+      // Populate visible cards
+      let poolIdx = 0;
+      for (let i = startIdx; i < endIdx && i < this.entries.length; i++) {
+        const entry = this.entries[i];
+        const card = this.cardPool[poolIdx++];
+        if (!entry || !card) continue;
 
-      const top = i === 0 ? 0 : (this.cumulativeHeights[i - 1] ?? 0);
-      card.style.top = `${top}px`;
-      card.style.display = 'block';
+        const top = i === 0 ? 0 : (this.cumulativeHeights[i - 1] ?? 0);
+        card.style.top = `${top}px`;
+        card.style.display = 'block';
 
-      this.populateCard(card, entry);
+        this.populateCard(card, entry);
+      }
+    } finally {
+      this.isUpdating = false;
     }
   }
 
@@ -168,13 +235,16 @@ export class ChronicleRenderer {
     } else if (entry.kind === 'aggregate') {
       card.className = 'aggregate-card';
       card.style.borderLeftColor = entry.categoryColor;
+      card.setAttribute('data-event-ids', entry.eventIds.join(','));
       card.innerHTML = `
         <span class="aggregate-card__icon">${escapeHtml(entry.icon)}</span>
         <span class="aggregate-card__theme">${escapeHtml(entry.theme)}</span>
-        <span class="aggregate-card__count">${entry.count}</span>
       `;
     } else {
       card.className = this.mode === 'compact' ? 'event-card event-card--compact' : 'event-card';
+
+      // Store event ID for click-to-inspect
+      card.setAttribute('data-event-id', String(entry.event.id));
 
       // Add legendary class for high significance events
       if (entry.formatted.significanceTier === 'legendary') {
@@ -224,6 +294,8 @@ export class ChronicleRenderer {
 
   private readonly handleClick = (e: Event): void => {
     const target = e.target as HTMLElement;
+
+    // Entity link click (names within event descriptions)
     const link = target.closest('.entity-link');
     if (link instanceof HTMLElement) {
       const idStr = link.getAttribute('data-entity-id');
@@ -231,6 +303,32 @@ export class ChronicleRenderer {
         const id = parseInt(idStr, 10);
         if (!isNaN(id)) {
           this.onEntityClick?.(id);
+        }
+      }
+      return;
+    }
+
+    // Aggregate card click — inspect the first constituent event
+    const aggregate = target.closest('.aggregate-card');
+    if (aggregate instanceof HTMLElement) {
+      const idsStr = aggregate.getAttribute('data-event-ids');
+      if (idsStr) {
+        const firstId = parseInt(idsStr.split(',')[0] ?? '', 10);
+        if (!isNaN(firstId)) {
+          this.onEventClick?.(firstId);
+        }
+      }
+      return;
+    }
+
+    // Event card click (inspect the event itself)
+    const card = target.closest('.event-card');
+    if (card instanceof HTMLElement) {
+      const eventIdStr = card.getAttribute('data-event-id');
+      if (eventIdStr) {
+        const eventId = parseInt(eventIdStr, 10);
+        if (!isNaN(eventId)) {
+          this.onEventClick?.(eventId);
         }
       }
     }
@@ -247,7 +345,7 @@ export class ChronicleRenderer {
     if (poolIdx === -1) return;
 
     // Get the visible range to determine the entry
-    const { scrollTop, clientHeight } = this.scrollContainer;
+    const { scrollTop } = this.scrollContainer;
     let firstVisible = 0;
     let left = 0;
     let right = this.cumulativeHeights.length - 1;
@@ -271,7 +369,7 @@ export class ChronicleRenderer {
       {
         label: 'Inspect Event',
         onClick: () => {
-          this.onEntityClick?.(entry.formatted.entityIds[0] ?? 0);
+          this.onEventClick?.(entry.event.id);
         },
       },
     ];
@@ -281,9 +379,7 @@ export class ChronicleRenderer {
 
   private readonly handleScroll = (): void => {
     this.updateVisibleCards();
-    if (!this.isAtBottom() && this.newEventsIndicator.style.display === 'block') {
-      // Keep indicator visible
-    } else if (this.isAtBottom()) {
+    if (this.isAtBottom()) {
       this.newEventsIndicator.style.display = 'none';
     }
   };

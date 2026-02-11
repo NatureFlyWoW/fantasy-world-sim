@@ -195,6 +195,25 @@
   color: var(--n0);
 }
 
+/* ── View Modes (topbar tab switching) ────────────────────────────── */
+
+/* Chronicle view: hide map, panels fill content area */
+.view--chronicle {
+  grid-template-columns: 1fr;
+  grid-template-areas:
+    "topbar"
+    "panels"
+    "status";
+}
+
+.view--chronicle #map-container {
+  display: none;
+}
+
+.view--chronicle #panel-column {
+  border-left: none;
+}
+
 /* ── Layout Presets ─────────────────────────────────────────────────── */
 
 /* Narrative: panels take more space */
